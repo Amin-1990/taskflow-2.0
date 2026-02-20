@@ -1,0 +1,289 @@
+import { type FunctionComponent } from 'preact';
+import { useEffect, useMemo, useState } from 'preact/hooks';
+import { route } from 'preact-router';
+import { ChevronLeft, ChevronRight } from 'lucide-preact';
+import { ROUTES } from '../../../constants';
+import { showToast } from '../../../utils/toast';
+import planningManuelService from '../../../services/planning/planningManuel.service';
+import type { DayKey, ManualPlanningRow, PlanningWeekOption } from '../../../services/planning/types';
+
+interface SuiviRealisationProps {
+  path?: string;
+}
+
+const DAYS: Array<{ key: DayKey; label: string }> = [
+  { key: 'lundi', label: 'Lundi' },
+  { key: 'mardi', label: 'Mardi' },
+  { key: 'mercredi', label: 'Mercredi' },
+  { key: 'jeudi', label: 'Jeudi' },
+  { key: 'vendredi', label: 'Vendredi' },
+  { key: 'samedi', label: 'Samedi' },
+];
+
+const formatDayDate = (startDate: string | null | undefined, dayIndex: number) => {
+  if (!startDate) return '--/--';
+  const d = new Date(startDate);
+  d.setDate(d.getDate() + dayIndex);
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+};
+
+const getWeekNumber = (date: Date): number => {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d.valueOf() - yearStart.valueOf()) / 86400000) + 1) / 7);
+};
+
+export const SuiviRealisation: FunctionComponent<SuiviRealisationProps> = () => {
+  const now = new Date();
+  const [annee, setAnnee] = useState(now.getFullYear());
+  const [semaineCommande, setSemaineCommande] = useState(getWeekNumber(now));
+  const [semainePlanification, setSemainePlanification] = useState(getWeekNumber(now));
+  const [annees, setAnnees] = useState<number[]>([]);
+  const [weeks, setWeeks] = useState<PlanningWeekOption[]>([]);
+  const [selectedWeek, setSelectedWeek] = useState<PlanningWeekOption | null>(null);
+  const [unite, setUnite] = useState('Toutes');
+  const [unites, setUnites] = useState<string[]>(['Toutes']);
+  const [priorite, setPriorite] = useState<'toutes' | 'basse' | 'normale' | 'haute' | 'urgente'>('toutes');
+  const [articleSearch, setArticleSearch] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [rows, setRows] = useState<ManualPlanningRow[]>([]);
+  const [initial, setInitial] = useState<string>('');
+
+  const loadBase = async () => {
+    const [years, units] = await Promise.all([
+      planningManuelService.loadAnnees(),
+      planningManuelService.loadUnites(),
+    ]);
+    setAnnees(years.length > 0 ? years : [annee]);
+    setUnites(units);
+    if (years.length > 0 && !years.includes(annee)) setAnnee(years[0]);
+  };
+
+  const loadWeeks = async (year: number) => {
+    const list = await planningManuelService.loadWeeks(year);
+    setWeeks(list);
+    if (list.length > 0 && !list.some((w) => w.numero === semaineCommande)) {
+      setSemaineCommande(list[0].numero);
+    }
+    if (list.length > 0 && !list.some((w) => w.numero === semainePlanification)) {
+      setSemainePlanification(list[0].numero);
+    }
+  };
+
+  const loadRows = async () => {
+    try {
+      setLoading(true);
+      const result = await planningManuelService.loadRows(
+        semaineCommande,
+        semainePlanification,
+        annee,
+        unite
+      );
+      setRows(result.rows);
+      setSelectedWeek(result.weekOption);
+      setInitial(JSON.stringify(result.rows));
+    } catch (err: any) {
+      showToast.error(err?.error || err?.message || 'Erreur chargement suivi realisation');
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadBase();
+  }, []);
+
+  useEffect(() => {
+    void loadWeeks(annee);
+  }, [annee]);
+
+  useEffect(() => {
+    void loadRows();
+  }, [annee, semaineCommande, semainePlanification, unite]);
+
+  const filteredRows = useMemo(() => {
+    return rows.filter((r) => {
+      if (priorite !== 'toutes' && r.priorite !== priorite) return false;
+      if (articleSearch.trim() && !r.articleCode.toLowerCase().includes(articleSearch.trim().toLowerCase())) return false;
+      return true;
+    });
+  }, [rows, priorite, articleSearch]);
+
+  const updateEmballe = (rowIdx: number, day: DayKey, value: number) => {
+    setRows((prev) =>
+      prev.map((r, i) =>
+        i === rowIdx
+          ? {
+              ...r,
+              planification: {
+                ...r.planification,
+                [day]: {
+                  ...r.planification[day],
+                  emballe: Math.max(0, value),
+                },
+              },
+            }
+          : r
+      )
+    );
+  };
+
+  const goWeek = (offset: -1 | 1) => {
+    const idx = weeks.findIndex((w) => w.numero === semainePlanification);
+    if (idx < 0) return;
+    const next = weeks[idx + offset];
+    if (next) setSemainePlanification(next.numero);
+  };
+
+  const saveAll = async () => {
+    if (!selectedWeek) return;
+    const current = JSON.stringify(rows);
+    if (current === initial) {
+      showToast.info('Aucun changement');
+      return;
+    }
+    try {
+      setSaving(true);
+      for (const row of rows) {
+        // eslint-disable-next-line no-await-in-loop
+        await planningManuelService.saveRow(row, selectedWeek);
+      }
+      showToast.success('Suivi realisation sauvegarde');
+      await loadRows();
+    } catch (err: any) {
+      showToast.error(err?.error || err?.message || 'Erreur sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-800">Suivi de Realisation</h1>
+        <div className="flex gap-2">
+          <button onClick={() => route(ROUTES.PLANNING_MANUEL)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            Planning
+          </button>
+          <button onClick={() => route(ROUTES.PLANNING_ANALYSE)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+            Analyse charge
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-end gap-3">
+        <div className="flex items-center gap-2">
+          <button onClick={() => goWeek(-1)} className="p-2 border border-gray-300 rounded hover:bg-gray-50">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <select value={semainePlanification} onChange={(e) => setSemainePlanification(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-60">
+            {weeks.map((w) => <option key={w.id} value={w.numero}>{w.label}</option>)}
+          </select>
+          <button onClick={() => goWeek(1)} className="p-2 border border-gray-300 rounded hover:bg-gray-50">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Semaine commande</label>
+          <select value={semaineCommande} onChange={(e) => setSemaineCommande(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-60">
+            {weeks.map((w) => <option key={`cmd-${w.id}`} value={w.numero}>{w.label}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Semaine a suivre</label>
+          <select value={semainePlanification} onChange={(e) => setSemainePlanification(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-60">
+            {weeks.map((w) => <option key={`pln-${w.id}`} value={w.numero}>{w.label}</option>)}
+          </select>
+        </div>
+        <select value={annee} onChange={(e) => setAnnee(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          {annees.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+        <select value={unite} onChange={(e) => setUnite((e.target as HTMLSelectElement).value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          {unites.map((u) => <option key={u} value={u}>{u}</option>)}
+        </select>
+        <input value={articleSearch} onInput={(e) => setArticleSearch((e.target as HTMLInputElement).value)} placeholder="Filtre article" className="px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+        <select value={priorite} onChange={(e) => setPriorite((e.target as HTMLSelectElement).value as any)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
+          <option value="toutes">Toutes priorites</option>
+          <option value="basse">Basse</option>
+          <option value="normale">Normale</option>
+          <option value="haute">Haute</option>
+          <option value="urgente">Urgente</option>
+        </select>
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center text-gray-600">Chargement...</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1300px] text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-2 text-left">Commande</th>
+                  <th className="px-2 py-2 text-right whitespace-nowrap w-28">Qte a facturer</th>
+                  <th className="px-3 py-2 text-center">Semaine precedente / report</th>
+                  {DAYS.map((d, idx) => (
+                    <th key={d.key} className="px-3 py-2 text-center">
+                      <div>{d.label}</div>
+                      <div className="text-xs text-gray-500">{formatDayDate(selectedWeek?.dateDebut, idx)}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredRows.length === 0 && (
+                  <tr><td colSpan={9} className="px-3 py-8 text-center text-gray-500">Aucune commande</td></tr>
+                )}
+                {filteredRows.map((r) => {
+                  const rowIdx = rows.findIndex((x) => x.commandeId === r.commandeId);
+                  return (
+                    <tr key={r.commandeId}>
+                      <td className="px-3 py-2">
+                        <div className="font-medium">{r.articleCode}</div>
+                        <div className="text-xs text-gray-500">Lot {r.lot || '-'} | {r.unite || '-'} | {r.priorite || '-'}</div>
+                      </td>
+                      <td className="px-3 py-2 text-right">{r.objectifSemaine}</td>
+                      <td className="px-3 py-2 text-center text-xs">
+                        <div>{r.semainePrecedenteCode || '-'}</div>
+                        <div className="text-gray-500">Stock prev: {r.stockEmballePrecedent}</div>
+                      </td>
+                      {DAYS.map((d) => (
+                        <td key={d.key} className="px-3 py-2">
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="number"
+                              min={0}
+                              value={r.planification[d.key].emballe}
+                              onInput={(e) => updateEmballe(rowIdx, d.key, parseInt((e.target as HTMLInputElement).value || '0', 10))}
+                              className="w-20 px-2 py-1 border border-gray-300 rounded text-right"
+                            />
+                          </div>
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          disabled={saving}
+          onClick={() => void saveAll()}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
+        >
+          {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default SuiviRealisation;
