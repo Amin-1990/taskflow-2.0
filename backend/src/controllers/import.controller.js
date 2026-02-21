@@ -70,6 +70,43 @@ class ImportController {
       res.status(500).json({ error: error.message });
     }
   }
+
+  /**
+   * Template affectations
+   */
+  async getTemplateAffectations(req, res) {
+    try {
+      const columns = [
+        { header: 'ID', key: 'id', width: 10, example: '' },
+        { header: 'ID_Commande', key: 'id_commande', width: 14, example: '' },
+        { header: 'Code_article', key: 'code_article', width: 18, example: 'ART-001' },
+        { header: 'Lot', key: 'lot', width: 14, example: 'L001' },
+        { header: 'ID_Operateur', key: 'id_operateur', width: 14, example: '' },
+        { header: 'Operateur_nom', key: 'operateur_nom', width: 24, example: 'Jean Martin' },
+        { header: 'Matricule', key: 'matricule', width: 14, example: 'EMP001' },
+        { header: 'ID_Poste', key: 'id_poste', width: 10, example: '' },
+        { header: 'Poste_description', key: 'poste_description', width: 22, example: 'Assemblage' },
+        { header: 'ID_Semaine', key: 'id_semaine', width: 12, example: '' },
+        { header: 'Semaine', key: 'semaine', width: 14, example: 'S10-2026' },
+        { header: 'ID_Article', key: 'id_article', width: 12, example: '' },
+        { header: 'Date_debut', key: 'date_debut', width: 22, example: '2026-02-21 08:00:00' },
+        { header: 'Date_fin', key: 'date_fin', width: 22, example: '' },
+        { header: 'Duree', key: 'duree', width: 12, example: '' },
+        { header: 'Heure_supp', key: 'heure_supp', width: 12, example: '0' },
+        { header: 'Quantite_produite', key: 'quantite_produite', width: 18, example: '' },
+        { header: 'Commentaire', key: 'commentaire', width: 30, example: 'Import CSV' }
+      ];
+
+      const buffer = await importService.generateTemplate(columns, 'Affectations');
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_affectations.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erreur template affectations:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
   
   /**
     * Template semaines
@@ -968,6 +1005,274 @@ class ImportController {
       await connection.rollback();
       console.error('Erreur import planning:', error);
       res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Import affectations (ID optionnel)
+   * - Si ID fourni: update de la ligne existante
+   * - Si ID absent: creation d'une nouvelle affectation
+   */
+  async importAffectations(req, res) {
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
+
+      const data = await importService.readExcel(req.file.buffer);
+      const errors = [];
+      const resultats = [];
+
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
+
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
+
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
+
+      const toIntOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const n = parseInt(String(value).trim(), 10);
+        return Number.isNaN(n) ? null : n;
+      };
+
+      const toFloatOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        const n = parseFloat(String(value).trim().replace(',', '.'));
+        return Number.isNaN(n) ? null : n;
+      };
+
+      const toDateTimeOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          const yyyy = value.getFullYear();
+          const mm = String(value.getMonth() + 1).padStart(2, '0');
+          const dd = String(value.getDate()).padStart(2, '0');
+          const hh = String(value.getHours()).padStart(2, '0');
+          const mi = String(value.getMinutes()).padStart(2, '0');
+          const ss = String(value.getSeconds()).padStart(2, '0');
+          return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+        }
+        if (typeof value === 'number' && Number.isFinite(value) && value > 20000 && value < 80000) {
+          const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+          const ms = value * 24 * 60 * 60 * 1000;
+          const d = new Date(excelEpoch.getTime() + ms);
+          if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 19).replace('T', ' ');
+        }
+        const raw = String(value).trim();
+        const d = new Date(raw);
+        if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 19).replace('T', ' ');
+        return null;
+      };
+
+      const [tableColumnsRows] = await connection.query('SHOW COLUMNS FROM affectations');
+      const tableColumns = new Set((tableColumnsRows || []).map((c) => String(c.Field || '').toLowerCase()));
+      const hasDateCreation = tableColumns.has('date_creation');
+      const hasDateModification = tableColumns.has('date_modification');
+
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
+
+        try {
+          const affectationId = toIntOrNull(getCell(row, ['id']));
+
+          let idCommande = toIntOrNull(getCell(row, ['id commande', 'id_commande']));
+          const codeArticle = String(getCell(row, ['code article', 'code_article']) || '').trim();
+          const lot = String(getCell(row, ['lot']) || '').trim();
+
+          if (!idCommande && codeArticle) {
+            const [commandes] = await connection.query(
+              `SELECT ID, ID_Article
+               FROM commandes
+               WHERE Code_article = ?
+                 AND (? = '' OR Lot = ?)
+               ORDER BY Date_creation DESC, ID DESC
+               LIMIT 1`,
+              [codeArticle, lot, lot]
+            );
+            idCommande = commandes[0]?.ID || null;
+          }
+
+          let idOperateur = toIntOrNull(getCell(row, ['id operateur', 'id_operateur', 'id personnel', 'id_personnel']));
+          const operateurNom = String(getCell(row, ['operateur nom', 'operateur_nom', 'nom prenom', 'nom_prenom']) || '').trim();
+          const matricule = String(getCell(row, ['matricule']) || '').trim();
+
+          if (!idOperateur && (matricule || operateurNom)) {
+            const [personnel] = await connection.query(
+              `SELECT ID
+               FROM personnel
+               WHERE (? <> '' AND Matricule = ?)
+                  OR (? <> '' AND Nom_prenom = ?)
+               ORDER BY ID DESC
+               LIMIT 1`,
+              [matricule, matricule, operateurNom, operateurNom]
+            );
+            idOperateur = personnel[0]?.ID || null;
+          }
+
+          let idPoste = toIntOrNull(getCell(row, ['id poste', 'id_poste']));
+          const posteDescription = String(getCell(row, ['poste description', 'poste_description', 'poste']) || '').trim();
+
+          if (!idPoste && posteDescription) {
+            const [postes] = await connection.query(
+              'SELECT ID FROM postes WHERE Description = ? LIMIT 1',
+              [posteDescription]
+            );
+            idPoste = postes[0]?.ID || null;
+          }
+
+          let idSemaine = toIntOrNull(getCell(row, ['id semaine', 'id_semaine']));
+          const semaineCode = String(getCell(row, ['semaine', 'code semaine', 'code_semaine']) || '').trim();
+
+          if (!idSemaine && semaineCode) {
+            const [semaines] = await connection.query(
+              'SELECT ID FROM semaines WHERE Code_semaine = ? LIMIT 1',
+              [semaineCode]
+            );
+            idSemaine = semaines[0]?.ID || null;
+          }
+
+          let idArticle = toIntOrNull(getCell(row, ['id article', 'id_article']));
+          if (!idArticle && codeArticle) {
+            const [articles] = await connection.query(
+              'SELECT ID FROM articles WHERE Code_article = ? LIMIT 1',
+              [codeArticle]
+            );
+            idArticle = articles[0]?.ID || null;
+          }
+          if (!idArticle && idCommande) {
+            const [commandes] = await connection.query(
+              'SELECT ID_Article FROM commandes WHERE ID = ? LIMIT 1',
+              [idCommande]
+            );
+            idArticle = commandes[0]?.ID_Article || null;
+          }
+
+          const payload = {
+            ID_Commande: idCommande,
+            ID_Operateur: idOperateur,
+            ID_Poste: idPoste,
+            ID_Article: idArticle,
+            ID_Semaine: idSemaine,
+            Date_debut: toDateTimeOrNull(getCell(row, ['date debut', 'date_debut'])),
+            Date_fin: toDateTimeOrNull(getCell(row, ['date fin', 'date_fin'])),
+            Duree: toIntOrNull(getCell(row, ['duree'])),
+            Heure_supp: toFloatOrNull(getCell(row, ['heure supp', 'heure_supp', 'heures supp'])),
+            Quantite_produite: toIntOrNull(getCell(row, ['quantite produite', 'quantite_produite'])),
+            Commentaire: getCell(row, ['commentaire'])
+          };
+
+          if (affectationId) {
+            const [existing] = await connection.query(
+              'SELECT * FROM affectations WHERE ID = ?',
+              [affectationId]
+            );
+            if (existing.length === 0) {
+              throw new Error(`Affectation ID ${affectationId} introuvable`);
+            }
+
+            const updateFields = Object.entries(payload).filter(([, value]) => value !== null && value !== undefined);
+            if (updateFields.length === 0) {
+              resultats.push({ ligne: rowNumber, id: affectationId, action: 'skipped' });
+              continue;
+            }
+
+            const setClause = updateFields.map(([key]) => `${key} = ?`).join(', ');
+            const values = updateFields.map(([, value]) => value);
+
+            let sql = `UPDATE affectations SET ${setClause}`;
+            if (hasDateModification) sql += ', Date_modification = NOW()';
+            sql += ' WHERE ID = ?';
+
+            await connection.query(sql, [...values, affectationId]);
+            resultats.push({ ligne: rowNumber, id: affectationId, action: 'updated' });
+          } else {
+            if (!payload.ID_Commande || !payload.ID_Operateur || !payload.ID_Poste || !payload.ID_Article) {
+              throw new Error('ID_Commande, ID_Operateur, ID_Poste et ID_Article sont requis (directement ou via correspondances)');
+            }
+
+            if (!payload.Date_debut) payload.Date_debut = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+            const insertColumns = [];
+            const insertValues = [];
+            Object.entries(payload).forEach(([key, value]) => {
+              if (value !== null && value !== undefined) {
+                insertColumns.push(key);
+                insertValues.push(value);
+              }
+            });
+
+            let sql = `INSERT INTO affectations (${insertColumns.join(', ')}`;
+            let valuesSql = insertColumns.map(() => '?').join(', ');
+            if (hasDateCreation) {
+              sql += ', Date_creation';
+              valuesSql += ', NOW()';
+            }
+            sql += `) VALUES (${valuesSql})`;
+
+            const [insert] = await connection.query(sql, insertValues);
+            resultats.push({ ligne: rowNumber, id: insert.insertId, action: 'created' });
+          }
+        } catch (importError) {
+          errors.push(`Ligne ${rowNumber}: ${importError.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'affectations',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      return res.json({
+        success: true,
+        message: `${resultats.length} affectations importees`,
+        data: resultats
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import affectations:', error);
+      return res.status(500).json({ error: error.message });
     } finally {
       connection.release();
     }

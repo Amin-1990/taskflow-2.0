@@ -14,6 +14,7 @@ router.get('/template/pointage', authMiddleware, importController.getTemplatePoi
 router.get('/template/defauts-produit', authMiddleware, importController.getTemplateDefautsProduit);
 router.get('/template/defauts-process', authMiddleware, importController.getTemplateDefautsProcess);
 router.get('/template/horaires', authMiddleware, importController.getTemplateHoraires);
+router.get('/template/affectations', authMiddleware, importController.getTemplateAffectations);
 
 // Imports
 router.post('/commandes', authMiddleware, upload.single('file'), importController.importCommandes);
@@ -24,5 +25,6 @@ router.post('/pointage', authMiddleware, upload.single('file'), importController
 router.post('/defauts-produit', authMiddleware, upload.single('file'), importController.importDefautsProduit);
 router.post('/defauts-process', authMiddleware, upload.single('file'), importController.importDefautsProcess);
 router.post('/horaires', authMiddleware, upload.single('file'), importController.importHorairesFile);
+router.post('/affectations', authMiddleware, upload.single('file'), importController.importAffectations);
 
 module.exports = router;

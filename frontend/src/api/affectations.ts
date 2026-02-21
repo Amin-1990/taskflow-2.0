@@ -53,6 +53,19 @@ export const affectationsApi = {
     api.patch<ApiResponse<Affectation>>(`/affectations/${id}/heures-supp`, {
       heures,
     }),
+
+  getTemplateImport: () =>
+    api.get<Blob>('/import/template/affectations', {
+      responseType: 'blob',
+    }),
+
+  importFile: (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post<ApiResponse<any>>('/import/affectations', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 };
 
 export const { getList, create, update, delete: deleteAffectation, terminerAffectation, ajouterHeuresSupp } = affectationsApi;

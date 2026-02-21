@@ -53,12 +53,23 @@ exports.getPosteById = async (req, res) => {
 // POST /api/postes - Créer un nouveau poste
 exports.createPoste = async (req, res) => {
   try {
-    const { Description } = req.body;
+    const Description = typeof req.body.Description === 'string' ? req.body.Description.trim() : '';
     
     if (!Description) {
       return res.status(400).json({ 
         success: false, 
         error: 'La description est requise' 
+      });
+    }
+
+    const [existing] = await db.query(
+      'SELECT ID FROM postes WHERE LOWER(TRIM(Description)) = LOWER(?) LIMIT 1',
+      [Description]
+    );
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ce poste existe deja'
       });
     }
     
@@ -72,8 +83,8 @@ exports.createPoste = async (req, res) => {
     // Log audit
     const auditInfo = getAuditInfo(req);
     logAction({
-      ID_Utilisateur: req.user?.id || null,
-      Username: req.user?.username || null,
+      ID_Utilisateur: req.user?.ID || null,
+      Username: req.user?.Username || null,
       Action: 'CREATE',
       Table_concernee: 'postes',
       ID_Enregistrement: result.insertId,
@@ -100,7 +111,7 @@ exports.createPoste = async (req, res) => {
 // PUT /api/postes/:id - Modifier un poste
 exports.updatePoste = async (req, res) => {
   try {
-    const { Description } = req.body;
+    const Description = typeof req.body.Description === 'string' ? req.body.Description.trim() : '';
     const posteId = req.params.id;
     
     if (!Description) {
@@ -120,7 +131,18 @@ exports.updatePoste = async (req, res) => {
     }
     const oldValue = existing[0];
     
-    const [result] = await db.query(
+    const [duplicate] = await db.query(
+      'SELECT ID FROM postes WHERE LOWER(TRIM(Description)) = LOWER(?) AND ID <> ? LIMIT 1',
+      [Description, posteId]
+    );
+    if (duplicate.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Ce poste existe deja'
+      });
+    }
+
+    await db.query(
       'UPDATE postes SET Description = ? WHERE ID = ?',
       [Description, posteId]
     );
@@ -130,8 +152,8 @@ exports.updatePoste = async (req, res) => {
     // Log audit
     const auditInfo = getAuditInfo(req);
     logAction({
-      ID_Utilisateur: req.user?.id || null,
-      Username: req.user?.username || null,
+      ID_Utilisateur: req.user?.ID || null,
+      Username: req.user?.Username || null,
       Action: 'UPDATE',
       Table_concernee: 'postes',
       ID_Enregistrement: posteId,
@@ -175,8 +197,8 @@ exports.deletePoste = async (req, res) => {
     // Log audit
     const auditInfo = getAuditInfo(req);
     logAction({
-      ID_Utilisateur: req.user?.id || null,
-      Username: req.user?.username || null,
+      ID_Utilisateur: req.user?.ID || null,
+      Username: req.user?.Username || null,
       Action: 'DELETE',
       Table_concernee: 'postes',
       ID_Enregistrement: posteId,

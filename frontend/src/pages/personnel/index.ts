@@ -3,3 +3,4 @@ export { default as PersonnelCreate } from './PersonnelCreate';
 export { default as PersonnelEdit } from './PersonnelEdit';
 export { default as Horaires } from './Horaires';
 export { default as Pointage } from './Pointage';
+export { default as PostesGestion } from './PostesGestion';

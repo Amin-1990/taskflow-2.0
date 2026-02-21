@@ -31,6 +31,7 @@ import PersonnelCreate from './pages/personnel/PersonnelCreate';
 import PersonnelEdit from './pages/personnel/PersonnelEdit';
 import Horaires from './pages/personnel/Horaires';
 import Pointage from './pages/personnel/Pointage';
+import PostesGestion from './pages/personnel/PostesGestion';
 
 import { ReferentielDefauts, NonConformitesProduction } from './pages/qualite';
 
@@ -136,6 +137,9 @@ export const App: FunctionalComponent = () => {
         </ProtectedRoute>
         <ProtectedRoute path="/personnel/pointage" component={Layout}>
           <Pointage path="/" />
+        </ProtectedRoute>
+        <ProtectedRoute path="/personnel/postes" component={Layout}>
+          <PostesGestion path="/" />
         </ProtectedRoute>
 
         <ProtectedRoute path="/qualite/referentiel-defauts" component={Layout}>

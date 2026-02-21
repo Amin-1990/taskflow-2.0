@@ -72,6 +72,7 @@ const menuItems: MenuItem[] = [
     label: 'Ressources Humaines',
     subItems: [
       { icon: UserCheck, label: 'Personnel', path: ROUTES.PERSONNEL },
+      { icon: Settings, label: 'Gestion postes', path: ROUTES.PERSONNEL_POSTES },
       { icon: Package, label: 'Nouveau Personnel', path: ROUTES.PERSONNEL_NEW },
       { icon: Calendar, label: 'Horaires', path: ROUTES.PERSONNEL_HORAIRES },
       { icon: Clock3, label: 'Pointage', path: ROUTES.PERSONNEL_POINTAGE }

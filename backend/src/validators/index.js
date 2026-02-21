@@ -1,9 +1,10 @@
 /**
- * Index centralisé de tous les validateurs
+ * Index centralise de tous les validateurs
  * Utilisation: const { createArticleValidator } = require('../validators');
  */
 
 const commonValidators = require('./common.validators');
+const posteValidators = require('./poste.validators');
 const articleValidators = require('./article.validators');
 const personnelValidators = require('./personnel.validators');
 const commandeValidators = require('./commande.validators');
@@ -16,52 +17,40 @@ const horaireValidators = require('./horaire.validators');
 const authValidators = require('./auth.validators');
 const echelonsValidators = require('./echelons.validators');
 
-// Créer des validateurs simples pour poste et typeMachine
-const posteValidators = {
-  idValidator: commonValidators.idValidator
-};
-
-const typeMachineValidators = {
-  idValidator: commonValidators.idValidator
-};
-
 module.exports = {
   // Common validators
   ...commonValidators,
-  
+
   // Poste validators
   ...posteValidators,
-  
-  // TypeMachine validators
-  ...typeMachineValidators,
-  
+
   // Article validators
   ...articleValidators,
-  
+
   // Personnel validators
   ...personnelValidators,
-  
+
   // Commande validators
   ...commandeValidators,
-  
+
   // Machine validators
   ...machineValidators,
-  
+
   // Pointage validators
   ...pointageValidators,
-  
+
   // Intervention validators
   ...interventionValidators,
-  
+
   // Defaut validators
   ...defautValidators,
-  
+
   // Planning validators
   ...planningValidators,
-  
+
   // Horaire validators
   ...horaireValidators,
-  
+
   // Auth validators
   ...authValidators,
 

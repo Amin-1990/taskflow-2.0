@@ -37,6 +37,7 @@ export const ROUTES = {
   PERSONNEL_EDIT: '/personnel/:id/edit',
   PERSONNEL_HORAIRES: '/personnel/horaires',
   PERSONNEL_POINTAGE: '/personnel/pointage',
+  PERSONNEL_POSTES: '/personnel/postes',
   QUALITY: '/qualite/referentiel-defauts',
   QUALITY_REFERENTIEL_DEFAUTS: '/qualite/referentiel-defauts',
   QUALITY_NON_CONFORMITES: '/qualite/non-conformites-production',

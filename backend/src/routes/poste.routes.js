@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { validate } = require('../middleware/validation.middleware');
-const { idValidator } = require('../validators');
+const { idValidator, createPosteValidator, updatePosteValidator } = require('../validators');
 const posteController = require('../controllers/poste.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 
@@ -16,12 +16,18 @@ router.get(
   posteController.getPosteById
 );
 
-router.post('/', authMiddleware, posteController.createPoste);
+router.post(
+  '/',
+  authMiddleware,
+  createPosteValidator,
+  validate,
+  posteController.createPoste
+);
 
 router.put(
   '/:id',
   authMiddleware,
-  idValidator,
+  updatePosteValidator,
   validate,
   posteController.updatePoste
 );

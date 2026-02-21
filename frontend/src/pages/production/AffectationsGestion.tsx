@@ -29,31 +29,6 @@ const csvEscape = (v: unknown) => {
   return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-const parseCsvLine = (line: string): string[] => {
-  const values: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    const next = line[i + 1];
-    if (ch === '"') {
-      if (inQuotes && next === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (ch === ',' && !inQuotes) {
-      values.push(current.trim());
-      current = '';
-    } else {
-      current += ch;
-    }
-  }
-  values.push(current.trim());
-  return values;
-};
-
 const defaultRange = () => {
   const now = new Date();
   const day = now.getDay();
@@ -243,13 +218,21 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
   };
 
   const template = () => {
-    const headers = ['ID', 'ID_Commande', 'Operateur_nom', 'Code_article', 'Poste_description', 'Semaine', 'Date_debut', 'Date_fin', 'Duree', 'Heure_supp'];
-    const row = ['', '1001', 'Nom Operateur', 'ART-001', 'Assemblage', '06-2026', '2026-02-19T08:00', '', '', '0'];
-    const csv = `${headers.join(',')}\n${row.join(',')}\n`;
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'template_affectations.csv'; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    void (async () => {
+      try {
+        const response = await affectationsApi.getTemplateImport();
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'template_affectations.xlsx');
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (e: any) {
+        showToast.error(e?.error || e?.message || 'Erreur telechargement template');
+      }
+    })();
   };
 
   const exportCsv = () => {
@@ -265,96 +248,13 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
     a.href = url; a.download = `affectations_export_${new Date().toISOString().slice(0, 10)}.csv`; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   };
 
-  const importCsv = async (event: Event) => {
+  const importXlsx = async (event: Event) => {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
     try {
-      const text = await file.text();
-      const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-      if (lines.length < 2) {
-        showToast.error('Fichier vide ou invalide');
-        return;
-      }
-
-      const headers = parseCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
-      const idx = (name: string) => headers.indexOf(name.toLowerCase());
-
-      const opByName = new Map<string, number>();
-      operateurs.forEach((o) => opByName.set(o.label.toLowerCase(), o.id));
-      const posteByName = new Map<string, number>();
-      postes.forEach((p) => posteByName.set(p.label.toLowerCase(), p.id));
-      const weekByKey = new Map<string, number>();
-      weeks.forEach((w) => {
-        weekByKey.set(w.label.toLowerCase(), w.id);
-        if (w.code) weekByKey.set(w.code.toLowerCase(), w.id);
-      });
-
-      let created = 0;
-      let updated = 0;
-      let skipped = 0;
-
-      for (let i = 1; i < lines.length; i += 1) {
-        const cols = parseCsvLine(lines[i]);
-        const row: Record<string, string> = {};
-        headers.forEach((h, j) => { row[h] = cols[j] ?? ''; });
-
-        const id = toNumOrNull(row.id || '');
-        const commandeId = toNumOrNull(row.id_commande || '');
-        const opId = opByName.get((row.operateur_nom || '').toLowerCase()) || toNumOrNull(row.id_operateur || '') || undefined;
-        const posteId = posteByName.get((row.poste_description || '').toLowerCase()) || toNumOrNull(row.id_poste || '') || undefined;
-        const weekId = weekByKey.get((row.semaine || '').toLowerCase()) || toNumOrNull(row.id_semaine || '') || null;
-
-        if (weekId && !weekCmds[weekId]) {
-          // eslint-disable-next-line no-await-in-loop
-          const r = await commandesApi.getBySemaine(weekId);
-          const entries = ((r.data.data || []) as any[])
-            .map((x) => ({ commandeId: Number(x.ID), articleId: Number(x.ID_Article), code: String(x.Code_article || x.Article_code || '') }))
-            .filter((x) => x.commandeId > 0 && x.articleId > 0 && x.code);
-          setWeekCmds((p) => ({ ...p, [weekId]: entries }));
-        }
-
-        const weekEntries = weekId ? (weekCmds[weekId] || []) : [];
-        const artCode = (row.code_article || '').toLowerCase();
-        const artId = toNumOrNull(row.id_article || '') || weekEntries.find((x) => (!commandeId || x.commandeId === commandeId) && x.code.toLowerCase() === artCode)?.articleId || undefined;
-
-        const payload: UpdateAffectationPayload = {
-          ID_Commande: commandeId || undefined,
-          ID_Operateur: opId,
-          ID_Poste: posteId,
-          ID_Article: artId,
-          ID_Semaine: weekId,
-          Date_debut: fromInputDateTime(row.date_debut || '') || undefined,
-          Date_fin: fromInputDateTime(row.date_fin || ''),
-          Duree: toNumOrNull(row.duree || ''),
-          Heure_supp: toNumOrNull(row.heure_supp || ''),
-        };
-
-        if (!payload.ID_Commande || !payload.ID_Operateur || !payload.ID_Poste || !payload.ID_Article) {
-          skipped += 1;
-          continue;
-        }
-
-        if (id && idx('id') >= 0) {
-          // eslint-disable-next-line no-await-in-loop
-          await affectationsApi.update(id, payload);
-          updated += 1;
-        } else {
-          const createPayload: CreateAffectationPayload = {
-            ID_Commande: payload.ID_Commande,
-            ID_Operateur: payload.ID_Operateur,
-            ID_Poste: payload.ID_Poste,
-            ID_Article: payload.ID_Article,
-            ID_Semaine: payload.ID_Semaine,
-            Date_debut: payload.Date_debut || undefined,
-          };
-          // eslint-disable-next-line no-await-in-loop
-          await affectationsApi.create(createPayload);
-          created += 1;
-        }
-      }
-
+      await affectationsApi.importFile(file);
       await loadData();
-      showToast.success(`Import termine: ${created} crees, ${updated} modifies, ${skipped} ignores`);
+      showToast.success('Import XLSX termine');
     } catch (e: any) {
       showToast.error(e?.error || e?.message || 'Erreur import');
     } finally {
@@ -391,7 +291,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
         </div>
       </FilterPanel>
 
-      <input ref={fileInputRef} type="file" accept=".csv" className="hidden" onChange={importCsv} />
+      <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={importXlsx} />
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
