@@ -1,5 +1,4 @@
 const ExcelJS = require('exceljs');
-const XLSX = require('xlsx');
 const db = require('../config/database');
 const { Readable } = require('stream');
 
@@ -43,44 +42,6 @@ class ImportService {
       worksheet = null;
     }
 
-    // Fallback 1: XLS/XLSX via SheetJS (supporte .xls legacy)
-    if (!worksheet) {
-      try {
-        const workbookXls = XLSX.read(buffer, {
-          type: 'buffer',
-          cellDates: true,
-          raw: false
-        });
-
-        const firstSheetName = workbookXls.SheetNames?.[0];
-        if (firstSheetName) {
-          const sheet = workbookXls.Sheets[firstSheetName];
-          const jsonRows = XLSX.utils.sheet_to_json(sheet, {
-            defval: '',
-            raw: false
-          });
-
-          const formattedRows = jsonRows.map((row) => {
-            const out = {};
-            Object.entries(row || {}).forEach(([k, v]) => {
-              if (v instanceof Date) {
-                out[k] = this.formatDate(v);
-              } else {
-                out[k] = v;
-              }
-            });
-            return out;
-          });
-
-          if (formattedRows.length > 0) {
-            return formattedRows;
-          }
-        }
-      } catch (_) {
-        // continue vers fallback CSV
-      }
-    }
-
     if (!worksheet) {
       try {
         const csvText = buffer.toString('utf8');
@@ -99,7 +60,7 @@ class ImportService {
     }
 
     if (!worksheet) {
-      throw new Error('Format non supporte. Utilisez un fichier .xls, .xlsx ou .csv');
+      throw new Error('Format non supporte. Utilisez un fichier .xlsx ou .csv');
     }
 
     const data = [];

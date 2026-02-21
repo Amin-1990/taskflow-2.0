@@ -18,10 +18,9 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "mysql2": "^3.17.1",
-    "pdfkit": "^0.17.2",
-    "xlsx": "^0.18.5"
+    "pdfkit": "^0.17.2"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.1.13"
   }
 }
