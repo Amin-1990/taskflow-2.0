@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { logAction } = require('../services/audit.service');
+const exportService = require('../services/export.service');
 
 // Helper pour extraire IP et User-Agent
 const getAuditInfo = (req) => ({
@@ -220,6 +221,31 @@ exports.deleteTypeMachine = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Erreur lors de la suppression du type de machine' 
+    });
+  }
+};
+
+// GET /api/types-machine/export/xlsx - Exporter les types machine en XLSX
+exports.exportTypesMachineXLSX = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        ID as 'ID',
+        Type_machine as 'Type machine'
+      FROM types_machine
+      ORDER BY ID ASC
+    `);
+
+    const buffer = await exportService.toExcel(rows, 'Types Machine');
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=types_machine.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erreur exportTypesMachineXLSX:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de export des types machine'
     });
   }
 };

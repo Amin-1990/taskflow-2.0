@@ -4,6 +4,7 @@
  */
 
 import api from '../services/api';
+import type { ApiResponse } from '../types/api.types';
 import type {
   Intervention,
   CreateMachineDto,
@@ -82,7 +83,30 @@ export async function deleteMachine(id: number): Promise<void> {
  * Récupère les types de machines disponibles
  */
 export async function getMachineTypes(): Promise<any[]> {
-  const response = await api.get<any[]>('/types-machine');
+  const response = await api.get<ApiResponse<any[]>>('/types-machine');
+  return response.data?.data || [];
+}
+
+export async function exportMachinesXlsx(): Promise<Blob> {
+  const response = await api.get<Blob>('/machines/export/xlsx', {
+    responseType: 'blob'
+  } as any);
+  return response.data;
+}
+
+export async function getMachinesTemplateImport(): Promise<Blob> {
+  const response = await api.get<Blob>('/import/template/machines', {
+    responseType: 'blob'
+  } as any);
+  return response.data;
+}
+
+export async function importMachines(file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post<ApiResponse<any>>('/import/machines', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  });
   return response.data;
 }
 
@@ -180,6 +204,29 @@ export async function assignIntervention(
 ): Promise<MaintenanceResponse> {
   const response = await api.patch<MaintenanceResponse>(`/interventions/${id}/affecter`, {
     ID_Technicien: technicien_id,
+  });
+  return response.data;
+}
+
+export async function exportInterventionsXlsx(): Promise<Blob> {
+  const response = await api.get<Blob>('/interventions/export/xlsx', {
+    responseType: 'blob'
+  } as any);
+  return response.data;
+}
+
+export async function getInterventionsTemplateImport(): Promise<Blob> {
+  const response = await api.get<Blob>('/import/template/interventions', {
+    responseType: 'blob'
+  } as any);
+  return response.data;
+}
+
+export async function importInterventions(file: File): Promise<any> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post<ApiResponse<any>>('/import/interventions', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
   });
   return response.data;
 }

@@ -1,5 +1,5 @@
-/**
- * Hook personnalisé pour gérer les machines
+﻿/**
+ * Hook personnalise pour gerer les machines
  * Chargement, filtrage, pagination et recherche
  */
 
@@ -9,9 +9,9 @@ import { showToast } from '../utils/toast';
 import type {
   Machine,
   MachineDetail,
+  TypeMachine,
   FiltresMachines,
   MachineSortField,
-  MachinesListResponse,
   CreateMachineDto,
   UpdateMachineDto,
 } from '../types/maintenance.types';
@@ -27,19 +27,17 @@ export interface UseMachinesOptions {
 }
 
 /**
- * Valeur retournée par le hook
+ * Valeur retournee par le hook
  */
 interface UseMachinesReturn {
-  // Données
   machines: Machine[];
   machineDetail: MachineDetail | null;
+  machineTypes: TypeMachine[];
 
-  // États
   loading: boolean;
   loadingDetail: boolean;
   error: string | null;
 
-  // Pagination
   page: number;
   limit: number;
   total: number;
@@ -47,22 +45,19 @@ interface UseMachinesReturn {
   setPage: (page: number) => void;
   setLimit: (limit: number) => void;
 
-  // Filtres
   filtres: FiltresMachines;
   setFiltres: (filtres: Partial<FiltresMachines>) => void;
   clearFiltres: () => void;
 
-  // Tri
   sort: MachineSortField;
   order: 'asc' | 'desc';
   setSort: (field: MachineSortField, order?: 'asc' | 'desc') => void;
 
-  // Recherche
   recherche: string;
   setRecherche: (terme: string) => void;
 
-  // Actions
   fetchMachines: () => Promise<void>;
+  fetchMachineTypes: () => Promise<void>;
   fetchDetail: (id: number) => Promise<void>;
   createMachine: (data: CreateMachineDto) => Promise<Machine | null>;
   updateMachine: (id: number, data: UpdateMachineDto) => Promise<Machine | null>;
@@ -70,10 +65,6 @@ interface UseMachinesReturn {
   updateStatut: (id: number, statut: string) => Promise<boolean>;
 }
 
-/**
- * Hook useMachines
- * Gère toute la logique de chargement et manipulation des machines
- */
 export const useMachines = (
   options: UseMachinesOptions = {}
 ): UseMachinesReturn => {
@@ -84,33 +75,55 @@ export const useMachines = (
     initialOrder = 'asc',
   } = options;
 
-  // États de données
   const [machines, setMachines] = useState<Machine[]>([]);
   const [machineDetail, setMachineDetail] = useState<MachineDetail | null>(null);
+  const [machineTypes, setMachineTypes] = useState<TypeMachine[]>([]);
 
-  // États de chargement
   const [loading, setLoading] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Pagination
   const [page, setPage] = useState(initialPage);
   const [limit, setLimit] = useState(initialLimit);
   const [total, setTotal] = useState(0);
 
-  // Filtres
   const [filtres, setFiltresState] = useState<FiltresMachines>({});
 
-  // Tri
   const [sort, setSort] = useState<MachineSortField>(initialSort);
   const [order, setOrder] = useState<'asc' | 'desc'>(initialOrder);
 
-  // Recherche
   const [recherche, setRecherche] = useState('');
 
-  /**
-   * Charger la liste des machines
-   */
+  const normalizeMachine = useCallback((raw: any): Machine => {
+    const id = Number(raw?.ID ?? raw?.id ?? 0);
+    const typeMachineId = Number(raw?.Type_machine_id ?? raw?.type_machine_id ?? 0);
+    const typeMachine = String(raw?.Type_machine ?? raw?.type ?? '').trim();
+    const code = String(raw?.Code_interne ?? raw?.code ?? '').trim();
+    const nom = String(raw?.Nom_machine ?? raw?.nom ?? '').trim();
+    const localisation = String(raw?.Site_affectation ?? raw?.localisation ?? '').trim();
+    const statutRaw = String(raw?.Statut_operationnel ?? raw?.statut ?? '').trim();
+    const statut = (statutRaw === 'operationnel' ? 'operationnelle' : statutRaw) as any;
+
+    return {
+      ...raw,
+      ID: id,
+      id,
+      Type_machine_id: typeMachineId,
+      Type_machine: typeMachine,
+      code,
+      nom,
+      type: typeMachine,
+      localisation,
+      statut,
+      date_installation: raw?.Date_installation ?? raw?.date_installation ?? null,
+      date_derniere_maintenance: raw?.Date_derniere_maintenance ?? raw?.date_derniere_maintenance ?? null,
+      date_prochaine_maintenance: raw?.Date_prochaine_maintenance ?? raw?.date_prochaine_maintenance ?? null,
+      description: raw?.Description ?? raw?.description ?? null,
+      numero_serie: raw?.Numero_serie ?? raw?.numero_serie ?? null,
+      notes: raw?.Commentaire ?? raw?.notes ?? null,
+    } as Machine;
+  }, []);
+
   const fetchMachines = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -122,154 +135,168 @@ export const useMachines = (
         limit
       );
 
-      setMachines(response.data || []);
-      setTotal(response.total || 0);
-      console.log(`✅ ${(response.data || []).length} machines chargées`);
+      const payload = Array.isArray(response.data) ? response.data : [];
+      const normalized = payload.map((row: any) => normalizeMachine(row));
+
+      const filtered = normalized.filter((machine) => {
+        const q = recherche.trim().toLowerCase();
+        const matchSearch = !q
+          || machine.code?.toLowerCase().includes(q)
+          || machine.nom?.toLowerCase().includes(q)
+          || machine.Type_machine?.toLowerCase().includes(q);
+
+        const matchStatut = !filtres.statut || machine.statut === filtres.statut;
+        const matchType = !filtres.Type_machine_id || machine.Type_machine_id === filtres.Type_machine_id;
+        const matchLocalisation = !filtres.localisation
+          || machine.localisation?.toLowerCase().includes(String(filtres.localisation).toLowerCase());
+
+        return matchSearch && matchStatut && matchType && matchLocalisation;
+      });
+
+      const computedPages = Math.max(1, Math.ceil(filtered.length / limit));
+      if (page > computedPages) {
+        setPage(computedPages);
+        setLoading(false);
+        return;
+      }
+
+      const start = (page - 1) * limit;
+      const paged = filtered.slice(start, start + limit);
+
+      setMachines(paged);
+      setTotal(filtered.length);
+      console.log(`Loaded ${paged.length} machines`);
     } catch (err: any) {
       const errorMsg = err.message || 'Erreur inconnue';
       setError(errorMsg);
-      console.error('❌ Erreur chargement machines:', err);
+      console.error('Erreur chargement machines:', err);
       showToast.error(errorMsg);
     } finally {
       setLoading(false);
     }
-  }, [page, limit, filtres, recherche]);
+  }, [filtres, limit, normalizeMachine, page, recherche]);
 
-  /**
-   * Charger les détails d'une machine
-   */
+  const fetchMachineTypes = useCallback(async () => {
+    try {
+      const types = await maintenanceApi.getMachineTypes();
+      setMachineTypes(Array.isArray(types) ? types : []);
+    } catch (err: any) {
+      console.error('Erreur chargement types machine:', err);
+    }
+  }, []);
+
   const fetchDetail = useCallback(async (id: number) => {
     setLoadingDetail(true);
     setError(null);
 
     try {
       const response = await maintenanceApi.getMachineById(id);
-      setMachineDetail(response);
-      console.log(`✅ Détails machine ${id} chargés`);
+      const raw = (response as any)?.data || response;
+      setMachineDetail(normalizeMachine(raw) as any);
+      console.log(`Details machine ${id} charges`);
     } catch (err: any) {
       const errorMsg = err.message || 'Erreur inconnue';
       setError(errorMsg);
-      console.error('❌ Erreur chargement détails:', err);
+      console.error('Erreur chargement details:', err);
       showToast.error(errorMsg);
     } finally {
       setLoadingDetail(false);
     }
-  }, []);
+  }, [normalizeMachine]);
 
-  /**
-   * Créer une nouvelle machine
-   */
   const createMachine = useCallback(async (data: CreateMachineDto) => {
-    const toastId = showToast.loading('Création de la machine...');
+    const toastId = showToast.loading('Creation de la machine...');
 
     try {
-      const response = await maintenanceApi.createMachine(data);
-      showToast.update(toastId, `Machine créée: ${response.code}`, 'success');
-      console.log('✅ Machine créée:', response.code);
+      const response: any = await maintenanceApi.createMachine(data);
+      const machine = response?.data || response;
+      const code = machine?.Code_interne || machine?.code || '';
+      showToast.update(toastId, `Machine creee${code ? `: ${code}` : ''}`, 'success');
       setPage(1);
       await fetchMachines();
-      return { id: response.id } as Machine;
+      return machine ? normalizeMachine(machine) : ({ id: 0 } as Machine);
     } catch (err: any) {
       const errorMsg = err.message || 'Erreur inconnue';
       showToast.update(toastId, errorMsg, 'error');
-      console.error('❌ Erreur création:', err);
+      console.error('Erreur creation:', err);
     }
     return null;
-  }, [fetchMachines]);
+  }, [fetchMachines, normalizeMachine]);
 
-  /**
-   * Mettre à jour une machine
-   */
   const updateMachine = useCallback(async (id: number, data: UpdateMachineDto) => {
-    const toastId = showToast.loading('Mise à jour...');
+    const toastId = showToast.loading('Mise a jour...');
 
     try {
-      const response = await maintenanceApi.updateMachine(id, data);
-      showToast.update(toastId, 'Machine mise à jour', 'success');
-      console.log('✅ Machine mise à jour');
+      const response: any = await maintenanceApi.updateMachine(id, data);
+      showToast.update(toastId, 'Machine mise a jour', 'success');
       await fetchMachines();
-      return { id: response.id } as Machine;
+      return normalizeMachine(response?.data || response);
     } catch (err: any) {
       const errorMsg = err.message || 'Erreur inconnue';
       showToast.update(toastId, errorMsg, 'error');
-      console.error('❌ Erreur mise à jour:', err);
+      console.error('Erreur mise a jour:', err);
     }
     return null;
-  }, [fetchMachines]);
+  }, [fetchMachines, normalizeMachine]);
 
-  /**
-   * Supprimer une machine
-   */
   const deleteMachine = useCallback(async (id: number) => {
     const toastId = showToast.loading('Suppression...');
 
     try {
       await maintenanceApi.deleteMachine(id);
-      showToast.update(toastId, 'Machine supprimée', 'success');
-      console.log('✅ Machine supprimée');
+      showToast.update(toastId, 'Machine supprimee', 'success');
       await fetchMachines();
       return true;
     } catch (err: any) {
       const errorMsg = err.message || 'Erreur inconnue';
       showToast.update(toastId, errorMsg, 'error');
-      console.error('❌ Erreur suppression:', err);
+      console.error('Erreur suppression:', err);
     }
     return false;
   }, [fetchMachines]);
 
-  /**
-   * Mettre à jour le statut d'une machine
-   */
   const updateMachineStatut = useCallback(async (id: number, statut: string) => {
     try {
-      await maintenanceApi.updateMachine(id, { statut: statut as any });
-      showToast.success('Statut mis à jour');
-      console.log('✅ Statut mise à jour');
+      await maintenanceApi.updateMachine(id, { Statut_operationnel: statut as any });
+      showToast.success('Statut mis a jour');
       await fetchMachines();
       return true;
     } catch (err: any) {
       const errorMsg = err.message || 'Erreur inconnue';
       showToast.error(errorMsg);
-      console.error('❌ Erreur mise à jour statut:', err);
+      console.error('Erreur mise a jour statut:', err);
     }
     return false;
   }, [fetchMachines]);
 
-  /**
-   * Mettre à jour les filtres
-   */
   const setFiltres = useCallback((newFiltres: Partial<FiltresMachines>) => {
-    setFiltresState(prev => ({ ...prev, ...newFiltres }));
+    setFiltresState((prev) => ({ ...prev, ...newFiltres }));
     setPage(1);
   }, []);
 
-  /**
-   * Réinitialiser les filtres
-   */
   const clearFiltres = useCallback(() => {
     setFiltresState({});
     setPage(1);
   }, []);
 
-  /**
-   * Changer le tri
-   */
   const handleSetSort = useCallback((field: MachineSortField, ord?: 'asc' | 'desc') => {
     setSort(field);
     if (ord) setOrder(ord);
     setPage(1);
   }, []);
 
-  /**
-   * Charger les machines quand les paramètres changent
-   */
   useEffect(() => {
     fetchMachines();
   }, [fetchMachines]);
 
+  useEffect(() => {
+    fetchMachineTypes();
+  }, [fetchMachineTypes]);
+
   return {
     machines,
     machineDetail,
+    machineTypes,
     loading,
     loadingDetail,
     error,
@@ -288,6 +315,7 @@ export const useMachines = (
     recherche,
     setRecherche,
     fetchMachines,
+    fetchMachineTypes,
     fetchDetail,
     createMachine,
     updateMachine,
@@ -297,6 +325,4 @@ export const useMachines = (
 };
 
 export default useMachines;
-
-
 

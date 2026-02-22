@@ -1,3 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --layout-header-bg: #c7bbfb;
+  --layout-header-text: #ffffff;
+  --layout-header-text-muted: rgba(255, 255, 255, 0.75);
+  --layout-header-border: rgba(255, 255, 255, 0.35);
+  --layout-header-hover-bg: rgba(255, 255, 255, 0.12);
+
+  --layout-sidebar-bg: #c7bbfb;
+  --layout-sidebar-text: #ffffff;
+  --layout-sidebar-text-muted: rgba(255, 255, 255, 0.85);
+  --layout-sidebar-hover-bg: rgba(255, 255, 255, 0.12);
+  --layout-sidebar-active-bg: rgba(255, 255, 255, 0.2);
+  --layout-sidebar-submenu-bg: rgba(255, 255, 255, 0.08);
+}
+
+.layout-header-search::placeholder {
+  color: var(--layout-header-text-muted);
+}
+
+.layout-header-hover:hover {
+  background-color: var(--layout-header-hover-bg);
+}
+
+.layout-sidebar-hover:hover {
+  background-color: var(--layout-sidebar-hover-bg);
+}
+
+.layout-sidebar-active {
+  background-color: var(--layout-sidebar-active-bg);
+}

@@ -255,6 +255,102 @@ class ImportController {
   }
 
   /**
+   * Template types machine
+   */
+  async getTemplateTypesMachine(req, res) {
+    try {
+      const columns = [
+        { header: 'Type machine', key: 'type_machine', width: 35, example: 'Presse hydraulique' }
+      ];
+
+      const buffer = await importService.generateTemplate(columns, 'Types Machine');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_types_machine.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erreur template types machine:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Template defauts type machine
+   */
+  async getTemplateDefautsTypeMachine(req, res) {
+    try {
+      const columns = [
+        { header: 'ID_Type_machine', key: 'id_type_machine', width: 18, example: '1' },
+        { header: 'Type_machine', key: 'type_machine', width: 30, example: 'Presse hydraulique' },
+        { header: 'Code_defaut', key: 'code_defaut', width: 18, example: 'DF-TM-001' },
+        { header: 'Nom_defaut', key: 'nom_defaut', width: 28, example: 'Surchauffe moteur' },
+        { header: 'Description_defaut', key: 'description_defaut', width: 40, example: 'Temperature anormale du moteur principal' }
+      ];
+
+      const buffer = await importService.generateTemplate(columns, 'Defauts Type Machine');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_defauts_type_machine.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erreur template defauts type machine:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Template machines
+   */
+  async getTemplateMachines(req, res) {
+    try {
+      const columns = [
+        { header: 'Code', key: 'code', width: 18, example: 'MCH-001' },
+        { header: 'Nom', key: 'nom', width: 28, example: 'Presse hydraulique A' },
+        { header: 'Type machine', key: 'type_machine', width: 28, example: 'Presse hydraulique' },
+        { header: 'Statut operationnel', key: 'statut_operationnel', width: 20, example: 'operationnel' },
+        { header: 'Site affectation', key: 'site_affectation', width: 22, example: 'Unite 1' },
+        { header: 'Date installation', key: 'date_installation', width: 18, example: '2024-01-20' },
+        { header: 'Numero serie', key: 'numero_serie', width: 20, example: 'SN-12345' },
+        { header: 'Description', key: 'description', width: 34, example: 'Machine principale ligne 1' },
+        { header: 'Notes', key: 'notes', width: 34, example: 'Controle trimestriel' }
+      ];
+
+      const buffer = await importService.generateTemplate(columns, 'Machines');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_machines.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erreur template machines:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
+   * Template interventions
+   */
+  async getTemplateInterventions(req, res) {
+    try {
+      const columns = [
+        { header: 'Type machine', key: 'type_machine', width: 28, example: 'Presse hydraulique' },
+        { header: 'Code machine', key: 'code_machine', width: 18, example: 'MCH-001' },
+        { header: 'Demandeur ID', key: 'demandeur_id', width: 14, example: '1' },
+        { header: 'Description panne', key: 'description_panne', width: 40, example: 'Arret soudain de la machine' },
+        { header: 'Priorite', key: 'priorite', width: 12, example: 'NORMALE' },
+        { header: 'Impact production', key: 'impact_production', width: 18, example: 'Partiel' },
+        { header: 'Statut', key: 'statut', width: 14, example: 'EN_ATTENTE' },
+        { header: 'Technicien ID', key: 'technicien_id', width: 14, example: '' },
+        { header: 'Commentaire', key: 'commentaire', width: 30, example: 'Controle urgent' }
+      ];
+
+      const buffer = await importService.generateTemplate(columns, 'Interventions');
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_interventions.xlsx');
+      res.send(buffer);
+    } catch (error) {
+      console.error('Erreur template interventions:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  /**
    * Template pointage (XLSX)
    */
   async getTemplatePointage(req, res) {
@@ -1272,6 +1368,605 @@ class ImportController {
     } catch (error) {
       await connection.rollback();
       console.error('Erreur import affectations:', error);
+      return res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Import types machine depuis fichier Excel/CSV
+   */
+  async importTypesMachine(req, res) {
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
+
+      const data = await importService.readExcel(req.file.buffer);
+      const errors = [];
+      const resultats = [];
+
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
+
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
+
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
+
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
+
+        const typeMachine = String(
+          getCell(row, ['type machine', 'type_machine']) || ''
+        ).trim();
+
+        if (!typeMachine) {
+          errors.push(`Ligne ${rowNumber}: Type machine requis`);
+          continue;
+        }
+
+        try {
+          const [existing] = await connection.query(
+            'SELECT ID FROM types_machine WHERE Type_machine = ? LIMIT 1',
+            [typeMachine]
+          );
+
+          if (existing.length > 0) {
+            await connection.query(
+              'UPDATE types_machine SET Type_machine = ? WHERE ID = ?',
+              [typeMachine, existing[0].ID]
+            );
+            resultats.push({ id: existing[0].ID, type_machine: typeMachine, action: 'updated' });
+          } else {
+            const [insert] = await connection.query(
+              'INSERT INTO types_machine (Type_machine) VALUES (?)',
+              [typeMachine]
+            );
+            resultats.push({ id: insert.insertId, type_machine: typeMachine, action: 'created' });
+          }
+        } catch (importError) {
+          errors.push(`Ligne ${rowNumber}: ${importError.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'types_machine',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      return res.json({
+        success: true,
+        message: `${resultats.length} types machine importes`,
+        data: resultats
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import types machine:', error);
+      return res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Import defauts type machine depuis fichier Excel/CSV
+   */
+  async importDefautsTypeMachine(req, res) {
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
+
+      const data = await importService.readExcel(req.file.buffer);
+      const errors = [];
+      const resultats = [];
+
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
+
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
+
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
+
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
+
+        const idTypeRaw = getCell(row, ['id type machine', 'id_type_machine', 'id type']);
+        const typeMachineRaw = getCell(row, ['type machine', 'type_machine']);
+        const codeDefaut = String(getCell(row, ['code defaut', 'code_defaut']) || '').trim();
+        const nomDefaut = String(getCell(row, ['nom defaut', 'nom_defaut']) || '').trim();
+        const descriptionDefaut = String(getCell(row, ['description defaut', 'description_defaut']) || '').trim() || null;
+
+        if (!codeDefaut || !nomDefaut) {
+          errors.push(`Ligne ${rowNumber}: Code_defaut et Nom_defaut sont requis`);
+          continue;
+        }
+
+        let typeMachineId = null;
+        if (idTypeRaw !== null && idTypeRaw !== undefined && String(idTypeRaw).trim() !== '') {
+          const parsedId = parseInt(String(idTypeRaw).trim(), 10);
+          if (Number.isNaN(parsedId) || parsedId <= 0) {
+            errors.push(`Ligne ${rowNumber}: ID_Type_machine invalide`);
+            continue;
+          }
+          typeMachineId = parsedId;
+        } else if (typeMachineRaw) {
+          const typeMachineNom = String(typeMachineRaw).trim();
+          const [typeRows] = await connection.query(
+            'SELECT ID FROM types_machine WHERE Type_machine = ? LIMIT 1',
+            [typeMachineNom]
+          );
+          if (typeRows.length === 0) {
+            errors.push(`Ligne ${rowNumber}: Type_machine introuvable (${typeMachineNom})`);
+            continue;
+          }
+          typeMachineId = typeRows[0].ID;
+        } else {
+          errors.push(`Ligne ${rowNumber}: ID_Type_machine ou Type_machine requis`);
+          continue;
+        }
+
+        const [typeExists] = await connection.query(
+          'SELECT ID FROM types_machine WHERE ID = ? LIMIT 1',
+          [typeMachineId]
+        );
+        if (typeExists.length === 0) {
+          errors.push(`Ligne ${rowNumber}: Type machine ID ${typeMachineId} introuvable`);
+          continue;
+        }
+
+        try {
+          const [existing] = await connection.query(
+            `SELECT ID
+             FROM defauts_par_type_machine
+             WHERE ID_Type_machine = ? AND Code_defaut = ?
+             LIMIT 1`,
+            [typeMachineId, codeDefaut]
+          );
+
+          if (existing.length > 0) {
+            await connection.query(
+              `UPDATE defauts_par_type_machine
+               SET Nom_defaut = ?, Description_defaut = ?
+               WHERE ID = ?`,
+              [nomDefaut, descriptionDefaut, existing[0].ID]
+            );
+            resultats.push({
+              id: existing[0].ID,
+              id_type_machine: typeMachineId,
+              code_defaut: codeDefaut,
+              action: 'updated'
+            });
+          } else {
+            const [insert] = await connection.query(
+              `INSERT INTO defauts_par_type_machine (
+                ID_Type_machine, Code_defaut, Nom_defaut, Description_defaut
+              ) VALUES (?, ?, ?, ?)`,
+              [typeMachineId, codeDefaut, nomDefaut, descriptionDefaut]
+            );
+            resultats.push({
+              id: insert.insertId,
+              id_type_machine: typeMachineId,
+              code_defaut: codeDefaut,
+              action: 'created'
+            });
+          }
+        } catch (importError) {
+          errors.push(`Ligne ${rowNumber}: ${importError.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'defauts_par_type_machine',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      return res.json({
+        success: true,
+        message: `${resultats.length} defauts type machine importes`,
+        data: resultats
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import defauts type machine:', error);
+      return res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Import machines depuis fichier Excel/CSV
+   * La colonne type machine attend le nom du type
+   */
+  async importMachines(req, res) {
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
+
+      const data = await importService.readExcel(req.file.buffer);
+      const errors = [];
+      const resultats = [];
+
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
+
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
+
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
+
+      const toDateOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().split('T')[0];
+        const raw = String(value).trim();
+        const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (ymd) return `${ymd[1]}-${String(Number(ymd[2])).padStart(2, '0')}-${String(Number(ymd[3])).padStart(2, '0')}`;
+        const dmy = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (dmy) {
+          const yyyy = dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3];
+          return `${yyyy}-${String(Number(dmy[2])).padStart(2, '0')}-${String(Number(dmy[1])).padStart(2, '0')}`;
+        }
+        const parsed = new Date(raw);
+        return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+      };
+
+      const statutsAutorises = new Set(['operationnel', 'en_maintenance', 'hors_service']);
+
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
+
+        const code = String(getCell(row, ['code', 'code interne', 'code_interne']) || '').trim();
+        const nom = String(getCell(row, ['nom', 'nom machine', 'nom_machine']) || '').trim();
+        const typeMachineNom = String(getCell(row, ['type machine', 'type_machine']) || '').trim();
+        const statutRaw = String(getCell(row, ['statut operationnel', 'statut_operationnel']) || 'operationnel').trim();
+        const site = String(getCell(row, ['site affectation', 'site_affectation']) || '').trim();
+        const dateInstallation = toDateOrNull(getCell(row, ['date installation', 'date_installation']));
+        const numeroSerie = String(getCell(row, ['numero serie', 'numero_serie']) || '').trim() || null;
+        const description = String(getCell(row, ['description']) || '').trim() || null;
+        const notes = String(getCell(row, ['notes', 'commentaire']) || '').trim() || null;
+
+        if (!code || !nom || !typeMachineNom) {
+          errors.push(`Ligne ${rowNumber}: Code, nom et type machine sont requis`);
+          continue;
+        }
+
+        if (!statutsAutorises.has(statutRaw)) {
+          errors.push(`Ligne ${rowNumber}: Statut operationnel invalide (${statutRaw})`);
+          continue;
+        }
+
+        const [typeRows] = await connection.query(
+          'SELECT ID FROM types_machine WHERE Type_machine = ? LIMIT 1',
+          [typeMachineNom]
+        );
+
+        if (typeRows.length === 0) {
+          errors.push(`Ligne ${rowNumber}: Type machine introuvable (${typeMachineNom})`);
+          continue;
+        }
+
+        const typeMachineId = typeRows[0].ID;
+
+        try {
+          const [existing] = await connection.query(
+            'SELECT ID FROM machines WHERE Code_interne = ? LIMIT 1',
+            [code]
+          );
+
+          if (existing.length > 0) {
+            await connection.query(
+              `UPDATE machines
+               SET Type_machine_id = ?, Nom_machine = ?, Statut_operationnel = ?, Site_affectation = ?,
+                   Date_installation = ?, Numero_serie = ?, Description = ?, Commentaire = ?, Date_modification = NOW()
+               WHERE ID = ?`,
+              [typeMachineId, nom, statutRaw, site || null, dateInstallation, numeroSerie, description, notes, existing[0].ID]
+            );
+            resultats.push({ id: existing[0].ID, code, action: 'updated' });
+          } else {
+            const [insert] = await connection.query(
+              `INSERT INTO machines (
+                Type_machine_id, Code_interne, Nom_machine, Statut_operationnel, Site_affectation,
+                Date_installation, Numero_serie, Description, Commentaire, Statut, Date_creation
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'actif', NOW())`,
+              [typeMachineId, code, nom, statutRaw, site || null, dateInstallation, numeroSerie, description, notes]
+            );
+            resultats.push({ id: insert.insertId, code, action: 'created' });
+          }
+        } catch (importError) {
+          errors.push(`Ligne ${rowNumber}: ${importError.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'machines',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      return res.json({
+        success: true,
+        message: `${resultats.length} machines importees`,
+        data: resultats
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import machines:', error);
+      return res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
+
+  /**
+   * Import interventions depuis fichier Excel/CSV
+   */
+  async importInterventions(req, res) {
+    const connection = await db.getConnection();
+
+    try {
+      await connection.beginTransaction();
+
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
+
+      const data = await importService.readExcel(req.file.buffer);
+      const errors = [];
+      const resultats = [];
+
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
+
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
+
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && String(row[key]).trim() !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
+
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
+
+      const statutsAutorises = new Set(['EN_ATTENTE', 'AFFECTEE', 'EN_COURS', 'EN_PAUSE', 'TERMINEE', 'ANNULEE', 'REPORTEE']);
+      const prioritesAutorisees = new Set(['URGENTE', 'HAUTE', 'NORMALE', 'BASSE']);
+      const impactsAutorises = new Set(['Aucun', 'Mineur', 'Partiel', 'Total']);
+
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
+
+        const typeMachineNom = String(getCell(row, ['type machine', 'type_machine']) || '').trim();
+        const codeMachine = String(getCell(row, ['code machine', 'code_machine']) || '').trim();
+        const demandeurId = Number(getCell(row, ['demandeur id', 'demandeur_id']));
+        const descriptionPanne = String(getCell(row, ['description panne', 'description_panne']) || '').trim();
+        const priorite = String(getCell(row, ['priorite']) || 'NORMALE').trim().toUpperCase();
+        const impact = String(getCell(row, ['impact production', 'impact_production']) || 'Partiel').trim();
+        const statut = String(getCell(row, ['statut']) || 'EN_ATTENTE').trim().toUpperCase();
+        const technicienRaw = getCell(row, ['technicien id', 'technicien_id']);
+        const technicienId = technicienRaw ? Number(technicienRaw) : null;
+        const commentaire = String(getCell(row, ['commentaire']) || '').trim() || null;
+
+        if (!typeMachineNom || !codeMachine || !Number.isInteger(demandeurId) || demandeurId <= 0 || !descriptionPanne) {
+          errors.push(`Ligne ${rowNumber}: Type machine, code machine, demandeur ID et description panne sont requis`);
+          continue;
+        }
+
+        if (!prioritesAutorisees.has(priorite)) {
+          errors.push(`Ligne ${rowNumber}: Priorite invalide (${priorite})`);
+          continue;
+        }
+
+        if (!statutsAutorises.has(statut)) {
+          errors.push(`Ligne ${rowNumber}: Statut invalide (${statut})`);
+          continue;
+        }
+
+        if (!impactsAutorises.has(impact)) {
+          errors.push(`Ligne ${rowNumber}: Impact production invalide (${impact})`);
+          continue;
+        }
+
+        const [typeRows] = await connection.query(
+          'SELECT ID FROM types_machine WHERE Type_machine = ? LIMIT 1',
+          [typeMachineNom]
+        );
+        if (typeRows.length === 0) {
+          errors.push(`Ligne ${rowNumber}: Type machine introuvable (${typeMachineNom})`);
+          continue;
+        }
+
+        const [machineRows] = await connection.query(
+          'SELECT ID FROM machines WHERE Code_interne = ? LIMIT 1',
+          [codeMachine]
+        );
+        if (machineRows.length === 0) {
+          errors.push(`Ligne ${rowNumber}: Machine introuvable (${codeMachine})`);
+          continue;
+        }
+
+        try {
+          const [insert] = await connection.query(
+            `INSERT INTO demande_intervention (
+              ID_Type_machine, ID_Machine, Date_heure_demande, Demandeur, Description_panne,
+              Priorite, Impact_production, Statut, ID_Technicien, Commentaire, Date_creation
+            ) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [
+              typeRows[0].ID,
+              machineRows[0].ID,
+              demandeurId,
+              descriptionPanne,
+              priorite,
+              impact,
+              statut,
+              technicienId,
+              commentaire
+            ]
+          );
+          resultats.push({ id: insert.insertId, code_machine: codeMachine, action: 'created' });
+        } catch (importError) {
+          errors.push(`Ligne ${rowNumber}: ${importError.message}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'demande_intervention',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      return res.json({
+        success: true,
+        message: `${resultats.length} interventions importees`,
+        data: resultats
+      });
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import interventions:', error);
       return res.status(500).json({ error: error.message });
     } finally {
       connection.release();

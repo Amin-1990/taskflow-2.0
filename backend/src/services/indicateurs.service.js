@@ -47,7 +47,24 @@ class IndicateursService {
 
     async getIndicateursProduction(periode) {
         try {
-            const dateCondition = this.getDateCondition(periode, 'c.Date_creation');
+            const commandesDateField = await this.resolveDateField(
+                'commandes',
+                'c',
+                ['Date_creation', 'Date_debut', 'Date_modification']
+            );
+            const commandesDateCondition = this.getDateCondition(periode, commandesDateField);
+            const affectationsDateField = await this.resolveDateField(
+                'affectations',
+                'a',
+                ['Date_creation', 'Date_debut', 'Date_modification', 'Date_fin']
+            );
+            const affectationsDateCondition = this.getDateCondition(periode, affectationsDateField);
+            const semainesDateField = await this.resolveDateField(
+                'semaines',
+                's',
+                ['Date_creation', 'Date_debut', 'Date_modification']
+            );
+            const semainesDateCondition = this.getDateCondition(periode, semainesDateField);
 
             // Données commandes
             const [commandes] = await db.query(`
@@ -65,7 +82,7 @@ class IndicateursService {
                 FROM planning_hebdo
                 GROUP BY ID_Commande
               ) pf ON pf.ID_Commande = c.ID
-              WHERE ${dateCondition}
+              WHERE ${commandesDateCondition}
             `);
 
             // Données affectations
@@ -75,8 +92,8 @@ class IndicateursService {
           SUM(CASE WHEN Date_fin IS NULL THEN 1 ELSE 0 END) as affectations_en_cours,
           ROUND(AVG(COALESCE(Duree, 0)), 2) as duree_moyenne,
           ROUND(AVG(COALESCE(Heure_supp, 0)), 2) as heures_sup_moyenne
-        FROM affectations
-        WHERE ${dateCondition}
+        FROM affectations a
+        WHERE ${affectationsDateCondition}
       `);
 
             // Planning hebdomadaire
@@ -87,7 +104,7 @@ class IndicateursService {
           COUNT(*) as total_semaines
         FROM planning_hebdo ph
         JOIN semaines s ON ph.ID_Semaine_planifiee = s.ID
-        WHERE ${dateCondition.replace(/c\./g, 's.')}
+        WHERE ${semainesDateCondition}
       `);
 
             const comData = commandes[0] || {};
@@ -136,7 +153,12 @@ class IndicateursService {
 
     async getIndicateursQualite(periode) {
         try {
-            const dateCondition = this.getDateCondition(periode, 'c.Date_creation');
+            const commandesDateField = await this.resolveDateField(
+                'commandes',
+                'c',
+                ['Date_creation', 'Date_debut', 'Date_modification']
+            );
+            const dateCondition = this.getDateCondition(periode, commandesDateField);
 
             // Qualité basée sur les commandes
             const [commandes] = await db.query(`
@@ -445,6 +467,24 @@ class IndicateursService {
             default:
                 return `1=1`; // Tous
         }
+    }
+
+    /**
+     * Trouve une colonne date existante dans une table.
+     * Evite les erreurs SQL quand les schemas diffèrent selon l'environnement.
+     */
+    async resolveDateField(tableName, alias, candidates = ['Date_creation']) {
+        try {
+            const [columnsRows] = await db.query(`SHOW COLUMNS FROM ${tableName}`);
+            const columns = new Set((columnsRows || []).map((c) => String(c.Field || '').toLowerCase()));
+            const selected = candidates.find((field) => columns.has(String(field).toLowerCase()));
+            if (selected) {
+                return `${alias}.${selected}`;
+            }
+        } catch (error) {
+            // Fallback silencieux: on garde la première candidate si introspection impossible.
+        }
+        return `${alias}.${candidates[0]}`;
     }
 }
 

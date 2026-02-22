@@ -5,6 +5,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 // Routes principales
 router.get('/', authMiddleware, defautController.getAllDefauts);
+router.get('/export/xlsx', authMiddleware, defautController.exportDefautsTypeMachineXLSX);
 router.get('/:id', authMiddleware, defautController.getDefautById);
 router.post('/', authMiddleware, defautController.createDefaut);
 router.put('/:id', authMiddleware, defautController.updateDefaut);

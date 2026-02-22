@@ -7,6 +7,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 // Routes CRUD pour types_machine
 router.get('/', authMiddleware, typeMachineController.getAllTypesMachine);
+router.get('/export/xlsx', authMiddleware, typeMachineController.exportTypesMachineXLSX);
 
 router.get(
   '/:id',

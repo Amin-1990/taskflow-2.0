@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { logAction } = require('../services/audit.service');
+const exportService = require('../services/export.service');
 
 // Helper pour extraire IP et User-Agent
 const getAuditInfo = (req) => ({
@@ -467,6 +468,35 @@ exports.getStatistiquesUtilisation = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Erreur lors du calcul des statistiques' 
+    });
+  }
+};
+
+// GET /api/defauts-type-machine/export/xlsx - Exporter les defauts type machine en XLSX
+exports.exportDefautsTypeMachineXLSX = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        d.ID as 'ID',
+        d.ID_Type_machine as 'ID Type machine',
+        tm.Type_machine as 'Type machine',
+        d.Code_defaut as 'Code defaut',
+        d.Nom_defaut as 'Nom defaut',
+        d.Description_defaut as 'Description defaut'
+      FROM defauts_par_type_machine d
+      LEFT JOIN types_machine tm ON d.ID_Type_machine = tm.ID
+      ORDER BY tm.Type_machine, d.Code_defaut
+    `);
+
+    const buffer = await exportService.toExcel(rows, 'Defauts Type Machine');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=defauts_type_machine.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erreur exportDefautsTypeMachineXLSX:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de export des defauts type machine'
     });
   }
 };

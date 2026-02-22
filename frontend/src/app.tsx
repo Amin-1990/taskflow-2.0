@@ -25,13 +25,15 @@ import { Interventions } from './pages/maintenance/Interventions';
 import { InterventionDetail } from './pages/maintenance/InterventionDetail';
 import { NouvelleIntervention } from './pages/maintenance/NouvelleIntervention';
 import { MaintenanceDashboard } from './pages/maintenance/MaintenanceDashboard';
+import { TypesMachine } from './pages/maintenance/TypesMachine';
+import { DefautsTypeMachine } from './pages/maintenance/DefautsTypeMachine';
 
 import PersonnelDashboard from './pages/personnel/PersonnelDashboard';
-import PersonnelCreate from './pages/personnel/PersonnelCreate';
 import PersonnelEdit from './pages/personnel/PersonnelEdit';
 import Horaires from './pages/personnel/Horaires';
 import Pointage from './pages/personnel/Pointage';
 import PostesGestion from './pages/personnel/PostesGestion';
+import { SettingsPage } from './pages/Settings';
 
 import { ReferentielDefauts, NonConformitesProduction } from './pages/qualite';
 
@@ -104,6 +106,12 @@ export const App: FunctionalComponent = () => {
         <ProtectedRoute path="/maintenance/machines" component={Layout}>
           <Machines path="/" />
         </ProtectedRoute>
+        <ProtectedRoute path="/maintenance/types-machine" component={Layout}>
+          <TypesMachine path="/" />
+        </ProtectedRoute>
+        <ProtectedRoute path="/maintenance/defauts-type-machine" component={Layout}>
+          <DefautsTypeMachine path="/" />
+        </ProtectedRoute>
         <ProtectedRoute path="/maintenance/machines/nouveau" component={Layout}>
           <NouvelleMachine path="/" />
         </ProtectedRoute>
@@ -126,9 +134,6 @@ export const App: FunctionalComponent = () => {
         <ProtectedRoute path="/personnel" component={Layout}>
           <PersonnelDashboard path="/" />
         </ProtectedRoute>
-        <ProtectedRoute path="/personnel/new" component={Layout}>
-          <PersonnelCreate path="/" />
-        </ProtectedRoute>
         <ProtectedRoute path="/personnel/:id/edit" component={Layout}>
           <PersonnelEdit path="/" />
         </ProtectedRoute>
@@ -147,6 +152,10 @@ export const App: FunctionalComponent = () => {
         </ProtectedRoute>
         <ProtectedRoute path="/qualite/non-conformites-production" component={Layout}>
           <NonConformitesProduction path="/" />
+        </ProtectedRoute>
+
+        <ProtectedRoute path="/settings" component={Layout}>
+          <SettingsPage path="/" />
         </ProtectedRoute>
       </Router>
     </div>

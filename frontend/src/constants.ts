@@ -1,5 +1,5 @@
 export const APP_NAME = 'Taskflow 2.0';
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.161:3000/api';
 
 export const ROLES = {
   ADMIN: 'admin',
@@ -27,13 +27,14 @@ export const ROUTES = {
   PRODUCTION_PLANIFICATION_FACTURATION: '/production/planification-facturation',
   MAINTENANCE_DASHBOARD: '/maintenance/dashboard',
   MAINTENANCE_MACHINES: '/maintenance/machines',
+  MAINTENANCE_TYPES_MACHINE: '/maintenance/types-machine',
+  MAINTENANCE_DEFAUTS_TYPE_MACHINE: '/maintenance/defauts-type-machine',
   MAINTENANCE_MACHINE_NOUVEAU: '/maintenance/machines/nouveau',
   MAINTENANCE_MACHINE_DETAIL: '/maintenance/machines/:id',
   MAINTENANCE_INTERVENTIONS: '/maintenance/interventions',
   MAINTENANCE_INTERVENTION_NOUVEAU: '/maintenance/interventions/nouveau',
   MAINTENANCE_INTERVENTION_DETAIL: '/maintenance/interventions/:id',
   PERSONNEL: '/personnel',
-  PERSONNEL_NEW: '/personnel/new',
   PERSONNEL_EDIT: '/personnel/:id/edit',
   PERSONNEL_HORAIRES: '/personnel/horaires',
   PERSONNEL_POINTAGE: '/personnel/pointage',

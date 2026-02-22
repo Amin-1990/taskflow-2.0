@@ -13,16 +13,27 @@ export const Header: FunctionComponent = () => {
   ];
 
   return (
-    <header className="bg-white shadow-sm h-16 fixed top-0 right-0 left-64 z-10">
+    <header
+      className="shadow-sm h-16 fixed top-0 right-0 left-64 z-10"
+      style={{ backgroundColor: 'var(--layout-header-bg)', color: 'var(--layout-header-text)' }}
+    >
       <div className="h-full px-6 flex items-center justify-between">
         {/* Barre de recherche */}
         <div className="flex-1 max-w-2xl">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5"
+              style={{ color: 'var(--layout-header-text-muted)' }}
+            />
             <input
               type="text"
               placeholder="Rechercher..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              className="layout-header-search w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-1"
+              style={{
+                backgroundColor: 'var(--layout-header-hover-bg)',
+                color: 'var(--layout-header-text)',
+                borderColor: 'var(--layout-header-border)',
+              }}
             />
           </div>
         </div>
@@ -33,9 +44,9 @@ export const Header: FunctionComponent = () => {
           <div className="relative">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="p-2 hover:bg-gray-100 rounded-full relative"
+              className="layout-header-hover p-2 rounded-full relative"
             >
-              <Bell className="w-5 h-5 text-gray-600" />
+              <Bell className="w-5 h-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
 
@@ -61,22 +72,22 @@ export const Header: FunctionComponent = () => {
           </div>
 
           {/* Paramètres */}
-          <button className="p-2 hover:bg-gray-100 rounded-full">
-            <Settings className="w-5 h-5 text-gray-600" />
+          <button className="layout-header-hover p-2 rounded-full">
+            <Settings className="w-5 h-5" />
           </button>
 
           {/* Profil utilisateur */}
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg"
+              className="layout-header-hover flex items-center space-x-3 p-2 rounded-lg"
             >
               <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5 text-white" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-medium text-gray-700">Admin User</p>
-                <p className="text-xs text-gray-500">Administrateur</p>
+                <p className="text-sm font-medium">Admin User</p>
+                <p className="text-xs" style={{ color: 'var(--layout-header-text-muted)' }}>Administrateur</p>
               </div>
             </button>
 

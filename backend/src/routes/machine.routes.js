@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const { validate } = require('../middleware/validation.middleware');
 const {
@@ -13,7 +13,7 @@ const {
 const machineController = require('../controllers/machine.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 
-// Routes spécifiques et d'administration D'ABORD
+// Routes specifiques et d'administration D'ABORD
 router.get(
   '/dashboard/stats',
   authMiddleware,
@@ -61,7 +61,13 @@ router.get(
   machineController.getMachinesByStatutOperationnel
 );
 
-// Route avec paramètre
+router.get(
+  '/export/xlsx',
+  authMiddleware,
+  machineController.exportMachinesXLSX
+);
+
+// Route avec parametre
 router.get(
   '/:id',
   authMiddleware,
@@ -110,3 +116,4 @@ router.delete(
 );
 
 module.exports = router;
+

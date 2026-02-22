@@ -1,39 +1,123 @@
+import { type FunctionalComponent } from 'preact';
 import { h } from 'preact';
-import type { FunctionalComponent } from 'preact';
-import { useState } from 'preact/hooks';
-import { route } from 'preact-router';
-import { Download, Upload, Plus } from 'lucide-preact';
+import { useMemo, useState } from 'preact/hooks';
+import { Plus, Search, Edit2, Trash2, AlertCircle, Download, Upload } from 'lucide-preact';
 import { usePersonnel, usePersonnelFilters } from '../../hooks';
-import PersonnelSearch from '../../components/personnel/PersonnelSearch';
-import PersonnelFilter from '../../components/personnel/PersonnelFilter';
-import PersonnelTable from '../../components/personnel/PersonnelTable';
-import PersonnelStats from '../../components/personnel/PersonnelStats';
+import type { Personnel } from '../../types/personnel.types';
+import {
+  getAnciennete,
+  getDefaultPersonnelData,
+  POSTE_OPTIONS,
+  STATUT_OPTIONS,
+  TYPE_CONTRAT_OPTIONS,
+} from '../../types/personnel.types';
+import ActionButton from '../../components/common/ActionButton';
+import PageHeader from '../../components/common/PageHeader';
+import FilterPanel from '../../components/common/FilterPanel';
 import PersonnelImport from '../../components/personnel/PersonnelImport';
 import PersonnelExport from '../../components/personnel/PersonnelExport';
-import PersonnelActionButton from '../../components/personnel/PersonnelActionButton';
-import PersonnelPageHeader from '../../components/personnel/PersonnelPageHeader';
-import PersonnelFilterPanel from '../../components/personnel/PersonnelFilterPanel';
 import { personnelAPI } from '../../api/personnel';
 import { showToast } from '../../utils/toast';
 
+const baseInputClass = 'w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20';
+const errorInputClass = `${baseInputClass} border-red-400 focus:border-red-500 focus:ring-red-500/20`;
+
 const PersonnelDashboard: FunctionalComponent = () => {
-  const { personnels, loading, error, delete: deletePersonnel, changeStatut, getAll } = usePersonnel();
-  const { filters, updateFilter, filtered, clearFilters, hasActiveFilters } = usePersonnelFilters(personnels);
+  const { personnels, loading, error, delete: deletePersonnel, changeStatut, create, update, getAll } = usePersonnel();
+  const { filters, updateFilter, filtered } = usePersonnelFilters(personnels);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
-  const [showFilters, setShowFilters] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [editingItem, setEditingItem] = useState<Personnel | null>(null);
+  const [showFormModal, setShowFormModal] = useState(false);
+  const [formData, setFormData] = useState<Partial<Personnel>>(getDefaultPersonnelData());
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
-  const handleCreate = () => route('/personnel/new');
-  const handleEdit = (id: number) => route(`/personnel/${id}/edit`);
-  const handleDelete = async (id: number) => {
-    const success = await deletePersonnel(id);
-    if (success) alert('Employe supprime avec succes');
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+
+  const paginated = useMemo(
+    () => filtered.slice((currentPage - 1) * limit, currentPage * limit),
+    [filtered, currentPage, limit]
+  );
+
+  const resetFormState = () => {
+    setFormErrors({});
+    setEditingItem(null);
+    setFormData(getDefaultPersonnelData());
+    setShowFormModal(false);
   };
-  const handleStatusChange = async (id: number, status: 'actif' | 'inactif') => {
-    await changeStatut(id, status);
+
+  const openCreateModal = () => {
+    setFormErrors({});
+    setEditingItem(null);
+    setFormData(getDefaultPersonnelData());
+    setShowFormModal(true);
   };
+
+  const openEditModal = (item: Personnel) => {
+    setFormErrors({});
+    setEditingItem(item);
+    setFormData({ ...item });
+    setShowFormModal(true);
+  };
+
+  const validateForm = () => {
+    const nextErrors: Record<string, string> = {};
+
+    if (!formData.Nom_prenom?.trim()) nextErrors.Nom_prenom = 'Le nom/prenom est requis';
+    if (!formData.Matricule?.trim()) nextErrors.Matricule = 'Le matricule est requis';
+    if (!formData.Date_embauche) nextErrors.Date_embauche = 'La date d embauche est requise';
+    if (formData.Email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.Email)) nextErrors.Email = 'Email invalide';
+    if (formData.Telephone && !/^[0-9\s\-\+\(\)]+$/.test(formData.Telephone)) nextErrors.Telephone = 'Telephone invalide';
+
+    setFormErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    try {
+      const payload: Partial<Personnel> = {
+        ...formData,
+        Nom_prenom: formData.Nom_prenom?.trim(),
+        Matricule: formData.Matricule?.trim(),
+        Email: formData.Email?.trim() || undefined,
+        Telephone: formData.Telephone?.trim() || undefined,
+        Site_affectation: formData.Site_affectation?.trim() || undefined,
+        Commentaire: formData.Commentaire?.trim() || undefined,
+      };
+
+      const result = editingItem
+        ? await update(editingItem.ID, payload)
+        : await create(payload);
+
+      if (result) {
+        showToast.success(editingItem ? 'Employe modifie avec succes' : 'Employe ajoute avec succes');
+        resetFormState();
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const success = await deletePersonnel(deleteId);
+    if (success) {
+      showToast.success('Employe supprime avec succes');
+      setDeleteId(null);
+    }
+  };
+
   const handleDownloadTemplate = async () => {
     try {
       setIsDownloadingTemplate(true);
@@ -46,197 +130,409 @@ const PersonnelDashboard: FunctionalComponent = () => {
     }
   };
 
-  const stats = {
-    total: personnels.length,
-    actifs: personnels.filter(p => p.Statut === 'actif').length,
-    inactifs: personnels.filter(p => p.Statut === 'inactif').length,
+  const handleFormChange = (e: Event) => {
+    const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    const { name, value } = target;
+    setFormData(prev => ({ ...prev, [name]: value || undefined }));
+
+    if (formErrors[name]) {
+      setFormErrors(prev => {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      });
+    }
   };
+
+  if (loading && (!personnels || personnels.length === 0)) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Chargement du personnel...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <PersonnelPageHeader
+      <PageHeader
         title="Personnel"
         subtitle={`Total: ${personnels.length} employe${personnels.length > 1 ? 's' : ''}`}
         actions={
           <>
-            <PersonnelActionButton
-              onClick={handleDownloadTemplate}
-              loading={isDownloadingTemplate}
-              title="Telecharger le template d'import"
-              icon={Download}
-            >
+            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
               {isDownloadingTemplate ? 'Template...' : 'Template'}
-            </PersonnelActionButton>
-            <PersonnelActionButton
-              onClick={() => setShowImport(true)}
-              title="Importer des employes"
-              icon={Upload}
-            >
+            </ActionButton>
+            <ActionButton onClick={() => setShowImport(true)} icon={Upload}>
               Importer
-            </PersonnelActionButton>
-            <PersonnelActionButton
-              onClick={() => setShowExport(true)}
-              title="Exporter les employes"
-              icon={Download}
-            >
+            </ActionButton>
+            <ActionButton onClick={() => setShowExport(true)} icon={Download}>
               Exporter
-            </PersonnelActionButton>
-            <PersonnelActionButton
-              onClick={handleCreate}
-              title="Ajouter un nouvel employe"
-              icon={Plus}
-              variant="accent"
-            >
-              Nouveau
-            </PersonnelActionButton>
+            </ActionButton>
+            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+              Ajouter
+            </ActionButton>
           </>
         }
       />
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+          <div className="flex items-start">
+            <AlertCircle className="w-5 h-5 text-red-500 mr-3 flex-shrink-0" />
+            <div>
+              <h3 className="text-sm font-medium text-red-800">Erreur</h3>
+              <p className="text-sm text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
         </div>
       )}
 
-      <PersonnelStats stats={stats} />
-
-      <PersonnelFilterPanel title="Recherche et filtres">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <PersonnelSearch value={filters.search || ''} onChange={(value) => updateFilter('search', value)} />
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={`relative rounded-lg border px-4 py-2 text-sm font-medium ${
-              showFilters
-                ? 'border-blue-600 bg-blue-600 text-white'
-                : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            {showFilters ? 'Masquer filtres' : 'Afficher filtres'}
-            {hasActiveFilters && (
-              <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-xs font-semibold text-white">
-                {Object.values(filters).filter(v => v).length}
-              </span>
-            )}
-          </button>
-        </div>
-
-        {showFilters && (
-          <div className="mt-4">
-            <PersonnelFilter
-              filters={filters}
-              onFilterChange={updateFilter}
-              hasActive={hasActiveFilters}
-              onClear={clearFilters}
+      <FilterPanel title="Recherche">
+        <div className="flex items-center gap-2">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Rechercher par nom, matricule, email..."
+              value={filters.search || ''}
+              onChange={(e) => {
+                updateFilter('search', (e.target as HTMLInputElement).value);
+                setPage(1);
+              }}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
-        )}
-      </PersonnelFilterPanel>
-
-      <div className="flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Affichage <strong>{filtered.length}</strong> sur <strong>{personnels.length}</strong> employe(s)
-          {hasActiveFilters ? ' (filtres)' : ''}
+          <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`rounded-md px-3 py-1.5 text-sm ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+            >
+              Tableau
+            </button>
+            <button
+              onClick={() => setViewMode('card')}
+              className={`rounded-md px-3 py-1.5 text-sm ${viewMode === 'card' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+            >
+              Cartes
+            </button>
+          </div>
         </div>
-        <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
-          <button
-            onClick={() => setViewMode('table')}
-            className={`rounded-md px-3 py-1.5 text-sm ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-            title="Vue tableau"
+      </FilterPanel>
+
+      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        {total === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <p>Aucun employe trouve</p>
+          </div>
+        ) : viewMode === 'table' ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Matricule</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Nom/Prenom</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Poste</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Statut</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Site</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Email</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Telephone</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Anciennete</th>
+                  <th className="px-4 py-3 text-right font-semibold text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {paginated.map((p) => (
+                  <tr key={p.ID} className="hover:bg-gray-50">
+                    <td className="px-4 py-4 font-medium text-blue-700">{p.Matricule}</td>
+                    <td className="px-4 py-4 text-gray-700">{p.Nom_prenom}</td>
+                    <td className="px-4 py-4 text-gray-700">{p.Poste}</td>
+                    <td className="px-4 py-4">
+                      <button
+                        type="button"
+                        onClick={() => changeStatut(p.ID, p.Statut === 'actif' ? 'inactif' : 'actif')}
+                        className={p.Statut === 'actif'
+                          ? 'rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700'
+                          : 'rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700'}
+                      >
+                        {p.Statut === 'actif' ? 'Actif' : 'Inactif'}
+                      </button>
+                    </td>
+                    <td className="px-4 py-4 text-gray-700">{p.Site_affectation || '-'}</td>
+                    <td className="px-4 py-4 text-gray-700">{p.Email || '-'}</td>
+                    <td className="px-4 py-4 text-gray-700">{p.Telephone || '-'}</td>
+                    <td className="px-4 py-4 text-gray-700">{getAnciennete(p.Date_embauche)}</td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        <button
+                          title="Modifier"
+                          onClick={() => openEditModal(p)}
+                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          title="Supprimer"
+                          onClick={() => setDeleteId(p.ID)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2 xl:grid-cols-3">
+            {paginated.map((p) => (
+              <div key={p.ID} className="rounded-lg border border-gray-200 bg-white p-4">
+                <div className="mb-3 flex items-start justify-between">
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-800">{p.Nom_prenom}</h3>
+                    <p className="text-sm text-gray-500">{p.Matricule}</p>
+                  </div>
+                  <span className={p.Statut === 'actif' ? 'rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700' : 'rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700'}>
+                    {p.Statut}
+                  </span>
+                </div>
+                <div className="space-y-1 text-sm text-gray-700">
+                  <p><span className="font-medium text-gray-500">Poste:</span> {p.Poste}</p>
+                  <p><span className="font-medium text-gray-500">Site:</span> {p.Site_affectation || '-'}</p>
+                  <p><span className="font-medium text-gray-500">Email:</span> {p.Email || '-'}</p>
+                  <p><span className="font-medium text-gray-500">Tel:</span> {p.Telephone || '-'}</p>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <button
+                    onClick={() => openEditModal(p)}
+                    className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    Modifier
+                  </button>
+                  <button
+                    onClick={() => setDeleteId(p.ID)}
+                    className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+                  >
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div className="text-gray-600">{total} enregistrement(s)</div>
+        <div className="flex items-center gap-2">
+          <label className="text-gray-600">Par page</label>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number((e.target as HTMLSelectElement).value));
+              setPage(1);
+            }}
+            className="rounded border border-gray-300 px-2 py-1"
           >
-            Tableau
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <button
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+          >
+            Prec
           </button>
+          <span className="min-w-20 text-center text-gray-700">{currentPage} / {totalPages}</span>
           <button
-            onClick={() => setViewMode('card')}
-            className={`rounded-md px-3 py-1.5 text-sm ${viewMode === 'card' ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
-            title="Vue cartes"
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
           >
-            Cartes
+            Suiv
           </button>
         </div>
       </div>
 
-      {loading && (
-        <div className="rounded-lg bg-white p-10 text-center shadow-sm">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-blue-600"></div>
-          <p className="mt-3 text-sm text-gray-600">Chargement des donnees...</p>
-        </div>
-      )}
+      {showFormModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              {editingItem ? 'Modifier personnel' : 'Ajouter personnel'}
+            </h3>
 
-      {!loading && filtered.length === 0 && (
-        <div className="rounded-lg bg-white p-10 text-center shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800">Aucun employe trouve</h3>
-          <p className="mt-2 text-sm text-gray-500">Essayez de modifier vos criteres de recherche ou de filtrage</p>
-          {hasActiveFilters && (
-            <button onClick={clearFilters} className="mt-4 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-              Reinitialiser les filtres
-            </button>
-          )}
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <>
-          {viewMode === 'table' ? (
-            <PersonnelTable
-              personnels={filtered}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onStatusChange={handleStatusChange}
-            />
-          ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {filtered.map(p => (
-                <div key={p.ID} className="rounded-lg bg-white p-4 shadow-sm">
-                  <div className="mb-3 flex items-start justify-between">
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-800">{p.Nom_prenom}</h3>
-                      <p className="text-sm text-gray-500">{p.Matricule}</p>
-                    </div>
-                    <span className={p.Statut === 'actif' ? 'rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700' : 'rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-700'}>
-                      {p.Statut}
-                    </span>
-                  </div>
-
-                  <div className="space-y-1 text-sm text-gray-700">
-                    <p><span className="font-medium text-gray-500">Poste:</span> {p.Poste}</p>
-                    <p><span className="font-medium text-gray-500">Site:</span> {p.Site_affectation || '—'}</p>
-                    <p>
-                      <span className="font-medium text-gray-500">Email:</span>{' '}
-                      {p.Email ? <a href={`mailto:${p.Email}`} className="text-blue-600 hover:underline">{p.Email}</a> : '—'}
-                    </p>
-                    <p>
-                      <span className="font-medium text-gray-500">Tel:</span>{' '}
-                      {p.Telephone ? <a href={`tel:${p.Telephone}`} className="text-blue-600 hover:underline">{p.Telephone}</a> : '—'}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 flex items-center gap-2">
-                    <button onClick={() => handleEdit(p.ID)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">
-                      Modifier
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Supprimer ${p.Nom_prenom} ?`)) {
-                          handleDelete(p.ID);
-                        }
-                      }}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
-                    >
-                      Supprimer
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nom/Prenom *</label>
+                <input
+                  name="Nom_prenom"
+                  type="text"
+                  value={formData.Nom_prenom || ''}
+                  onChange={handleFormChange}
+                  className={formErrors.Nom_prenom ? errorInputClass : baseInputClass}
+                />
+                {formErrors.Nom_prenom && <p className="mt-1 text-xs text-red-600">{formErrors.Nom_prenom}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Matricule *</label>
+                <input
+                  name="Matricule"
+                  type="text"
+                  value={formData.Matricule || ''}
+                  onChange={handleFormChange}
+                  disabled={!!editingItem}
+                  className={formErrors.Matricule ? errorInputClass : baseInputClass}
+                />
+                {formErrors.Matricule && <p className="mt-1 text-xs text-red-600">{formErrors.Matricule}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date d embauche *</label>
+                <input
+                  name="Date_embauche"
+                  type="date"
+                  value={formData.Date_embauche || ''}
+                  onChange={handleFormChange}
+                  className={formErrors.Date_embauche ? errorInputClass : baseInputClass}
+                />
+                {formErrors.Date_embauche && <p className="mt-1 text-xs text-red-600">{formErrors.Date_embauche}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Poste</label>
+                <select
+                  name="Poste"
+                  value={formData.Poste || 'Operateur'}
+                  onChange={handleFormChange}
+                  className={baseInputClass}
+                >
+                  {POSTE_OPTIONS.map(poste => (
+                    <option key={poste} value={poste}>{poste}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+                <select
+                  name="Statut"
+                  value={formData.Statut || 'actif'}
+                  onChange={handleFormChange}
+                  className={baseInputClass}
+                >
+                  {STATUT_OPTIONS.map(statut => (
+                    <option key={statut} value={statut}>{statut}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type de contrat</label>
+                <select
+                  name="Type_contrat"
+                  value={formData.Type_contrat || 'CDI'}
+                  onChange={handleFormChange}
+                  className={baseInputClass}
+                >
+                  {TYPE_CONTRAT_OPTIONS.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Site</label>
+                <input
+                  name="Site_affectation"
+                  type="text"
+                  value={formData.Site_affectation || ''}
+                  onChange={handleFormChange}
+                  className={baseInputClass}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  name="Email"
+                  type="email"
+                  value={formData.Email || ''}
+                  onChange={handleFormChange}
+                  className={formErrors.Email ? errorInputClass : baseInputClass}
+                />
+                {formErrors.Email && <p className="mt-1 text-xs text-red-600">{formErrors.Email}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Telephone</label>
+                <input
+                  name="Telephone"
+                  type="text"
+                  value={formData.Telephone || ''}
+                  onChange={handleFormChange}
+                  className={formErrors.Telephone ? errorInputClass : baseInputClass}
+                />
+                {formErrors.Telephone && <p className="mt-1 text-xs text-red-600">{formErrors.Telephone}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Commentaire</label>
+                <textarea
+                  name="Commentaire"
+                  value={formData.Commentaire || ''}
+                  onChange={handleFormChange}
+                  rows={3}
+                  className={baseInputClass}
+                />
+              </div>
             </div>
-          )}
-        </>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={resetFormState}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={isSubmitting}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isSubmitting ? 'Enregistrement...' : editingItem ? 'Modifier' : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirmer la suppression</h3>
+            <p className="text-gray-600 mb-6">
+              Etes-vous sur de vouloir supprimer cet employe ? Cette action est irreversible.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showImport && h(PersonnelImport, {
         onClose: () => setShowImport(false),
-        onSuccess: () => {
-          getAll();
+        onSuccess: async () => {
+          await getAll();
           setShowImport(false);
         }
       })}

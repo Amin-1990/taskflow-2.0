@@ -45,6 +45,12 @@ router.get(
   demandeController.getHistoriqueMachine
 );
 
+router.get(
+  '/export/xlsx',
+  authMiddleware,
+  demandeController.exportInterventionsXLSX
+);
+
 // Route avec paramètre
 router.get(
   '/:id',
@@ -64,6 +70,14 @@ router.post(
   createInterventionValidator,
   validate,
   demandeController.createDemande
+);
+
+router.put(
+  '/:id',
+  authMiddleware,
+  updateInterventionValidator,
+  validate,
+  demandeController.updateDemande
 );
 
 // Actions sur les demandes
@@ -97,6 +111,14 @@ router.patch(
   interventionIdValidator,
   validate,
   demandeController.annulerIntervention
+);
+
+router.delete(
+  '/:id',
+  authMiddleware,
+  interventionIdValidator,
+  validate,
+  demandeController.deleteDemande
 );
 
 module.exports = router;

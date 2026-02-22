@@ -1,8 +1,8 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 
 // Importer les routes
-const authRoutes = require('./auth.routes');  // ✅ NOUVEAU - Routes d'authentification
+const authRoutes = require('./auth.routes');  // âœ… NOUVEAU - Routes d'authentification
 const exportRoutes = require('./export.routes');
 const importRoutes = require('./import.routes'); 
 const posteRoutes = require('./poste.routes');
@@ -26,8 +26,9 @@ const indicateursRoutes = require('./indicateurs.routes');
 const semainesRoutes = require('./semaines.routes');
 const filtresRoutes = require('./filtres.routes');
 const echelonsRoutes = require('./echelons.routes');
+const mobileAppRoutes = require('./mobileApp.routes');
 
-// Route de santé (publique)
+// Route de santÃ© (publique)
 router.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
@@ -36,11 +37,11 @@ router.get('/health', (req, res) => {
   });
 });
 
-// ✅ ROUTES PUBLIQUES (accessible sans authentification)
+// âœ… ROUTES PUBLIQUES (accessible sans authentification)
 router.use('/auth', authRoutes);
 
-// ⚠️ POUR L'INSTANT - Routes non protégées (seront sécurisées à l'étape 2)
-// Dans l'étape suivante, on ajoutera authMiddleware sur chaque route
+// âš ï¸ POUR L'INSTANT - Routes non protÃ©gÃ©es (seront sÃ©curisÃ©es Ã  l'Ã©tape 2)
+// Dans l'Ã©tape suivante, on ajoutera authMiddleware sur chaque route
 router.use('/postes', posteRoutes);
 router.use('/export', exportRoutes); 
 router.use('/import', importRoutes);
@@ -64,5 +65,7 @@ router.use('/indicateurs', indicateursRoutes);
 router.use('/semaines', semainesRoutes);
 router.use('/filtres', filtresRoutes);
 router.use('/echelons', echelonsRoutes);
+router.use('/mobile-app', mobileAppRoutes);
 
 module.exports = router;
+

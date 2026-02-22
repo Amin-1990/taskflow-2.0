@@ -1,7 +1,10 @@
 import { render } from 'preact';
 import { Toaster } from 'react-hot-toast';
 import { App } from './app';
+import { applyLayoutTheme, getStoredLayoutTheme } from './utils/layoutTheme';
 import './index.css';
+
+applyLayoutTheme(getStoredLayoutTheme());
 
 render(
   <>

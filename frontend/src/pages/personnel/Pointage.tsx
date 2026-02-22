@@ -82,6 +82,8 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
   const [search, setSearch] = useState<string>('');
   const [posteFilter, setPosteFilter] = useState<string>('Tous');
   const [presenceFilter, setPresenceFilter] = useState<'Tous' | 'Presents' | 'Absents' | 'Retards'>('Tous');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -211,6 +213,14 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
       return true;
     });
   }, [personnels, posteFilter, search, presenceFilter, visibleDates, pointageMap]);
+
+  const total = filteredPersonnels.length;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const currentPage = Math.min(Math.max(1, page), totalPages);
+  const paginatedPersonnels = useMemo(
+    () => filteredPersonnels.slice((currentPage - 1) * limit, currentPage * limit),
+    [filteredPersonnels, currentPage, limit]
+  );
 
   const openCellModal = (personnel: Personnel, date: string) => {
     const pointage = pointageMap.get(getCellKey(personnel.ID, date));
@@ -436,7 +446,10 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
                 <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
                 <input
                   value={search}
-                  onChange={(e) => setSearch((e.target as HTMLInputElement).value)}
+                  onChange={(e) => {
+                    setSearch((e.target as HTMLInputElement).value);
+                    setPage(1);
+                  }}
                   placeholder="Nom ou matricule"
                   className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm min-w-48"
                 />
@@ -446,7 +459,10 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
               <label className="block text-xs text-gray-600 mb-1">Poste</label>
               <select
                 value={posteFilter}
-                onChange={(e) => setPosteFilter((e.target as HTMLSelectElement).value)}
+                onChange={(e) => {
+                  setPosteFilter((e.target as HTMLSelectElement).value);
+                  setPage(1);
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-44"
               >
                 {posteOptions.map((option) => (
@@ -458,7 +474,10 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
               <label className="block text-xs text-gray-600 mb-1">Presence</label>
               <select
                 value={presenceFilter}
-                onChange={(e) => setPresenceFilter((e.target as HTMLSelectElement).value as any)}
+                onChange={(e) => {
+                  setPresenceFilter((e.target as HTMLSelectElement).value as any);
+                  setPage(1);
+                }}
                 className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-40"
               >
                 <option value="Tous">Tous</option>
@@ -527,16 +546,16 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {filteredPersonnels.length === 0 && (
+                {paginatedPersonnels.length === 0 && (
                   <tr>
                     <td colSpan={2 + visibleDates.length} className="px-3 py-8 text-center text-gray-500">
                       Aucune ligne a afficher
                     </td>
                   </tr>
                 )}
-                {filteredPersonnels.map((personnel, index) => (
+                {paginatedPersonnels.map((personnel, index) => (
                   <tr key={personnel.ID} className="hover:bg-gray-50">
-                    <td className="px-3 py-3 text-gray-700">{index + 1}</td>
+                    <td className="px-3 py-3 text-gray-700">{(currentPage - 1) * limit + index + 1}</td>
                     <td className="px-3 py-3">
                       <div className="font-medium text-gray-900">{personnel.Nom_prenom}</div>
                       <div className="text-xs text-gray-500">{personnel.Matricule}</div>
@@ -583,6 +602,40 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div className="text-gray-600">{total} enregistrement(s)</div>
+        <div className="flex items-center gap-2">
+          <label className="text-gray-600">Par page</label>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number((e.target as HTMLSelectElement).value));
+              setPage(1);
+            }}
+            className="rounded border border-gray-300 px-2 py-1"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <button
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+          >
+            Prec
+          </button>
+          <span className="min-w-20 text-center text-gray-700">{currentPage} / {totalPages}</span>
+          <button
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+          >
+            Suiv
+          </button>
+        </div>
       </div>
 
       {modal && (

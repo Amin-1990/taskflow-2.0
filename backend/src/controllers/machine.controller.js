@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { logAction } = require('../services/audit.service');
+const exportService = require('../services/export.service');
 
 // Helper pour extraire IP et User-Agent
 const getAuditInfo = (req) => ({
@@ -524,6 +525,39 @@ exports.getDashboardStats = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Erreur lors du calcul des statistiques' 
+    });
+  }
+};
+
+// GET /api/machines/export/xlsx - Exporter les machines en XLSX
+exports.exportMachinesXLSX = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        m.ID as 'ID',
+        m.Code_interne as 'Code',
+        m.Nom_machine as 'Nom',
+        tm.Type_machine as 'Type machine',
+        m.Statut_operationnel as 'Statut operationnel',
+        m.Site_affectation as 'Site affectation',
+        m.Date_installation as 'Date installation',
+        m.Date_derniere_maintenance as 'Derniere maintenance',
+        m.Description as 'Description',
+        m.Commentaire as 'Notes'
+      FROM machines m
+      LEFT JOIN types_machine tm ON m.Type_machine_id = tm.ID
+      ORDER BY m.Nom_machine ASC
+    `);
+
+    const buffer = await exportService.toExcel(rows, 'Machines');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=machines.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erreur exportMachinesXLSX:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de export des machines'
     });
   }
 };

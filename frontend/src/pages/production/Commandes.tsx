@@ -10,8 +10,6 @@ import {
   Plus,
   Search,
   Filter,
-  ChevronLeft,
-  ChevronRight,
   Edit2,
   Trash2,
   Eye,
@@ -80,6 +78,8 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
   const [isImporting, setIsImporting] = useState(false);
   const [unitesProduction, setUnitesProduction] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const totalPages = Math.max(1, pages || 0);
+  const currentPage = Math.min(Math.max(1, page), totalPages);
 
   // Charger les articles au montage
   useEffect(() => {
@@ -459,43 +459,39 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
         )}
       </div>
 
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="bg-white rounded-lg shadow-sm p-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            Page {page} sur {pages} • {total} résultat{total > 1 ? 's' : ''}
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            {Array.from({ length: pages }).map((_, i) => (
-              <button
-                key={i + 1}
-                onClick={() => setPage(i + 1)}
-                className={`px-3 py-1 rounded-lg ${
-                  page === i + 1
-                    ? 'bg-blue-600 text-white'
-                    : 'border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => setPage(Math.min(pages, page + 1))}
-              disabled={page === pages}
-              className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 hover:bg-gray-50"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-100 px-4 py-3 flex flex-wrap items-center justify-between gap-3 text-sm">
+        <div className="text-gray-600">{total} enregistrement(s)</div>
+        <div className="flex items-center gap-2">
+          <label className="text-gray-600">Par page</label>
+          <select
+            value={limit}
+            onChange={(e) => {
+              setLimit(Number((e.target as HTMLSelectElement).value));
+              setPage(1);
+            }}
+            className="rounded border border-gray-300 px-2 py-1"
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+          </select>
+          <button
+            onClick={() => setPage(Math.max(1, currentPage - 1))}
+            disabled={currentPage <= 1}
+            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+          >
+            Prec
+          </button>
+          <span className="min-w-20 text-center text-gray-700">{currentPage} / {totalPages}</span>
+          <button
+            onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+            disabled={currentPage >= totalPages}
+            className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+          >
+            Suiv
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Dialog de confirmation de suppression */}
       {deleteId && (

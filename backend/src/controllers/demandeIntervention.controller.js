@@ -1,5 +1,6 @@
 const db = require('../config/database');
 const { logAction } = require('../services/audit.service');
+const exportService = require('../services/export.service');
 
 // Helper pour extraire IP et User-Agent
 const getAuditInfo = (req) => ({
@@ -596,6 +597,210 @@ exports.getStatistiquesMaintenance = async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Erreur lors du calcul des statistiques' 
+    });
+  }
+};
+
+// PUT /api/interventions/:id - Modifier une demande
+exports.updateDemande = async (req, res) => {
+  try {
+    const demandeId = req.params.id;
+    const payload = { ...req.body };
+
+    const [existing] = await db.query('SELECT * FROM demande_intervention WHERE ID = ?', [demandeId]);
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Demande non trouvee'
+      });
+    }
+    const oldValue = existing[0];
+
+    if (payload.ID_Type_machine) {
+      const [typeRows] = await db.query('SELECT ID FROM types_machine WHERE ID = ?', [payload.ID_Type_machine]);
+      if (typeRows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Type machine non trouve'
+        });
+      }
+    }
+
+    if (payload.ID_Machine) {
+      const [machineRows] = await db.query('SELECT ID FROM machines WHERE ID = ?', [payload.ID_Machine]);
+      if (machineRows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Machine non trouvee'
+        });
+      }
+    }
+
+    if (!payload.Description_panne && payload.Description_probleme) {
+      payload.Description_panne = payload.Description_probleme;
+    }
+
+    const allowedFields = [
+      'ID_Type_machine',
+      'ID_Machine',
+      'ID_Defaut',
+      'Demandeur',
+      'Description_panne',
+      'Priorite',
+      'Impact_production',
+      'Statut',
+      'ID_Technicien',
+      'Date_heure_debut',
+      'Date_heure_fin',
+      'Cause_racine',
+      'Action_realisee',
+      'Pieces_remplacees',
+      'Commentaire',
+      'Temps_attente_minutes',
+      'Duree_intervention_minutes',
+      'Date_cloture'
+    ];
+
+    const fields = [];
+    const values = [];
+    allowedFields.forEach((key) => {
+      if (payload[key] !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(payload[key]);
+      }
+    });
+
+    if (fields.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Aucune donnee a mettre a jour'
+      });
+    }
+
+    fields.push('Date_modification = NOW()');
+    values.push(demandeId);
+
+    await db.query(`UPDATE demande_intervention SET ${fields.join(', ')} WHERE ID = ?`, values);
+
+    const [updated] = await db.query(`
+      SELECT d.*,
+             tm.Type_machine,
+             m.Nom_machine, m.Code_interne,
+             def.Nom_defaut, def.Code_defaut as Code_defaut_ref,
+             tech.Nom_prenom as Technicien_nom,
+             demandeur.Nom_prenom as Demandeur_nom
+      FROM demande_intervention d
+      LEFT JOIN types_machine tm ON d.ID_Type_machine = tm.ID
+      LEFT JOIN machines m ON d.ID_Machine = m.ID
+      LEFT JOIN defauts_par_type_machine def ON d.ID_Defaut = def.ID
+      LEFT JOIN personnel tech ON d.ID_Technicien = tech.ID
+      LEFT JOIN personnel demandeur ON d.Demandeur = demandeur.ID
+      WHERE d.ID = ?
+    `, [demandeId]);
+
+    const auditInfo = getAuditInfo(req);
+    logAction({
+      ID_Utilisateur: req.user?.id || null,
+      Username: req.user?.username || null,
+      Action: 'UPDATE',
+      Table_concernee: 'demande_intervention',
+      ID_Enregistrement: demandeId,
+      Ancienne_valeur: oldValue,
+      Nouvelle_valeur: updated[0],
+      IP_address: auditInfo.IP_address,
+      User_agent: auditInfo.User_agent
+    }).catch((err) => console.error('Audit log failed:', err));
+
+    return res.json({
+      success: true,
+      message: 'Demande modifiee avec succes',
+      data: updated[0]
+    });
+  } catch (error) {
+    console.error('Erreur updateDemande:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la modification de la demande'
+    });
+  }
+};
+
+// DELETE /api/interventions/:id - Supprimer une demande
+exports.deleteDemande = async (req, res) => {
+  try {
+    const demandeId = req.params.id;
+
+    const [existing] = await db.query('SELECT * FROM demande_intervention WHERE ID = ?', [demandeId]);
+    if (existing.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Demande non trouvee'
+      });
+    }
+    const oldValue = existing[0];
+
+    await db.query('DELETE FROM demande_intervention WHERE ID = ?', [demandeId]);
+
+    const auditInfo = getAuditInfo(req);
+    logAction({
+      ID_Utilisateur: req.user?.id || null,
+      Username: req.user?.username || null,
+      Action: 'DELETE',
+      Table_concernee: 'demande_intervention',
+      ID_Enregistrement: demandeId,
+      Ancienne_valeur: oldValue,
+      Nouvelle_valeur: null,
+      IP_address: auditInfo.IP_address,
+      User_agent: auditInfo.User_agent
+    }).catch((err) => console.error('Audit log failed:', err));
+
+    return res.json({
+      success: true,
+      message: 'Demande supprimee avec succes'
+    });
+  } catch (error) {
+    console.error('Erreur deleteDemande:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Erreur lors de la suppression de la demande'
+    });
+  }
+};
+
+// GET /api/interventions/export/xlsx - Exporter les interventions en XLSX
+exports.exportInterventionsXLSX = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT
+        d.ID as 'ID',
+        tm.Type_machine as 'Type machine',
+        m.Code_interne as 'Code machine',
+        m.Nom_machine as 'Nom machine',
+        d.Description_panne as 'Description panne',
+        d.Priorite as 'Priorite',
+        d.Statut as 'Statut',
+        demandeur.Nom_prenom as 'Demandeur',
+        tech.Nom_prenom as 'Technicien',
+        d.Date_heure_demande as 'Date demande',
+        d.Date_heure_debut as 'Date debut',
+        d.Date_heure_fin as 'Date fin'
+      FROM demande_intervention d
+      LEFT JOIN types_machine tm ON d.ID_Type_machine = tm.ID
+      LEFT JOIN machines m ON d.ID_Machine = m.ID
+      LEFT JOIN personnel tech ON d.ID_Technicien = tech.ID
+      LEFT JOIN personnel demandeur ON d.Demandeur = demandeur.ID
+      ORDER BY d.Date_heure_demande DESC
+    `);
+
+    const buffer = await exportService.toExcel(rows, 'Interventions');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=interventions.xlsx');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Erreur exportInterventionsXLSX:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Erreur lors de export des interventions'
     });
   }
 };

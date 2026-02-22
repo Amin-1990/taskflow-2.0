@@ -64,6 +64,8 @@ const menuItems: MenuItem[] = [
     subItems: [
       { icon: Activity, label: 'Tableau de bord', path: ROUTES.MAINTENANCE_DASHBOARD },
       { icon: Package, label: 'Machines', path: ROUTES.MAINTENANCE_MACHINES },
+      { icon: Settings, label: 'Types machine', path: ROUTES.MAINTENANCE_TYPES_MACHINE },
+      { icon: ClipboardCheck, label: 'Defauts machine', path: ROUTES.MAINTENANCE_DEFAUTS_TYPE_MACHINE },
       { icon: Zap, label: 'Interventions', path: ROUTES.MAINTENANCE_INTERVENTIONS }
     ]
   },
@@ -73,7 +75,6 @@ const menuItems: MenuItem[] = [
     subItems: [
       { icon: UserCheck, label: 'Personnel', path: ROUTES.PERSONNEL },
       { icon: Settings, label: 'Gestion postes', path: ROUTES.PERSONNEL_POSTES },
-      { icon: Package, label: 'Nouveau Personnel', path: ROUTES.PERSONNEL_NEW },
       { icon: Calendar, label: 'Horaires', path: ROUTES.PERSONNEL_HORAIRES },
       { icon: Clock3, label: 'Pointage', path: ROUTES.PERSONNEL_POINTAGE }
     ]
@@ -140,10 +141,13 @@ export const Sidebar: FunctionComponent = () => {
   };
 
   return (
-    <aside className="w-64 bg-white shadow-lg flex flex-col h-screen fixed left-0 top-0">
-      <div className="p-6 border-b">
-        <h2 className="text-2xl font-bold text-blue-600">Taskflow</h2>
-        <p className="text-xs text-gray-500 mt-1">Gestion de production</p>
+    <aside
+      className="w-64 shadow-lg flex flex-col h-screen fixed left-0 top-0"
+      style={{ backgroundColor: 'var(--layout-sidebar-bg)', color: 'var(--layout-sidebar-text)' }}
+    >
+      <div className="p-6 border-b" style={{ borderColor: 'var(--layout-sidebar-hover-bg)' }}>
+        <h2 className="text-2xl font-bold">Taskflow</h2>
+        <p className="text-xs mt-1" style={{ color: 'var(--layout-sidebar-text-muted)' }}>Gestion de production</p>
       </div>
 
       <nav className="flex-1 py-6 overflow-y-auto">
@@ -153,8 +157,8 @@ export const Sidebar: FunctionComponent = () => {
               <>
                 <button
                   onClick={() => toggleMenu(item.label)}
-                  className={`w-full flex items-center justify-between px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors ${
-                    isMenuActive(item) ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : ''
+                  className={`layout-sidebar-hover w-full flex items-center justify-between px-6 py-3 transition-colors ${
+                    isMenuActive(item) ? 'layout-sidebar-active border-r-4 border-current' : ''
                   }`}
                 >
                   <div className="flex items-center">
@@ -169,15 +173,15 @@ export const Sidebar: FunctionComponent = () => {
                 </button>
 
                 {expandedMenu === item.label && (
-                  <div className="bg-gray-50 border-l-2 border-blue-200">
+                  <div className="border-l-2" style={{ backgroundColor: 'var(--layout-sidebar-submenu-bg)', borderColor: 'var(--layout-sidebar-hover-bg)' }}>
                     {item.subItems.map((subItem) => (
                       <button
                         key={subItem.path}
                         onClick={() => handleNavigation(subItem.path)}
                         className={`w-full flex items-center px-10 py-2.5 text-sm transition-colors ${
                           isPathMatch(subItem.path, currentPath)
-                            ? 'text-blue-600 bg-blue-100 font-medium'
-                            : 'text-gray-600 hover:text-blue-600 hover:bg-white'
+                            ? 'layout-sidebar-active font-medium'
+                            : 'layout-sidebar-hover'
                         }`}
                       >
                         <subItem.icon className="w-4 h-4 mr-2" />
@@ -190,8 +194,8 @@ export const Sidebar: FunctionComponent = () => {
             ) : (
               <button
                 onClick={() => handleNavigation(item.path!)}
-                className={`w-full flex items-center px-6 py-3 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors ${
-                  currentPath === item.path ? 'bg-blue-50 text-blue-600 border-r-4 border-blue-600' : ''
+                className={`layout-sidebar-hover w-full flex items-center px-6 py-3 transition-colors ${
+                  currentPath === item.path ? 'layout-sidebar-active border-r-4 border-current' : ''
                 }`}
               >
                 <item.icon className="w-5 h-5 mr-3" />
@@ -202,10 +206,10 @@ export const Sidebar: FunctionComponent = () => {
         ))}
       </nav>
 
-      <div className="p-4 border-t">
+      <div className="p-4 border-t" style={{ borderColor: 'var(--layout-sidebar-hover-bg)' }}>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center px-4 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+          className="layout-sidebar-hover w-full flex items-center px-4 py-2 rounded-lg transition-colors"
         >
           <LogOut className="w-5 h-5 mr-3" />
           <span className="text-sm font-medium">Deconnexion</span>
