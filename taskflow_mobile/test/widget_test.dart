@@ -1,0 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:taskflow_mobile/main.dart';
+
+void main() {
+  testWidgets('Taskflow app bootstraps', (WidgetTester tester) async {
+    await tester.pumpWidget(const ProviderScope(child: TaskflowApp()));
+    expect(find.byType(TaskflowApp), findsOneWidget);
+  });
+}

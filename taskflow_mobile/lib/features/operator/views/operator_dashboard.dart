@@ -1,0 +1,270 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/widgets/bottom_navigation.dart';
+import '../../../core/constants/design_constants.dart';
+import '../controllers/operator_dashboard_provider.dart';
+import '../widgets/header_with_profile.dart';
+import '../widgets/intervention_card.dart';
+import '../widgets/productivity_card.dart';
+import '../widgets/stat_card.dart';
+
+class OperatorDashboardPage extends ConsumerWidget {
+  const OperatorDashboardPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(operatorDashboardProvider);
+    final notifier = ref.read(operatorDashboardProvider.notifier);
+
+    return Scaffold(
+      backgroundColor: AppPalette.backgroundDark,
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: notifier.refresh,
+          color: const Color(0xFF2A7BFF),
+          backgroundColor: const Color(0xFF112341),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+            children: [
+              if (state.isLoading && state.userContext == null)
+                const _DashboardShimmer()
+              else if (state.error != null && state.stats == null)
+                _ErrorView(
+                  message: state.error!,
+                  onRetry: notifier.loadDashboard,
+                )
+              else ...[
+                HeaderWithProfile(
+                  userContext: state.userContext!,
+                  isSyncing: state.isRefreshing,
+                  onSync: notifier.refresh,
+                ),
+                const SizedBox(height: 14),
+                Container(height: 1, color: AppPalette.borderDark),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'Tableau de bord',
+                        style: TextStyle(
+                            color: AppPalette.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 38 / 1.4),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: AppPalette.primary.withOpacity(0.5)),
+                        color: const Color(0xFF12274A),
+                      ),
+                      child: const Text('v2.4.0',
+                          style: TextStyle(
+                              color: AppPalette.primary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _StatGrid(
+                  activeTasks: state.stats!.activeTasks,
+                  tasksToFinish: state.stats!.tasksToFinish,
+                  packagingRate: state.stats!.packagingRate,
+                  processDefects: state.stats!.processDefects,
+                ),
+                const SizedBox(height: 14),
+                InterventionCard(
+                    onTap: () =>
+                        context.push('/operator/intervention/request')),
+                const SizedBox(height: 20),
+                const Text(
+                  'PERFORMANCE AUJOURD\'HUI',
+                  style: TextStyle(
+                    color: AppPalette.textSecondary,
+                    fontSize: 18 / 1.4,
+                    letterSpacing: 1,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ProductivityCard(
+                  productivity: state.stats!.productivity,
+                  targetUnits: state.stats!.targetUnits,
+                  achievedUnits: state.stats!.achievedUnits,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar:
+          const TaskflowBottomNavigation(currentIndex: 0, notificationCount: 0),
+    );
+  }
+}
+
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({
+    required this.activeTasks,
+    required this.tasksToFinish,
+    required this.packagingRate,
+    required this.processDefects,
+  });
+
+  final int activeTasks;
+  final int tasksToFinish;
+  final double packagingRate;
+  final int processDefects;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.0,
+      children: [
+        StatCard(
+          icon: Icons.assignment_rounded,
+          value: '$activeTasks',
+          label: 'Affectations',
+          color: const Color(0xFF2A7BFF),
+          onTap: () => context.push('/operator/affectations'),
+        ),
+        StatCard(
+          icon: Icons.check_circle_outline,
+          value: '$tasksToFinish',
+          label: 'Finir tache',
+          color: const Color(0xFF33D39A),
+          onTap: () => context.push('/operator/tasks'),
+        ),
+        StatCard(
+          icon: Icons.inventory_2_outlined,
+          value: '${(packagingRate * 100).round()}%',
+          label: 'Emballage',
+          color: const Color(0xFFF7C744),
+          onTap: () => context.push('/operator/packaging'),
+        ),
+        StatCard(
+          icon: Icons.warning_amber_rounded,
+          value: '$processDefects',
+          label: 'Defauts Process',
+          color: const Color(0xFFFD6A77),
+          onTap: () => context.push('/operator/defects'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardShimmer extends StatefulWidget {
+  const _DashboardShimmer();
+
+  @override
+  State<_DashboardShimmer> createState() => _DashboardShimmerState();
+}
+
+class _DashboardShimmerState extends State<_DashboardShimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 1300))
+      ..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final pulse = 0.22 + (_controller.value * 0.24);
+        final color = Color.fromRGBO(36, 64, 102, pulse);
+        return Column(
+          children: [
+            Container(
+                height: 90,
+                decoration: BoxDecoration(
+                    color: color, borderRadius: BorderRadius.circular(20))),
+            const SizedBox(height: 16),
+            Container(
+                height: 50,
+                decoration: BoxDecoration(
+                    color: color, borderRadius: BorderRadius.circular(12))),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1,
+              children: List.generate(
+                4,
+                (_) => Container(
+                  decoration: BoxDecoration(
+                      color: color, borderRadius: BorderRadius.circular(24)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Container(
+                height: 120,
+                decoration: BoxDecoration(
+                    color: color, borderRadius: BorderRadius.circular(24))),
+            const SizedBox(height: 18),
+            Container(
+                height: 160,
+                decoration: BoxDecoration(
+                    color: color, borderRadius: BorderRadius.circular(24))),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ErrorView extends StatelessWidget {
+  const _ErrorView({required this.message, required this.onRetry});
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 120),
+      child: Column(
+        children: [
+          const Icon(Icons.cloud_off, color: Color(0xFF9DB2D4), size: 44),
+          const SizedBox(height: 10),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF9DB2D4), fontSize: 16),
+          ),
+          const SizedBox(height: 14),
+          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+        ],
+      ),
+    );
+  }
+}

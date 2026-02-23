@@ -1,5 +1,5 @@
 export const APP_NAME = 'Taskflow 2.0';
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.1.161:3000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://10.0.1.6:3000/api';
 
 export const ROLES = {
   ADMIN: 'admin',
