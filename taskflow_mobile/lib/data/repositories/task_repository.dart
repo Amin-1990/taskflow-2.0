@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/enums/task_status.dart';
 import '../../domain/models/article.dart';
+import '../../domain/models/article_lot.dart';
 import '../../domain/models/operateur.dart';
 import '../../domain/models/semaine.dart';
 import '../../domain/models/task.dart';
+import '../../domain/models/unite.dart';
 import '../../domain/models/workstation.dart';
 import '../local/daos/pending_actions_dao.dart';
 import '../remote/services/task_service.dart';
@@ -56,6 +58,32 @@ class TaskRepository {
     } on DioException {
       return mockCurrentTask;
     }
+  }
+
+  Future<Task?> getCurrentTaskForIdentity({
+    required String userId,
+    String? matricule,
+  }) async {
+    final primaryId = userId.trim();
+    if (primaryId.isNotEmpty) {
+      final task = await getCurrentTask(primaryId);
+      if (task != null) {
+        return task;
+      }
+    }
+
+    final matriculeValue = matricule?.trim() ?? '';
+    if (matriculeValue.isEmpty) {
+      return null;
+    }
+
+    final resolvedId =
+        await _service.resolveOperatorIdFromMatricule(matriculeValue);
+    if (resolvedId == null || resolvedId.isEmpty) {
+      return null;
+    }
+
+    return getCurrentTask(resolvedId);
   }
 
   Future<List<Article>> searchArticles(String query) async {
@@ -136,7 +164,7 @@ class TaskRepository {
     try {
       return await _service.getCurrentWeek();
     } on DioException {
-      return const Semaine(id: '42-2023', label: 'Semaine 42 - 2023');
+      return const Semaine(id: '42-2023', codeSemaine: 'S42', numeroSemaine: 42, annee: 2023);
     }
   }
 
@@ -152,7 +180,7 @@ class TaskRepository {
         return _cachedWeeks;
       }
       return const [
-        Semaine(id: '42-2023', label: '2023 - Semaine 42'),
+        Semaine(id: '42-2023', codeSemaine: 'S42', numeroSemaine: 42, annee: 2023),
       ];
     }
   }
@@ -226,6 +254,7 @@ class TaskRepository {
     required String articleId,
     required String workstationId,
     required String semaineId,
+    String? commandeId,
   }) async {
     try {
       return await _service.createAffectation(
@@ -233,6 +262,7 @@ class TaskRepository {
         articleId: articleId,
         workstationId: workstationId,
         semaineId: semaineId,
+        commandeId: commandeId,
       );
     } on DioException {
       final actionId =
@@ -245,6 +275,7 @@ class TaskRepository {
           'articleId': articleId,
           'workstationId': workstationId,
           'semaineId': semaineId,
+          if (commandeId != null) 'commandeId': commandeId,
         },
       );
 
@@ -284,34 +315,103 @@ class TaskRepository {
     }
   }
 
-  Future<int> syncPending() async {
-    final actions = await _pendingDao.getAll();
-    var synced = 0;
-
-    for (final action in actions
-        .where((a) => a.type == 'CREATE_TASK' || a.type == 'FINISH_TASK')) {
-      try {
-        if (action.type == 'CREATE_TASK') {
-          await _service.createAffectation(
-            operatorId: (action.data['operatorId'] ?? '').toString(),
-            articleId: (action.data['articleId'] ?? '').toString(),
-            workstationId: (action.data['workstationId'] ?? '').toString(),
-            semaineId: (action.data['semaineId'] ?? '').toString(),
-          );
-        } else if (action.type == 'FINISH_TASK') {
-          await _service.finishTask(
-            taskId: (action.data['taskId'] ?? '').toString(),
-            quantity: (action.data['quantity'] as num?)?.toInt() ?? 0,
-            notes: action.data['notes']?.toString(),
-          );
-        }
-        await _pendingDao.remove(action.id);
-        synced++;
-      } catch (_) {
-        await _pendingDao.incrementRetry(action.id);
+  Future<List<Semaine>> getSemainesAvecCommandes() async {
+    try {
+      final semaines = await _service.getSemainesAvecCommandes();
+      if (semaines.isNotEmpty) {
+        _cachedWeeks = semaines;
       }
+      return semaines;
+    } on DioException {
+      if (_cachedWeeks.isNotEmpty) {
+        return _cachedWeeks;
+      }
+      return const [
+        Semaine(
+          id: '1',
+          codeSemaine: 'S08',
+          numeroSemaine: 8,
+          annee: 2026,
+        ),
+      ];
+    }
+  }
+
+  Future<List<Unite>> getUnitesProduction() async {
+    try {
+      return await _service.getUnitesProduction();
+    } on DioException {
+      return const [
+        Unite(id: '1', nom: 'Unité 1'),
+        Unite(id: '2', nom: 'Unité 2'),
+      ];
+    }
+  }
+
+  Future<List<Article>> getArticlesFiltres(String semaineId, String unite) async {
+    if (semaineId.isEmpty || unite.isEmpty) {
+      return const [];
     }
 
-    return synced;
+    try {
+      final result = await _service.getArticlesFiltres(semaineId, unite);
+      if (result.isNotEmpty) {
+        _cachedArticles = result;
+      }
+      return result;
+    } on DioException {
+      if (_cachedArticles.isNotEmpty) {
+        return _cachedArticles;
+      }
+      // Fallback: Retourner liste vide si pas de données en cache
+      // Les articles doivent venir de la BD réelle
+      return const [];
+    }
   }
-}
+
+  Future<List<ArticleLot>> getArticlesLotsFiltres(String semaineId, String unite) async {
+    if (semaineId.isEmpty || unite.isEmpty) {
+      return const [];
+    }
+
+    try {
+      return await _service.getArticlesLotsFiltres(semaineId, unite);
+    } on DioException {
+      // Fallback: Retourner liste vide si pas de données
+      // Les articles doivent venir de la BD réelle
+      return const [];
+    }
+  }
+
+   Future<int> syncPending() async {
+     final actions = await _pendingDao.getAll();
+     var synced = 0;
+
+     for (final action in actions
+         .where((a) => a.type == 'CREATE_TASK' || a.type == 'FINISH_TASK')) {
+       try {
+         if (action.type == 'CREATE_TASK') {
+           await _service.createAffectation(
+             operatorId: (action.data['operatorId'] ?? '').toString(),
+             articleId: (action.data['articleId'] ?? '').toString(),
+             workstationId: (action.data['workstationId'] ?? '').toString(),
+             semaineId: (action.data['semaineId'] ?? '').toString(),
+             commandeId: action.data['commandeId']?.toString(),
+           );
+         } else if (action.type == 'FINISH_TASK') {
+           await _service.finishTask(
+             taskId: (action.data['taskId'] ?? '').toString(),
+             quantity: (action.data['quantity'] as num?)?.toInt() ?? 0,
+             notes: action.data['notes']?.toString(),
+           );
+         }
+         await _pendingDao.remove(action.id);
+         synced++;
+       } catch (_) {
+         await _pendingDao.incrementRetry(action.id);
+       }
+     }
+
+     return synced;
+   }
+  }

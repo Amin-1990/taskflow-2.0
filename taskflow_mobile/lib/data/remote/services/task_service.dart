@@ -1,9 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../domain/models/article.dart';
+import '../../../domain/models/article_lot.dart';
 import '../../../domain/models/operateur.dart';
 import '../../../domain/models/semaine.dart';
 import '../../../domain/models/task.dart';
+import '../../../domain/models/unite.dart';
 import '../../../domain/models/workstation.dart';
 
 class TaskService {
@@ -12,14 +15,74 @@ class TaskService {
   final Dio _dio;
 
   Future<Task?> getCurrentTask(String operatorId) async {
-    final response = await _dio.get<Map<String, dynamic>>(
-        '/api/affectations/operateur/$operatorId/en-cours');
-    final body = response.data ?? <String, dynamic>{};
-    final data = (body['data'] as Map<String, dynamic>?) ?? body;
-    if (data.isEmpty) {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+          '/api/affectations/operateur/$operatorId/en-cours');
+      final body = response.data ?? <String, dynamic>{};
+
+      // Gérer les différents formats de réponse
+      final rawData = body['data'];
+
+      // Cas 1: data est null
+      if (rawData == null) {
+        return null;
+      }
+
+      // Cas 2: data est une liste
+      if (rawData is List) {
+        if (rawData.isEmpty) {
+          return null;
+        }
+        // Prendre le premier élément si c'est une liste non vide
+        final firstItem = rawData.first;
+        if (firstItem is Map<String, dynamic>) {
+          return Task.fromJson(firstItem);
+        }
+        return null;
+      }
+
+      // Cas 3: data est un Map
+      if (rawData is Map<String, dynamic>) {
+        if (rawData.isEmpty) {
+          return null;
+        }
+        return Task.fromJson(rawData);
+      }
+
+      // Cas 4: data est le body lui-même (pas de clé 'data')
+      if (body.isNotEmpty && body.containsKey('ID')) {
+        return Task.fromJson(body);
+      }
+
+      return null;
+    } on DioException catch (e) {
+      debugPrint('❌ Erreur réseau getCurrentTask: ${e.message}');
+      return null;
+    } catch (e) {
+      debugPrint('❌ Erreur parsing getCurrentTask: $e');
       return null;
     }
-    return Task.fromJson(data);
+  }
+
+  Future<String?> resolveOperatorIdFromMatricule(String matricule) async {
+    final value = matricule.trim();
+    if (value.isEmpty) {
+      return null;
+    }
+
+    try {
+      final response = await _dio
+          .get<Map<String, dynamic>>('/api/personnel/matricule/$value');
+      final body = response.data ?? <String, dynamic>{};
+      final rawData = body['data'];
+      if (rawData is Map<String, dynamic>) {
+        final id = (rawData['ID'] ?? rawData['id'] ?? '').toString();
+        return id.isEmpty ? null : id;
+      }
+      return null;
+    } on DioException {
+      return null;
+    }
   }
 
   Future<List<Article>> searchArticles(String query) async {
@@ -80,14 +143,16 @@ class TaskService {
     required String articleId,
     required String workstationId,
     required String semaineId,
+    required String? commandeId,
   }) async {
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/affectations',
       data: {
-        'operatorId': operatorId,
-        'articleId': articleId,
-        'workstationId': workstationId,
-        'semaineId': semaineId,
+        'ID_Operateur': int.tryParse(operatorId) ?? operatorId,
+        'ID_Article': int.tryParse(articleId) ?? articleId,
+        'ID_Poste': int.tryParse(workstationId) ?? workstationId,
+        'ID_Semaine': int.tryParse(semaineId) ?? semaineId,
+        if (commandeId != null) 'ID_Commande': int.tryParse(commandeId) ?? commandeId,
       },
     );
 
@@ -104,7 +169,7 @@ class TaskService {
     final response = await _dio.patch<Map<String, dynamic>>(
       '/api/affectations/$taskId/terminer',
       data: {
-        'quantity': quantity,
+        'quantite_produite': quantity,
         'notes': notes,
       },
     );
@@ -188,6 +253,79 @@ class TaskService {
         .whereType<Map<String, dynamic>>()
         .map(Operateur.fromJson)
         .where((item) => item.isActive)
+        .toList();
+  }
+
+  Future<List<Semaine>> getSemainesAvecCommandes() async {
+    final response = await _dio
+        .get<Map<String, dynamic>>('/api/commandes/semaines-disponibles');
+    final body = response.data ?? <String, dynamic>{};
+    final data = body['data'];
+    if (data is! List) {
+      return const [];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(Semaine.fromJson)
+        .toList();
+  }
+
+  Future<List<Unite>> getUnitesProduction() async {
+    final response =
+        await _dio.get<Map<String, dynamic>>('/api/commandes/unites');
+    final body = response.data ?? <String, dynamic>{};
+    final data = body['data'];
+    if (data is! List) {
+      return const [];
+    }
+    return data
+        .whereType<String>()
+        .map((nom) => Unite(id: nom, nom: nom))
+        .toList();
+  }
+
+  Future<List<Article>> getArticlesFiltres(String semaineId, String unite) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/commandes/articles-filtres',
+      queryParameters: {'semaineId': semaineId, 'unite': unite},
+    );
+    final body = response.data ?? <String, dynamic>{};
+    final data = body['data'];
+    if (data is! List) {
+      return const [];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map((item) => Article(
+              id: (item['id'] ?? item['ID'] ?? '').toString(),
+              code: (item['code'] ??
+                      item['Code_article'] ??
+                      item['codeArticle'] ??
+                      '')
+                  .toString(),
+              name: (item['code'] ??
+                      item['Code_article'] ??
+                      item['codeArticle'] ??
+                      '')
+                  .toString(),
+              client: null,
+            ))
+        .toList();
+  }
+
+  Future<List<ArticleLot>> getArticlesLotsFiltres(String semaineId, String unite) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      '/api/commandes/articles-lots-filtres',
+      queryParameters: {'semaineId': semaineId, 'unite': unite},
+    );
+    final body = response.data ?? <String, dynamic>{};
+    final data = body['data'];
+    if (data is! List) {
+      return const [];
+    }
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(ArticleLot.fromJson)
         .toList();
   }
 }

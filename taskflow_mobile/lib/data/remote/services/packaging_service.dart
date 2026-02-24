@@ -34,7 +34,7 @@ class PackagingService {
   }) async {
     await _dio.patch<Map<String, dynamic>>(
       '/api/commandes/$orderId/emballe',
-      data: {'quantite': quantity, 'periodLabel': periodLabel},
+      data: {'quantite': quantity},
     );
 
     final stats = await _dio

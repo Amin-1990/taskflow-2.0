@@ -26,6 +26,13 @@ class ApiClient {
           ),
         ) {
     _dio.interceptors.add(
+      QueuedInterceptorsWrapper(
+        onRequest: _onRequest,
+        onError: _onError,
+      ),
+    );
+
+    _dio.interceptors.add(
       LogInterceptor(
         request: true,
         requestHeader: true,
@@ -33,13 +40,6 @@ class ApiClient {
         responseHeader: false,
         responseBody: true,
         error: true,
-      ),
-    );
-
-    _dio.interceptors.add(
-      QueuedInterceptorsWrapper(
-        onRequest: _onRequest,
-        onError: _onError,
       ),
     );
   }

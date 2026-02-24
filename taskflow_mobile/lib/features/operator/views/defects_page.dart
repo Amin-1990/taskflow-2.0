@@ -22,6 +22,10 @@ class DefectsPage extends ConsumerWidget {
       backgroundColor: const Color(0xFF07152F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF13284A),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFFE8EEF8)),
+          onPressed: () => context.go('/operator/dashboard'),
+        ),
         title: const Text('Defauts process',
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [

@@ -114,12 +114,17 @@ class AffectationService {
 
   async getAffectationsEnCours(operateurId) {
     try {
+      console.log('🔍 [getAffectationsEnCours] Requête SQL avec ID_Operateur =', operateurId);
       const [affectations] = await db.query(
         `SELECT * FROM affectations
          WHERE ID_Operateur = ? AND Date_fin IS NULL
          ORDER BY Date_debut DESC`,
         [operateurId]
       );
+      console.log('🔍 [getAffectationsEnCours] Résultat SQL: ', affectations.length, 'affectations trouvées');
+      if (affectations.length > 0) {
+        console.log('🔍 [getAffectationsEnCours] Première affectation:', JSON.stringify(affectations[0], null, 2));
+      }
       return affectations;
     } catch (error) {
       console.error('Erreur getAffectationsEnCours:', error);

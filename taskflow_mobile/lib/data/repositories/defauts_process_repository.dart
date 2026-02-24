@@ -63,7 +63,7 @@ class DefautsProcessRepository {
       _postes = (results[0] as List<Poste>)
         ..sort((a, b) => a.name.compareTo(b.name));
       _semaines = (results[1] as List<Semaine>)
-        ..sort((a, b) => b.label.compareTo(a.label));
+        ..sort((a, b) => b.numeroSemaine.compareTo(a.numeroSemaine));
       _operateurs = (results[2] as List<Operateur>)
         ..sort((a, b) => a.fullName.compareTo(b.fullName));
       _types = (results[3] as List<TypeDefaut>)
@@ -85,8 +85,8 @@ class DefautsProcessRepository {
       }
       if (_semaines.isEmpty) {
         _semaines = const [
-          Semaine(id: '1', label: '2023-W42'),
-          Semaine(id: '2', label: '2023-W41'),
+          Semaine(id: '1', codeSemaine: 'S42', numeroSemaine: 42, annee: 2023),
+          Semaine(id: '2', codeSemaine: 'S41', numeroSemaine: 41, annee: 2023),
         ];
       }
       if (_operateurs.isEmpty) {

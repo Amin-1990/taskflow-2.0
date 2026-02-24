@@ -64,6 +64,24 @@ router.get(
 );
 
 router.get(
+    '/semaines-disponibles',
+    authMiddleware,
+    commandeController.getSemainesAvecCommandes
+);
+
+router.get(
+    '/articles-filtres',
+    authMiddleware,
+    commandeController.getArticlesFiltres
+);
+
+router.get(
+    '/articles-lots-filtres',
+    authMiddleware,
+    commandeController.getArticlesLotsFiltres
+);
+
+router.get(
     '/unites',
     authMiddleware,
     commandeController.getUnitesProduction

@@ -31,15 +31,21 @@ class DefautsProcessService {
       return const [];
     }
 
-    return data.whereType<Map<String, dynamic>>().map((e) {
-      final code = (e['Code_semaine'] ?? '').toString();
-      return Semaine(
-        id: (e['ID'] ?? '').toString(),
-        label: code.isEmpty
-            ? 'Semaine ${e['Numero_semaine']} - ${e['Annee']}'
-            : code,
-      );
-    }).toList();
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map((e) {
+          final code = (e['Code_semaine'] ?? '').toString();
+          final numero =
+              int.tryParse((e['Numero_semaine'] ?? '0').toString()) ?? 0;
+          final annee = int.tryParse((e['Annee'] ?? '0').toString()) ?? 0;
+          return Semaine(
+            id: (e['ID'] ?? '').toString(),
+            codeSemaine: code,
+            numeroSemaine: numero,
+            annee: annee,
+          );
+        })
+        .toList();
   }
 
   Future<List<Operateur>> getOperateurs() async {

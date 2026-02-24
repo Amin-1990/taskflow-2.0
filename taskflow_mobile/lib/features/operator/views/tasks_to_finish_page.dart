@@ -29,7 +29,13 @@ class _TasksToFinishPageState extends ConsumerState<TasksToFinishPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Taches a finir')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFFE8EEF8)),
+          onPressed: () => context.go('/operator/dashboard'),
+        ),
+        title: const Text('Taches a finir'),
+      ),
       body: Center(
         child: FilledButton(
           onPressed: () {

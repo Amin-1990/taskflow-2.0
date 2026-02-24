@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../../../core/widgets/scanner_button.dart';
-import '../../../../core/widgets/searchable_dropdown.dart';
-import '../../../../domain/models/article.dart';
+import '../../../../core/widgets/selection_field.dart';
+import '../../../../core/widgets/selection_modal.dart';
+import '../../../../domain/models/article_lot.dart';
 import '../../../../domain/models/operateur.dart';
 import '../../../../domain/models/semaine.dart';
+import '../../../../domain/models/unite.dart';
 import '../../../../domain/models/workstation.dart';
 import '../controllers/new_task_provider.dart';
-import '../widgets/recent_task_tile.dart';
 
 class NewTaskPage extends ConsumerStatefulWidget {
   const NewTaskPage({super.key});
@@ -28,6 +28,10 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
       backgroundColor: const Color(0xFF07152F),
       appBar: AppBar(
         backgroundColor: const Color(0xFF07152F),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFFE8EEF8)),
+          onPressed: () => context.go('/operator/dashboard'),
+        ),
         title: const Text('NOUVELLE AFFECTATION',
             style: TextStyle(fontWeight: FontWeight.w700)),
         actions: [
@@ -46,33 +50,31 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _FieldLabel('SEMAINE DE PRODUCTION'),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _WeekDropdown(
-                                weeks: state.weeks,
-                                selected: state.selectedWeek,
-                                onChanged: (w) {
-                                  if (w != null) notifier.selectWeek(w);
+                        SelectionField<Semaine>(
+                          label: 'SEMAINE DE PRODUCTION',
+                          value: state.selectedSemaine,
+                          displayText: (s) => s.label,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Semaine>(
+                                title: 'Sélectionner une semaine',
+                                items: state.semaines,
+                                displayText: (s) => s.label,
+                                selectedValue: state.selectedSemaine,
+                                onSelect: (s) {
+                                  notifier.selectSemaine(s);
                                 },
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            ScannerButton(
-                              onScan: (value) {
-                                final matched = state.weeks
-                                    .where((w) =>
-                                        w.id == value ||
-                                        w.label.contains(value))
-                                    .firstOrNull;
-                                if (matched != null) {
-                                  notifier.selectWeek(matched);
-                                }
-                              },
-                            ),
-                          ],
+                            );
+                          },
+                          enableQrScan: true,
+                          onScanQr: () async {
+                            // TODO: Implement QR scan logic
+                          },
+                          onClear: () {
+                            notifier.clearSemaine();
+                          },
                         ),
                       ],
                     ),
@@ -86,51 +88,84 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _FieldLabel('ARTICLE / REFERENCE'),
-                        const SizedBox(height: 8),
-                        SearchableDropdown<Article>(
-                          hint: 'Scannez ou recherchez...',
-                          selected: state.selectedArticle,
-                          onSearch: notifier.searchArticles,
-                          itemToText: (a) => '${a.code} - ${a.name}',
-                          onSelected: notifier.selectArticle,
-                          onScan: (value) async {
-                            final result = await notifier.searchArticles(value);
-                            if (result.isNotEmpty) {
-                              notifier.selectArticle(result.first);
-                            }
+                        SelectionField<Unite>(
+                          label: 'UNITE',
+                          value: state.selectedUnite,
+                          displayText: (u) => u.nom,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Unite>(
+                                title: 'Sélectionner une unité',
+                                items: state.unites,
+                                displayText: (u) => u.nom,
+                                selectedValue: state.selectedUnite,
+                                onSelect: (u) {
+                                  notifier.selectUnite(u);
+                                },
+                              ),
+                            );
+                          },
+                          enableQrScan: false,
+                          onClear: () {
+                            notifier.clearUnite();
                           },
                         ),
                         const SizedBox(height: 16),
-                        const _FieldLabel('POSTE DE TRAVAIL'),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _WorkstationDropdown(
-                                values: state.availableWorkstations,
-                                selected: state.selectedWorkstation,
-                                onChanged: (w) {
-                                  if (w != null) notifier.selectWorkstation(w);
+                        SelectionField<ArticleLot>(
+                          label: 'ARTICLE / LOT',
+                          value: state.selectedArticleLot,
+                          displayText: (al) => al.displayLabel,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<ArticleLot>(
+                                title: 'Sélectionner un article',
+                                items: state.articlesLots,
+                                displayText: (al) => al.displayLabel,
+                                selectedValue: state.selectedArticleLot,
+                                onSelect: (al) {
+                                  notifier.selectArticleLot(al);
                                 },
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            ScannerButton(
-                              onScan: (value) {
-                                final matched = state.availableWorkstations
-                                    .where((ws) =>
-                                        ws.code == value ||
-                                        ws.name
-                                            .toLowerCase()
-                                            .contains(value.toLowerCase()))
-                                    .firstOrNull;
-                                if (matched != null) {
-                                  notifier.selectWorkstation(matched);
-                                }
-                              },
-                            ),
-                          ],
+                            );
+                          },
+                          enableQrScan: true,
+                          onScanQr: () async {
+                            // TODO: Implement QR scan logic
+                          },
+                          onClear: () {
+                            notifier.clearArticleLot();
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        SelectionField<Workstation>(
+                          label: 'POSTE DE TRAVAIL',
+                          value: state.selectedPoste,
+                          displayText: (p) =>
+                              p.name.isEmpty ? p.code : p.name,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Workstation>(
+                                title: 'Sélectionner un poste',
+                                items: state.postes,
+                                displayText: (p) =>
+                                    p.name.isEmpty ? p.code : p.name,
+                                selectedValue: state.selectedPoste,
+                                onSelect: (p) {
+                                  notifier.selectPoste(p);
+                                },
+                              ),
+                            );
+                          },
+                          enableQrScan: true,
+                          onScanQr: () async {
+                            // TODO: Implement QR scan logic
+                          },
+                          onClear: () {
+                            notifier.clearPoste();
+                          },
                         ),
                       ],
                     ),
@@ -143,42 +178,55 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _FieldLabel('OPERATEUR (BADGE)'),
-                        const SizedBox(height: 8),
-                        SearchableDropdown<Operateur>(
-                          hint: 'Nom prenom ou matricule...',
-                          selected: state.selectedOperator,
-                          onSearch: notifier.searchOperators,
-                          itemToText: (item) =>
-                              '${item.fullName} (${item.matricule})',
-                          onSelected: notifier.selectOperator,
-                          onQueryChanged: notifier.setOperatorInput,
-                          onScan: notifier.setOperatorInput,
+                        SelectionField<Operateur>(
+                          label: 'OPERATEUR (BADGE)',
+                          value: state.selectedOperateur,
+                          displayText: (op) =>
+                              '${op.fullName} (${op.matricule})',
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Operateur>(
+                                title: 'Sélectionner un opérateur',
+                                items: state.operateurs,
+                                displayText: (op) =>
+                                    '${op.fullName} (${op.matricule})',
+                                selectedValue: state.selectedOperateur,
+                                onSelect: (op) {
+                                  notifier.selectOperateur(op);
+                                },
+                              ),
+                            );
+                          },
+                          enableQrScan: true,
+                          onScanQr: () async {
+                            // TODO: Implement QR scan logic
+                          },
+                          onClear: () {
+                            notifier.clearOperateur();
+                          },
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  const Text('RECENT',
-                      style: TextStyle(
-                          color: Color(0xFFAFC0DB),
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1.5)),
-                  const SizedBox(height: 10),
-                  if (state.recentTasks.isEmpty)
-                    const Text('Aucune activite recente',
-                        style: TextStyle(color: Color(0xFF7D95BA)))
-                  else
-                    ...state.recentTasks.take(3).map((t) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: RecentTaskTile(task: t),
-                        )),
                   if (state.error != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(state.error!,
-                          style: const TextStyle(color: Color(0xFFFF7A83))),
+                      padding: const EdgeInsets.only(top: 16),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD32F2F).withOpacity(0.1),
+                          border: Border.all(color: const Color(0xFFD32F2F)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          state.error!,
+                          style: const TextStyle(
+                            color: Color(0xFFFF7A83),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -197,8 +245,8 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                     }
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                          content:
-                              Text('Affectation enregistree avec succes.')),
+                          content: Text(
+                              'Affectation enregistree avec succes.')),
                     );
                     context.go('/operator/dashboard');
                   },
@@ -257,71 +305,6 @@ class _Panel extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: child,
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(label,
-        style: const TextStyle(
-            color: Color(0xFF8EA2C3),
-            fontSize: 17,
-            fontWeight: FontWeight.w600));
-  }
-}
-
-class _WeekDropdown extends StatelessWidget {
-  const _WeekDropdown(
-      {required this.weeks, required this.selected, required this.onChanged});
-
-  final List<Semaine> weeks;
-  final Semaine? selected;
-  final ValueChanged<Semaine?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<Semaine>(
-      value: selected,
-      onChanged: onChanged,
-      dropdownColor: const Color(0xFF13284A),
-      decoration: const InputDecoration(),
-      items: weeks
-          .map((w) => DropdownMenuItem(
-              value: w,
-              child: Text(w.label,
-                  style: const TextStyle(color: Color(0xFFE8EEF8)))))
-          .toList(),
-    );
-  }
-}
-
-class _WorkstationDropdown extends StatelessWidget {
-  const _WorkstationDropdown(
-      {required this.values, required this.selected, required this.onChanged});
-
-  final List<Workstation> values;
-  final Workstation? selected;
-  final ValueChanged<Workstation?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<Workstation>(
-      value: selected,
-      onChanged: onChanged,
-      dropdownColor: const Color(0xFF13284A),
-      decoration: const InputDecoration(hintText: 'Selectionner un poste'),
-      items: values
-          .map((w) => DropdownMenuItem(
-              value: w,
-              child: Text(w.name.isEmpty ? w.code : w.name,
-                  style: const TextStyle(color: Color(0xFFE8EEF8)))))
-          .toList(),
     );
   }
 }

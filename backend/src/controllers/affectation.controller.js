@@ -5,7 +5,7 @@ const { logAction } = require('../services/audit.service');
 
 exports.createAffectation = async (req, res) => {
   try {
-    const {
+    let {
       ID_Commande,
       ID_Operateur,
       ID_Poste,
@@ -16,11 +16,30 @@ exports.createAffectation = async (req, res) => {
       Quantite_produite
     } = req.body;
 
-    if (!ID_Commande || !ID_Operateur || !ID_Poste || !ID_Article) {
+    // Validation des champs obligatoires (ID_Commande peut être déterminé automatiquement)
+    if (!ID_Operateur || !ID_Poste || !ID_Article) {
       return res.status(400).json({
         success: false,
-        error: 'Commande, operateur, poste et article sont requis'
+        error: 'Operateur, poste et article sont requis'
       });
+    }
+
+    // Si ID_Commande non fourni, le déduire depuis la combinaison Article + Semaine + Unité
+    if (!ID_Commande) {
+      // Récupérer l'unite_production depuis le context ou depuis ID_Article
+      const [articleRows] = await db.query(
+        'SELECT c.ID, c.Unite_production FROM commandes c WHERE c.ID_Article = ? AND c.ID_Semaine = ? LIMIT 1',
+        [ID_Article, ID_Semaine]
+      );
+
+      if (articleRows.length > 0) {
+        ID_Commande = articleRows[0].ID;
+      } else {
+        return res.status(400).json({
+          success: false,
+          error: 'Commande non trouvée pour cette combinaison Article/Semaine'
+        });
+      }
     }
 
     const affectationsEnCours = await affectationService.getAffectationsEnCours(ID_Operateur);
@@ -71,12 +90,31 @@ exports.createAffectation = async (req, res) => {
 exports.getAffectationsEnCoursByOperateur = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('🔍 [getAffectationsEnCoursByOperateur] ID_Operateur reçu:', id);
     const affectations = await affectationService.getAffectationsEnCours(id);
-    res.json({
-      success: true,
-      count: affectations.length,
-      data: affectations
-    });
+    console.log('🔍 [getAffectationsEnCoursByOperateur] Affectations trouvées:', affectations.length);
+    
+    // Si une seule affectation, retourner l'objet directement
+    if (affectations.length === 1) {
+      res.json({
+        success: true,
+        count: 1,
+        data: affectations[0]  // Objet unique, pas de tableau
+      });
+    } else if (affectations.length === 0) {
+      res.json({
+        success: true,
+        count: 0,
+        data: null  // null au lieu de tableau vide
+      });
+    } else {
+      // Plusieurs affectations (ne devrait pas arriver normalement)
+      res.json({
+        success: true,
+        count: affectations.length,
+        data: affectations[0]  // Retourner la première
+      });
+    }
   } catch (error) {
     console.error('Erreur getAffectationsEnCoursByOperateur:', error);
     res.status(500).json({

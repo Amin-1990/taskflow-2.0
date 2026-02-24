@@ -144,6 +144,121 @@ exports.getAllCommandes = async (req, res) => {
 
 // GET /api/commandes/:id - Récupérer une commande par ID
 // GET /api/commandes/unites - Liste distincte des unites de production
+// GET /api/commandes/semaines-disponibles - Semaines avec commandes
+exports.getSemainesAvecCommandes = async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT DISTINCT
+                s.ID,
+                s.Annee,
+                s.Code_semaine,
+                s.Numero_semaine
+            FROM semaines s
+            INNER JOIN commandes c ON s.ID = c.ID_Semaine
+            ORDER BY s.Annee DESC, s.Code_semaine DESC
+        `);
+
+        res.json({
+            success: true,
+            data: rows.map((row) => ({
+                id: row.ID,
+                codeSemaine: row.Code_semaine,
+                numeroSemaine: row.Numero_semaine,
+                annee: row.Annee,
+                label: `${row.Code_semaine} - ${row.Annee}`
+            }))
+        });
+    } catch (error) {
+        console.error('Erreur getSemainesAvecCommandes:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la récupération des semaines'
+        });
+    }
+};
+
+// GET /api/commandes/articles-filtres - Articles filtrés par semaine et unité
+exports.getArticlesFiltres = async (req, res) => {
+    try {
+        const { semaineId, unite } = req.query;
+
+        if (!semaineId || !unite) {
+            return res.status(400).json({
+                success: false,
+                error: 'Les paramètres semaineId et unite sont requis'
+            });
+        }
+
+        const [rows] = await db.query(`
+            SELECT DISTINCT
+                a.ID,
+                a.Code_article
+            FROM articles a
+            INNER JOIN commandes c ON a.Code_article COLLATE utf8mb4_unicode_ci = c.Code_article
+            WHERE c.ID_Semaine = ? AND c.Unite_production = ?
+            ORDER BY a.Code_article
+        `, [semaineId, unite]);
+
+        res.json({
+            success: true,
+            data: rows.map((row) => ({
+                id: row.ID,
+                code: row.Code_article
+            }))
+        });
+    } catch (error) {
+        console.error('Erreur getArticlesFiltres:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la récupération des articles'
+        });
+    }
+};
+
+// GET /api/commandes/articles-lots-filtres - Articles avec lots filtrés par semaine et unité
+exports.getArticlesLotsFiltres = async (req, res) => {
+    try {
+        const { semaineId, unite } = req.query;
+
+        if (!semaineId || !unite) {
+            return res.status(400).json({
+                success: false,
+                error: 'Les paramètres semaineId et unite sont requis'
+            });
+        }
+
+        const [rows] = await db.query(`
+            SELECT DISTINCT 
+                c.ID as commandeId,
+                c.Code_article,
+                c.Lot,
+                a.ID as articleId,
+                CONCAT(c.Code_article, ' | ', COALESCE(c.Lot, 'Sans Lot')) as displayLabel
+            FROM commandes c
+            LEFT JOIN articles a ON c.ID_Article = a.ID
+            WHERE c.ID_Semaine = ? AND c.Unite_production = ?
+            ORDER BY c.Code_article, c.Lot
+        `, [semaineId, unite]);
+
+        res.json({
+            success: true,
+            data: rows.map((row) => ({
+                commandeId: row.commandeId,
+                codeArticle: row.Code_article,
+                lot: row.Lot,
+                articleId: row.articleId,
+                displayLabel: row.displayLabel
+            }))
+        });
+    } catch (error) {
+        console.error('Erreur getArticlesLotsFiltres:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Erreur lors de la récupération des articles avec lots'
+        });
+    }
+};
+
 exports.getUnitesProduction = async (req, res) => {
     try {
         const [columnsRows] = await db.query('SHOW COLUMNS FROM commandes');

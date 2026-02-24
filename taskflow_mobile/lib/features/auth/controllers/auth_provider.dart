@@ -60,8 +60,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   final ApiClient _apiClient;
   final TokenStorage _tokenStorage;
+  Future<void>? _bootstrapFuture;
 
   Future<void> checkStoredToken() async {
+    if (_bootstrapFuture != null) {
+      return _bootstrapFuture!;
+    }
+
+    _bootstrapFuture = _checkStoredTokenInternal();
+    try {
+      await _bootstrapFuture;
+    } finally {
+      _bootstrapFuture = null;
+    }
+  }
+
+  Future<void> _checkStoredTokenInternal() async {
     final storedServerUrl = await ApiSettingsStorage.getBaseUrl();
     if (storedServerUrl != null && storedServerUrl.isNotEmpty) {
       await _apiClient.updateBaseUrl(storedServerUrl);
