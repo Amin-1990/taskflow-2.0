@@ -12,6 +12,7 @@ const {
 } = require('../validators');
 const planningController = require('../controllers/planningHebdo.controller');
 const authMiddleware = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
 
 // Routes spécifiques D'ABORD
 
@@ -19,6 +20,7 @@ const authMiddleware = require('../middleware/auth.middleware');
 router.get(
   '/:id/export/pdf',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningIdValidator,
   validate,
   planningController.exportPlanningPDF
@@ -27,6 +29,7 @@ router.get(
 router.get(
   '/:id/export/excel',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningIdValidator,
   validate,
   planningController.exportPlanningExcel
@@ -36,6 +39,7 @@ router.get(
 router.get(
   '/semaine',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningController.getPlanningBySemaineParams
 );
 
@@ -43,6 +47,7 @@ router.get(
 router.get(
   '/grille/semaine',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningController.getPlanningGrilleSemaine
 );
 
@@ -50,12 +55,14 @@ router.get(
 router.get(
   '/semaines-annee',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningController.getInfosSemainesAnnee
 );
 
 router.post(
   '/generer/semaine/:semaineId',
   authMiddleware,
+  requirePermission('PLANNING_WRITE'),
   planningBySemaineValidator,
   validate,
   planningController.genererPlanningFromCommandes
@@ -64,6 +71,7 @@ router.post(
 router.get(
   '/synthese/semaine/:semaineId',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningBySemaineValidator,
   validate,
   planningController.getSyntheseSemaine
@@ -72,6 +80,7 @@ router.get(
 router.get(
   '/semaine/:semaineId',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningBySemaineValidator,
   validate,
   planningController.getPlanningBySemaine
@@ -80,6 +89,7 @@ router.get(
 router.get(
   '/commande/:commandeId',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningByCommandeValidator,
   validate,
   planningController.getPlanningByCommande
@@ -88,6 +98,7 @@ router.get(
 router.get(
   '/lot/:identifiant',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningByLotValidator,
   validate,
   planningController.getPlanningByLot
@@ -97,6 +108,7 @@ router.get(
 router.get(
   '/:id/conflits',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningIdValidator,
   validate,
   planningController.obtenirConflits
@@ -105,6 +117,7 @@ router.get(
 router.get(
   '/:id/suggestions',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningIdValidator,
   validate,
   planningController.obtenirSuggestions
@@ -114,18 +127,20 @@ router.get(
 router.get(
   '/:id',
   authMiddleware,
+  requirePermission('PLANNING_READ'),
   planningIdValidator,
   validate,
   planningController.getPlanningById
 );
 
 // Liste (pas de validation)
-router.get('/', authMiddleware, planningController.getAllPlannings);
+router.get('/', authMiddleware, requirePermission('PLANNING_READ'), planningController.getAllPlannings);
 
 // POST
 router.post(
   '/',
   authMiddleware,
+  requirePermission('PLANNING_WRITE'),
   createPlanningValidator,
   validate,
   planningController.createPlanning
@@ -135,6 +150,7 @@ router.post(
 router.put(
   '/:id',
   authMiddleware,
+  requirePermission('PLANNING_WRITE'),
   updatePlanningValidator,
   validate,
   planningController.updatePlanning
@@ -144,6 +160,7 @@ router.put(
 router.patch(
   '/:id/jour/:jour',
   authMiddleware,
+  requirePermission('PLANNING_WRITE'),
   planningIdValidator,
   validate,
   planningController.updateJour
@@ -153,6 +170,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware,
+  requirePermission('PLANNING_WRITE'),
   planningIdValidator,
   validate,
   planningController.deletePlanning
