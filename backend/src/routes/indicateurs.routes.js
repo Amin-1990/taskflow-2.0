@@ -14,8 +14,10 @@ const express = require('express');
 const router = express.Router();
 const indicateursController = require('../controllers/indicateurs.controller');
 const authMiddleware = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
 
 router.use(authMiddleware);
+router.use(requirePermission('INDICATEURS_READ'));
 
 // Point d'entree unique
 router.get('/', indicateursController.getAll);
