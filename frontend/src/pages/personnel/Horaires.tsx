@@ -16,6 +16,7 @@ import PersonnelFilterPanel from '../../components/personnel/PersonnelFilterPane
 import horairesApi from '../../api/horaires';
 import type { CreateHoraireDto, Horaire, JourSemaine, TypeChome } from '../../types/horaires.types';
 import { showToast } from '../../utils/toast';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface HorairesPageProps {
   path?: string;
@@ -93,6 +94,7 @@ const getMonthGrid = (date: Date) => {
 };
 
 export const Horaires: FunctionComponent<HorairesPageProps> = () => {
+  const { canWrite } = usePermissions();
   const [items, setItems] = useState<Horaire[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('week');
@@ -319,18 +321,24 @@ export const Horaires: FunctionComponent<HorairesPageProps> = () => {
         }
         actions={
           <>
-            <PersonnelActionButton onClick={onTemplate} loading={isDownloadingTemplate} icon={Download}>
-              {isDownloadingTemplate ? 'Template...' : 'Template'}
-            </PersonnelActionButton>
-            <PersonnelActionButton onClick={onImportClick} loading={isImporting} icon={Upload}>
-              {isImporting ? 'Import...' : 'Importer'}
-            </PersonnelActionButton>
+            {canWrite('HORAIRES') && (
+              <PersonnelActionButton onClick={onTemplate} loading={isDownloadingTemplate} icon={Download}>
+                {isDownloadingTemplate ? 'Template...' : 'Template'}
+              </PersonnelActionButton>
+            )}
+            {canWrite('HORAIRES') && (
+              <PersonnelActionButton onClick={onImportClick} loading={isImporting} icon={Upload}>
+                {isImporting ? 'Import...' : 'Importer'}
+              </PersonnelActionButton>
+            )}
             <PersonnelActionButton onClick={onExport} loading={isExporting} icon={Download}>
               {isExporting ? 'Export...' : 'Exporter'}
             </PersonnelActionButton>
-            <PersonnelActionButton onClick={() => openCreate()} icon={Plus} variant="accent">
-              Ajouter
-            </PersonnelActionButton>
+            {canWrite('HORAIRES') && (
+              <PersonnelActionButton onClick={() => openCreate()} icon={Plus} variant="accent">
+                Ajouter
+              </PersonnelActionButton>
+            )}
             <PersonnelActionButton onClick={loadData} icon={RefreshCw}>
               Actualiser
             </PersonnelActionButton>
@@ -423,7 +431,9 @@ export const Horaires: FunctionComponent<HorairesPageProps> = () => {
                         <div className="text-xs text-gray-500">Pause {item.Pause_debut.slice(0, 5)} - {item.Pause_fin.slice(0, 5)}</div>
                       )}
                       <div className="mt-2 flex items-center gap-2">
-                        <button onClick={() => openEdit(item)} className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">Modifier</button>
+                        {canWrite('HORAIRES') && (
+                          <button onClick={() => openEdit(item)} className="text-xs px-2 py-1 rounded border border-gray-300 hover:bg-gray-50">Modifier</button>
+                        )}
                         {item.Est_jour_ferie ? (
                           <span className="text-xs px-2 py-1 rounded bg-red-100 text-red-700">Ferie</span>
                         ) : null}
@@ -431,9 +441,11 @@ export const Horaires: FunctionComponent<HorairesPageProps> = () => {
                     </>
                   ) : (
                     <div className="mt-3">
-                      <PersonnelActionButton onClick={() => openCreate(d)}>
-                        Ajouter
-                      </PersonnelActionButton>
+                      {canWrite('HORAIRES') && (
+                        <PersonnelActionButton onClick={() => openCreate(d)}>
+                          Ajouter
+                        </PersonnelActionButton>
+                      )}
                     </div>
                   )}
                 </div>

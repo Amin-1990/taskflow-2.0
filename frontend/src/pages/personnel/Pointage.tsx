@@ -9,6 +9,7 @@ import PersonnelFilterPanel from '../../components/personnel/PersonnelFilterPane
 import type { Personnel } from '../../types/personnel.types';
 import type { PointageRow } from '../../types/pointage.types';
 import { showToast } from '../../utils/toast';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface PointagePageProps {
   path?: string;
@@ -68,6 +69,7 @@ const downloadBlob = (blob: Blob, filename: string) => {
 const getCellKey = (personnelId: number, date: string) => `${personnelId}_${date}`;
 
 const Pointage: FunctionComponent<PointagePageProps> = () => {
+  const { canWrite } = usePermissions();
   const today = toIsoDate(new Date());
   const [startDate, setStartDate] = useState<string>(shiftDate(today, -7));
   const [endDate, setEndDate] = useState<string>(today);
@@ -392,20 +394,24 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
         subtitle="Suivi journalier des presences, retards et absences"
         actions={
           <>
-            <PersonnelActionButton
-              onClick={handleTemplate}
-              loading={isDownloadingTemplate}
-              icon={Download}
-            >
-              {isDownloadingTemplate ? 'Template...' : 'Template'}
-            </PersonnelActionButton>
-            <PersonnelActionButton
-              onClick={handleImportClick}
-              loading={isImporting}
-              icon={Upload}
-            >
-              {isImporting ? 'Import...' : 'Importer'}
-            </PersonnelActionButton>
+            {canWrite('POINTAGE') && (
+              <PersonnelActionButton
+                onClick={handleTemplate}
+                loading={isDownloadingTemplate}
+                icon={Download}
+              >
+                {isDownloadingTemplate ? 'Template...' : 'Template'}
+              </PersonnelActionButton>
+            )}
+            {canWrite('POINTAGE') && (
+              <PersonnelActionButton
+                onClick={handleImportClick}
+                loading={isImporting}
+                icon={Upload}
+              >
+                {isImporting ? 'Import...' : 'Importer'}
+              </PersonnelActionButton>
+            )}
             <PersonnelActionButton
               onClick={() => void handleExport()}
               loading={isExporting}
@@ -422,70 +428,70 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
 
       <PersonnelFilterPanel title="Filtres">
         <div className="flex flex-wrap items-end gap-3">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Date debut</label>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Date debut</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate((e.target as HTMLInputElement).value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Date fin</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate((e.target as HTMLInputElement).value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Recherche</label>
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
               <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate((e.target as HTMLInputElement).value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Date fin</label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate((e.target as HTMLInputElement).value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Recherche</label>
-              <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
-                <input
-                  value={search}
-                  onChange={(e) => {
-                    setSearch((e.target as HTMLInputElement).value);
-                    setPage(1);
-                  }}
-                  placeholder="Nom ou matricule"
-                  className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm min-w-48"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Poste</label>
-              <select
-                value={posteFilter}
+                value={search}
                 onChange={(e) => {
-                  setPosteFilter((e.target as HTMLSelectElement).value);
+                  setSearch((e.target as HTMLInputElement).value);
                   setPage(1);
                 }}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-44"
-              >
-                {posteOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
+                placeholder="Nom ou matricule"
+                className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm min-w-48"
+              />
             </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Presence</label>
-              <select
-                value={presenceFilter}
-                onChange={(e) => {
-                  setPresenceFilter((e.target as HTMLSelectElement).value as any);
-                  setPage(1);
-                }}
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-40"
-              >
-                <option value="Tous">Tous</option>
-                <option value="Presents">Presents</option>
-                <option value="Absents">Absents</option>
-                <option value="Retards">Retards</option>
-              </select>
-            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Poste</label>
+            <select
+              value={posteFilter}
+              onChange={(e) => {
+                setPosteFilter((e.target as HTMLSelectElement).value);
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-44"
+            >
+              {posteOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Presence</label>
+            <select
+              value={presenceFilter}
+              onChange={(e) => {
+                setPresenceFilter((e.target as HTMLSelectElement).value as any);
+                setPage(1);
+              }}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-40"
+            >
+              <option value="Tous">Tous</option>
+              <option value="Presents">Presents</option>
+              <option value="Absents">Absents</option>
+              <option value="Retards">Retards</option>
+            </select>
+          </div>
         </div>
       </PersonnelFilterPanel>
 
@@ -575,13 +581,12 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
                         <td key={date} className="px-2 py-2">
                           <button
                             onClick={() => openCellModal(personnel, date)}
-                            className={`w-full min-h-[64px] rounded-lg border px-2 py-2 text-center hover:shadow-sm transition ${
-                              isAbsent
+                            className={`w-full min-h-[64px] rounded-lg border px-2 py-2 text-center hover:shadow-sm transition ${isAbsent
                                 ? 'border-red-200 bg-red-50'
                                 : hasRetard
                                   ? 'border-orange-200 bg-orange-50'
                                   : 'border-gray-200 bg-white hover:bg-gray-50'
-                            }`}
+                              }`}
                           >
                             <div className={`text-sm font-medium ${isAbsent ? 'text-red-700' : 'text-gray-800'}`}>
                               {topLine}
@@ -734,34 +739,42 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
               <div className="rounded-xl border border-gray-200 p-4 space-y-3">
                 <h4 className="text-sm font-semibold text-gray-800">Actions rapides</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  <button
-                    disabled={savingAction}
-                    onClick={() => void handlePointerArrivee()}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
-                  >
-                    Pointer arrivee
-                  </button>
-                  <button
-                    disabled={savingAction}
-                    onClick={() => void handlePointerDepart()}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
-                  >
-                    Pointer depart
-                  </button>
-                  <button
-                    disabled={savingAction}
-                    onClick={() => void handleSignalerAbsence()}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
-                  >
-                    Signaler absent
-                  </button>
-                  <button
-                    disabled={savingAction || !modal.pointage?.ID}
-                    onClick={() => void handleValiderPointage()}
-                    className="px-3 py-2.5 rounded-lg text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
-                  >
-                    Valider
-                  </button>
+                  {canWrite('POINTAGE') && (
+                    <button
+                      disabled={savingAction}
+                      onClick={() => void handlePointerArrivee()}
+                      className="px-3 py-2.5 rounded-lg text-sm font-medium border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+                    >
+                      Pointer arrivee
+                    </button>
+                  )}
+                  {canWrite('POINTAGE') && (
+                    <button
+                      disabled={savingAction}
+                      onClick={() => void handlePointerDepart()}
+                      className="px-3 py-2.5 rounded-lg text-sm font-medium border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-60"
+                    >
+                      Pointer depart
+                    </button>
+                  )}
+                  {canWrite('POINTAGE') && (
+                    <button
+                      disabled={savingAction}
+                      onClick={() => void handleSignalerAbsence()}
+                      className="px-3 py-2.5 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-60"
+                    >
+                      Signaler absent
+                    </button>
+                  )}
+                  {canWrite('POINTAGE') && (
+                    <button
+                      disabled={savingAction || !modal.pointage?.ID}
+                      onClick={() => void handleValiderPointage()}
+                      className="px-3 py-2.5 rounded-lg text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                    >
+                      Valider
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -773,13 +786,15 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
               >
                 Annuler
               </button>
-              <button
-                disabled={savingAction}
-                onClick={() => void handleAjusterPointage()}
-                className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-900 disabled:opacity-60"
-              >
-                Enregistrer modifications
-              </button>
+              {canWrite('POINTAGE') && (
+                <button
+                  disabled={savingAction}
+                  onClick={() => void handleAjusterPointage()}
+                  className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-900 disabled:opacity-60"
+                >
+                  Enregistrer modifications
+                </button>
+              )}
             </div>
           </div>
         </div>
