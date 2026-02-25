@@ -24,6 +24,7 @@ import { useArticles } from '../../hooks/useArticles';
 import { showToast } from '../../utils/toast';
 import { ARTICLE_STATUT_OPTIONS, articlesApi, type ArticleStatut } from '../../api/articles';
 import ActionButton from '../../components/common/ActionButton';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface ArticlesListProps {
   path?: string;
@@ -44,6 +45,7 @@ const STATUT_LABELS: Record<string, string> = {
 };
 
 export const Articles: FunctionComponent<ArticlesListProps> = () => {
+  const { canWrite } = usePermissions();
   const {
     articles,
     loading,
@@ -184,18 +186,24 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-            {isDownloadingTemplate ? 'Template...' : 'Template'}
-          </ActionButton>
-          <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-            {isImporting ? 'Import...' : 'Importer'}
-          </ActionButton>
+          {canWrite('ARTICLES') && (
+            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
+              {isDownloadingTemplate ? 'Template...' : 'Template'}
+            </ActionButton>
+          )}
+          {canWrite('ARTICLES') && (
+            <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
+              {isImporting ? 'Import...' : 'Importer'}
+            </ActionButton>
+          )}
           <ActionButton onClick={handleExportCSV} loading={isExporting} icon={Download}>
             {isExporting ? 'Export...' : 'Exporter'}
           </ActionButton>
-          <ActionButton onClick={() => route('/articles/gestion')} icon={Plus} variant="accent">
-            Nouvel article
-          </ActionButton>
+          {canWrite('ARTICLES') && (
+            <ActionButton onClick={() => route('/articles/gestion')} icon={Plus} variant="accent">
+              Nouvel article
+            </ActionButton>
+          )}
         </div>
       </div>
 
@@ -236,11 +244,10 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${
-              showFilters
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${showFilters
                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                 : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
+              }`}
           >
             <Filter className="w-5 h-5" />
             <span>Filtres</span>
@@ -355,26 +362,30 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                           title="Voir les dÃ©tails"
-                           onClick={() => route(`/articles/${article.ID}`)}
-                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                         >
-                           <Eye className="w-4 h-4" />
-                         </button>
-                        <button
-                          title="Modifier"
-                          onClick={() => route(`/articles/gestion/${article.ID}`)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          title="Voir les dÃ©tails"
+                          onClick={() => route(`/articles/${article.ID}`)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          title="Supprimer"
-                          onClick={() => handleDeleteClick(article.ID)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canWrite('ARTICLES') && (
+                          <button
+                            title="Modifier"
+                            onClick={() => route(`/articles/gestion/${article.ID}`)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canWrite('ARTICLES') && (
+                          <button
+                            title="Supprimer"
+                            onClick={() => handleDeleteClick(article.ID)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -403,11 +414,10 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
               <button
                 key={i + 1}
                 onClick={() => setPage(i + 1)}
-                className={`px-3 py-1 rounded-lg ${
-                  page === i + 1
+                className={`px-3 py-1 rounded-lg ${page === i + 1
                     ? 'bg-blue-600 text-white'
                     : 'border border-gray-300 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {i + 1}
               </button>
