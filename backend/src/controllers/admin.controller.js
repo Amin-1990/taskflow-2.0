@@ -17,6 +17,39 @@ const sanitizeSession = (session) => {
   return safe;
 };
 
+const DEFAULT_LIST_LIMIT = 25;
+const MAX_LIST_LIMIT = 100;
+
+const parseListQuery = (req, { defaultSortBy, allowedSortMap, defaultSortDir = 'desc' }) => {
+  const rawPage = parseInt(req.query.page || '1', 10);
+  const rawLimit = parseInt(req.query.limit || String(DEFAULT_LIST_LIMIT), 10);
+  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const limit = Number.isInteger(rawLimit) ? Math.min(Math.max(rawLimit, 1), MAX_LIST_LIMIT) : DEFAULT_LIST_LIMIT;
+  const search = typeof req.query.search === 'string' ? req.query.search.trim() : '';
+  const requestedSortBy = typeof req.query.sortBy === 'string' ? req.query.sortBy : defaultSortBy;
+  const sortBy = Object.prototype.hasOwnProperty.call(allowedSortMap, requestedSortBy) ? requestedSortBy : defaultSortBy;
+  const requestedSortDir = typeof req.query.sortDir === 'string' ? req.query.sortDir.toLowerCase() : defaultSortDir;
+  const sortDir = requestedSortDir === 'asc' ? 'ASC' : 'DESC';
+  const offset = (page - 1) * limit;
+
+  return {
+    page,
+    limit,
+    offset,
+    search,
+    sortBy,
+    sortDir,
+    sortExpr: allowedSortMap[sortBy]
+  };
+};
+
+const paginationMeta = (page, limit, total) => ({
+  page,
+  limit,
+  total,
+  totalPages: total > 0 ? Math.ceil(total / limit) : 0
+});
+
 exports.getDashboard = async (req, res) => {
   try {
     const [[users]] = await db.query(
@@ -61,18 +94,95 @@ exports.getDashboard = async (req, res) => {
 
 exports.listUsers = async (req, res) => {
   try {
+    const q = parseListQuery(req, {
+      defaultSortBy: 'ID',
+      allowedSortMap: {
+        ID: 'u.ID',
+        Username: 'u.Username',
+        Email: 'u.Email',
+        Nom_prenom: 'p.Nom_prenom',
+        Est_actif: 'u.Est_actif',
+        Est_verrouille: 'u.Est_verrouille',
+        Derniere_connexion: 'u.Derniere_connexion',
+        Date_creation: 'u.Date_creation'
+      },
+      defaultSortDir: 'desc'
+    });
+
+    const where = [];
+    const params = [];
+
+    if (q.search) {
+      where.push('(u.Username LIKE ? OR u.Email LIKE ? OR p.Nom_prenom LIKE ?)');
+      const like = `%${q.search}%`;
+      params.push(like, like, like);
+    }
+
+    if (req.query.status === 'active') {
+      where.push('u.Est_actif = 1 AND u.Est_verrouille = 0');
+    } else if (req.query.status === 'inactive') {
+      where.push('u.Est_actif = 0');
+    } else if (req.query.status === 'locked') {
+      where.push('u.Est_verrouille = 1');
+    }
+
+    if (req.query.roleId) {
+      where.push('ur.ID_Role = ?');
+      params.push(Number(req.query.roleId));
+    }
+
+    if (req.query.createdFrom) {
+      where.push('DATE(u.Date_creation) >= ?');
+      params.push(req.query.createdFrom);
+    }
+    if (req.query.createdTo) {
+      where.push('DATE(u.Date_creation) <= ?');
+      params.push(req.query.createdTo);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(DISTINCT u.ID) as total
+       FROM utilisateurs u
+       LEFT JOIN personnel p ON p.ID = u.ID_Personnel
+       LEFT JOIN utilisateurs_roles ur ON ur.ID_Utilisateur = u.ID
+       ${whereSql}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
+
     const [rows] = await db.query(
       `SELECT
         u.ID, u.ID_Personnel, u.Username, u.Email, u.Est_actif, u.Est_verifie,
         u.Est_verrouille, u.Tentatives_echec, u.Derniere_connexion,
         u.Date_creation, u.Date_modification,
-        p.Nom_prenom
+        p.Nom_prenom,
+        GROUP_CONCAT(DISTINCT r.Nom_role ORDER BY r.Nom_role SEPARATOR ', ') AS Roles_labels
        FROM utilisateurs u
        LEFT JOIN personnel p ON p.ID = u.ID_Personnel
-       ORDER BY u.ID DESC`
+       LEFT JOIN utilisateurs_roles ur ON ur.ID_Utilisateur = u.ID
+       LEFT JOIN roles r ON r.ID = ur.ID_Role
+       ${whereSql}
+       GROUP BY u.ID
+       ORDER BY ${q.sortExpr} ${q.sortDir}
+       LIMIT ? OFFSET ?`,
+      [...params, q.limit, q.offset]
     );
 
-    res.json({ success: true, count: rows.length, data: rows.map(sanitizeUser) });
+    res.json({
+      success: true,
+      count: rows.length,
+      data: rows.map(sanitizeUser),
+      pagination: paginationMeta(q.page, q.limit, total),
+      filtersApplied: {
+        search: q.search || null,
+        status: req.query.status || null,
+        roleId: req.query.roleId ? Number(req.query.roleId) : null,
+        createdFrom: req.query.createdFrom || null,
+        createdTo: req.query.createdTo || null
+      }
+    });
   } catch (error) {
     console.error('Erreur admin listUsers:', error);
     res.status(500).json({ success: false, error: 'Erreur lecture utilisateurs' });
@@ -335,6 +445,51 @@ exports.replaceUserPermissions = async (req, res) => {
 
 exports.listRoles = async (req, res) => {
   try {
+    const q = parseListQuery(req, {
+      defaultSortBy: 'Niveau_priorite',
+      allowedSortMap: {
+        ID: 'r.ID',
+        Code_role: 'r.Code_role',
+        Nom_role: 'r.Nom_role',
+        Niveau_priorite: 'r.Niveau_priorite',
+        Est_actif: 'r.Est_actif',
+        Est_systeme: 'r.Est_systeme',
+        users_count: 'users_count',
+        permissions_count: 'permissions_count',
+        Date_creation: 'r.Date_creation'
+      },
+      defaultSortDir: 'desc'
+    });
+
+    const where = [];
+    const params = [];
+
+    if (q.search) {
+      const like = `%${q.search}%`;
+      where.push('(r.Code_role LIKE ? OR r.Nom_role LIKE ? OR r.Description LIKE ?)');
+      params.push(like, like, like);
+    }
+
+    if (req.query.active !== undefined) {
+      where.push('r.Est_actif = ?');
+      params.push(req.query.active === '1' ? 1 : 0);
+    }
+
+    if (req.query.system !== undefined) {
+      where.push('r.Est_systeme = ?');
+      params.push(req.query.system === '1' ? 1 : 0);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) as total
+       FROM roles r
+       ${whereSql}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
+
     const [rows] = await db.query(
       `SELECT r.*,
               COUNT(DISTINCT ur.ID_Utilisateur) as users_count,
@@ -342,11 +497,24 @@ exports.listRoles = async (req, res) => {
        FROM roles r
        LEFT JOIN utilisateurs_roles ur ON ur.ID_Role = r.ID
        LEFT JOIN roles_permissions rp ON rp.ID_Role = r.ID
+       ${whereSql}
        GROUP BY r.ID
-       ORDER BY r.Niveau_priorite DESC, r.Nom_role ASC`
+       ORDER BY ${q.sortExpr} ${q.sortDir}
+       LIMIT ? OFFSET ?`,
+      [...params, q.limit, q.offset]
     );
 
-    res.json({ success: true, count: rows.length, data: rows });
+    res.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+      pagination: paginationMeta(q.page, q.limit, total),
+      filtersApplied: {
+        search: q.search || null,
+        active: req.query.active ?? null,
+        system: req.query.system ?? null
+      }
+    });
   } catch (error) {
     console.error('Erreur admin listRoles:', error);
     res.status(500).json({ success: false, error: 'Erreur lecture roles' });
@@ -425,33 +593,354 @@ exports.replaceRolePermissions = async (req, res) => {
 
 exports.listPermissions = async (req, res) => {
   try {
+    const q = parseListQuery(req, {
+      defaultSortBy: 'Categorie',
+      allowedSortMap: {
+        ID: 'p.ID',
+        Code_permission: 'p.Code_permission',
+        Nom_permission: 'p.Nom_permission',
+        Categorie: 'p.Categorie',
+        Date_creation: 'p.Date_creation',
+        roles_count: 'roles_count'
+      },
+      defaultSortDir: 'asc'
+    });
+
+    const where = [];
+    const params = [];
+
+    if (q.search) {
+      const like = `%${q.search}%`;
+      where.push('(p.Code_permission LIKE ? OR p.Nom_permission LIKE ? OR p.Description LIKE ? OR p.Categorie LIKE ?)');
+      params.push(like, like, like, like);
+    }
+
+    if (req.query.module) {
+      where.push('p.Categorie = ?');
+      params.push(req.query.module);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) as total
+       FROM permissions p
+       ${whereSql}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
+
     const [rows] = await db.query(
-      `SELECT *
-       FROM permissions
-       ORDER BY Categorie ASC, Nom_permission ASC`
+      `SELECT p.*,
+              COUNT(DISTINCT rp.ID_Role) as roles_count,
+              GROUP_CONCAT(DISTINCT r.Nom_role ORDER BY r.Nom_role SEPARATOR ', ') AS roles_labels,
+              MAX(CASE WHEN r.Est_systeme = 1 THEN 1 ELSE 0 END) as used_by_system_role
+       FROM permissions p
+       LEFT JOIN roles_permissions rp ON rp.ID_Permission = p.ID
+       LEFT JOIN roles r ON r.ID = rp.ID_Role
+       ${whereSql}
+       GROUP BY p.ID
+       ORDER BY ${q.sortExpr} ${q.sortDir}
+       LIMIT ? OFFSET ?`,
+      [...params, q.limit, q.offset]
     );
 
-    res.json({ success: true, count: rows.length, data: rows });
+    res.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+      pagination: paginationMeta(q.page, q.limit, total),
+      filtersApplied: {
+        search: q.search || null,
+        module: req.query.module || null
+      }
+    });
   } catch (error) {
     console.error('Erreur admin listPermissions:', error);
     res.status(500).json({ success: false, error: 'Erreur lecture permissions' });
   }
 };
 
+exports.getRolePermissions = async (req, res) => {
+  try {
+    const roleId = req.params.id;
+    const [rows] = await db.query(
+      `SELECT p.ID, p.Code_permission, p.Nom_permission, p.Categorie
+       FROM roles_permissions rp
+       JOIN permissions p ON p.ID = rp.ID_Permission
+       WHERE rp.ID_Role = ?
+       ORDER BY p.Categorie ASC, p.Nom_permission ASC`,
+      [roleId]
+    );
+
+    res.json({ success: true, count: rows.length, data: rows });
+  } catch (error) {
+    console.error('Erreur admin getRolePermissions:', error);
+    res.status(500).json({ success: false, error: 'Erreur lecture permissions role' });
+  }
+};
+
+exports.createPermission = async (req, res) => {
+  try {
+    const { Code_permission, Nom_permission, Description, Categorie } = req.body;
+
+    if (!Code_permission || !Nom_permission) {
+      return res.status(400).json({ success: false, error: 'Code_permission et Nom_permission requis' });
+    }
+
+    const [result] = await db.query(
+      `INSERT INTO permissions (
+        Code_permission, Nom_permission, Description, Categorie, Date_creation
+      ) VALUES (?, ?, ?, ?, NOW())`,
+      [Code_permission, Nom_permission, Description || null, Categorie || null]
+    );
+
+    await logAction({
+      ID_Utilisateur: req.user.ID,
+      Username: req.user.Username,
+      Action: 'ADMIN_CREATE_PERMISSION',
+      Table_concernee: 'permissions',
+      ID_Enregistrement: result.insertId,
+      Nouvelle_valeur: { Code_permission, Nom_permission, Description, Categorie },
+      IP_address: req.ip,
+      User_agent: req.get('User-Agent')
+    });
+
+    res.status(201).json({
+      success: true,
+      data: { ID: result.insertId, Code_permission, Nom_permission }
+    });
+  } catch (error) {
+    if (error && error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success: false, error: 'Code_permission deja existant' });
+    }
+
+    console.error('Erreur admin createPermission:', error);
+    res.status(500).json({ success: false, error: 'Erreur creation permission' });
+  }
+};
+
+exports.deletePermission = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const permissionId = req.params.id;
+
+    await connection.beginTransaction();
+
+    const [permissions] = await connection.query(
+      'SELECT ID, Code_permission, Nom_permission FROM permissions WHERE ID = ?',
+      [permissionId]
+    );
+
+    if (!permissions.length) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, error: 'Permission non trouvee' });
+    }
+
+    await connection.query('DELETE FROM roles_permissions WHERE ID_Permission = ?', [permissionId]);
+    await connection.query('DELETE FROM utilisateurs_permissions WHERE ID_Permission = ?', [permissionId]);
+    await connection.query('DELETE FROM permissions WHERE ID = ?', [permissionId]);
+
+    await connection.commit();
+
+    await logAction({
+      ID_Utilisateur: req.user.ID,
+      Username: req.user.Username,
+      Action: 'ADMIN_DELETE_PERMISSION',
+      Table_concernee: 'permissions',
+      ID_Enregistrement: permissionId,
+      Ancienne_valeur: permissions[0],
+      IP_address: req.ip,
+      User_agent: req.get('User-Agent')
+    });
+
+    res.json({ success: true, message: 'Permission supprimee' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Erreur admin deletePermission:', error);
+    res.status(500).json({ success: false, error: 'Erreur suppression permission' });
+  } finally {
+    connection.release();
+  }
+};
+
+exports.deleteRole = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const roleId = req.params.id;
+
+    await connection.beginTransaction();
+
+    const [roles] = await connection.query(
+      'SELECT ID, Code_role, Nom_role, Est_systeme FROM roles WHERE ID = ?',
+      [roleId]
+    );
+
+    if (!roles.length) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, error: 'Role non trouve' });
+    }
+
+    if (roles[0].Est_systeme === 1) {
+      await connection.rollback();
+      return res.status(400).json({ success: false, error: 'Suppression interdite pour un role systeme' });
+    }
+
+    await connection.query('DELETE FROM roles_permissions WHERE ID_Role = ?', [roleId]);
+    await connection.query('DELETE FROM utilisateurs_roles WHERE ID_Role = ?', [roleId]);
+    await connection.query('DELETE FROM roles WHERE ID = ?', [roleId]);
+
+    await connection.commit();
+
+    await logAction({
+      ID_Utilisateur: req.user.ID,
+      Username: req.user.Username,
+      Action: 'ADMIN_DELETE_ROLE',
+      Table_concernee: 'roles',
+      ID_Enregistrement: roleId,
+      Ancienne_valeur: roles[0],
+      IP_address: req.ip,
+      User_agent: req.get('User-Agent')
+    });
+
+    res.json({ success: true, message: 'Role supprime' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Erreur admin deleteRole:', error);
+    res.status(500).json({ success: false, error: 'Erreur suppression role' });
+  } finally {
+    connection.release();
+  }
+};
+
+exports.deleteUser = async (req, res) => {
+  const connection = await db.getConnection();
+  try {
+    const userId = req.params.id;
+
+    if (Number(userId) === Number(req.user.ID)) {
+      return res.status(400).json({ success: false, error: 'Suppression de votre propre compte interdite' });
+    }
+
+    await connection.beginTransaction();
+
+    const [users] = await connection.query(
+      'SELECT ID, Username, Email FROM utilisateurs WHERE ID = ?',
+      [userId]
+    );
+
+    if (!users.length) {
+      await connection.rollback();
+      return res.status(404).json({ success: false, error: 'Utilisateur non trouve' });
+    }
+
+    await connection.query('UPDATE logs_audit SET ID_Utilisateur = NULL WHERE ID_Utilisateur = ?', [userId]);
+    await connection.query('DELETE FROM sessions WHERE ID_Utilisateur = ?', [userId]);
+    await connection.query('DELETE FROM utilisateurs_permissions WHERE ID_Utilisateur = ?', [userId]);
+    await connection.query('DELETE FROM utilisateurs_roles WHERE ID_Utilisateur = ?', [userId]);
+    await connection.query('DELETE FROM utilisateurs WHERE ID = ?', [userId]);
+
+    await connection.commit();
+
+    await logAction({
+      ID_Utilisateur: req.user.ID,
+      Username: req.user.Username,
+      Action: 'ADMIN_DELETE_USER',
+      Table_concernee: 'utilisateurs',
+      ID_Enregistrement: userId,
+      Ancienne_valeur: users[0],
+      IP_address: req.ip,
+      User_agent: req.get('User-Agent')
+    });
+
+    res.json({ success: true, message: 'Utilisateur supprime' });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Erreur admin deleteUser:', error);
+    res.status(500).json({ success: false, error: 'Erreur suppression utilisateur' });
+  } finally {
+    connection.release();
+  }
+};
+
 exports.listSessions = async (req, res) => {
   try {
+    const q = parseListQuery(req, {
+      defaultSortBy: 'Date_connexion',
+      allowedSortMap: {
+        ID: 's.ID',
+        Username: 'u.Username',
+        Email: 'u.Email',
+        Date_connexion: 's.Date_connexion',
+        Date_expiration: 's.Date_expiration',
+        Derniere_activite: 's.Derniere_activite',
+        Est_active: 's.Est_active',
+        IP_address: 's.IP_address'
+      },
+      defaultSortDir: 'desc'
+    });
+
+    const where = [];
+    const params = [];
+
+    if (q.search) {
+      const like = `%${q.search}%`;
+      where.push('(u.Username LIKE ? OR u.Email LIKE ? OR s.IP_address LIKE ?)');
+      params.push(like, like, like);
+    }
+
+    if (req.query.userId) {
+      where.push('s.ID_Utilisateur = ?');
+      params.push(Number(req.query.userId));
+    }
+
+    if (req.query.active !== undefined) {
+      where.push('s.Est_active = ?');
+      params.push(req.query.active === '1' ? 1 : 0);
+    }
+
+    if (req.query.from) {
+      where.push('DATE(s.Date_connexion) >= ?');
+      params.push(req.query.from);
+    }
+    if (req.query.to) {
+      where.push('DATE(s.Date_connexion) <= ?');
+      params.push(req.query.to);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) as total
+       FROM sessions s
+       JOIN utilisateurs u ON u.ID = s.ID_Utilisateur
+       ${whereSql}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
+
     const [rows] = await db.query(
       `SELECT s.*, u.Username, u.Email
        FROM sessions s
        JOIN utilisateurs u ON u.ID = s.ID_Utilisateur
-       ORDER BY s.Date_connexion DESC
-       LIMIT 1000`
+       ${whereSql}
+       ORDER BY ${q.sortExpr} ${q.sortDir}
+       LIMIT ? OFFSET ?`,
+      [...params, q.limit, q.offset]
     );
 
     res.json({
       success: true,
       count: rows.length,
-      data: rows.map(sanitizeSession)
+      data: rows.map(sanitizeSession),
+      pagination: paginationMeta(q.page, q.limit, total),
+      filtersApplied: {
+        search: q.search || null,
+        userId: req.query.userId ? Number(req.query.userId) : null,
+        active: req.query.active ?? null,
+        from: req.query.from || null,
+        to: req.query.to || null
+      }
     });
   } catch (error) {
     console.error('Erreur admin listSessions:', error);
@@ -472,16 +961,86 @@ exports.revokeSession = async (req, res) => {
 
 exports.listAuditLogs = async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit || '200', 10), 2000);
+    const q = parseListQuery(req, {
+      defaultSortBy: 'Date_action',
+      allowedSortMap: {
+        ID: 'l.ID',
+        Date_action: 'l.Date_action',
+        Action: 'l.Action',
+        Table_concernee: 'l.Table_concernee',
+        Username: 'u.Username',
+        IP_address: 'l.IP_address'
+      },
+      defaultSortDir: 'desc'
+    });
+
+    const where = [];
+    const params = [];
+
+    if (q.search) {
+      const like = `%${q.search}%`;
+      where.push('(l.Action LIKE ? OR l.Table_concernee LIKE ? OR u.Username LIKE ? OR l.Username LIKE ? OR l.IP_address LIKE ?)');
+      params.push(like, like, like, like, like);
+    }
+
+    if (req.query.userId) {
+      where.push('l.ID_Utilisateur = ?');
+      params.push(Number(req.query.userId));
+    }
+
+    if (req.query.action) {
+      where.push('l.Action = ?');
+      params.push(req.query.action);
+    }
+
+    if (req.query.table) {
+      where.push('l.Table_concernee = ?');
+      params.push(req.query.table);
+    }
+
+    if (req.query.from) {
+      where.push('DATE(l.Date_action) >= ?');
+      params.push(req.query.from);
+    }
+    if (req.query.to) {
+      where.push('DATE(l.Date_action) <= ?');
+      params.push(req.query.to);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
+
+    const [countRows] = await db.query(
+      `SELECT COUNT(*) as total
+       FROM logs_audit l
+       LEFT JOIN utilisateurs u ON u.ID = l.ID_Utilisateur
+       ${whereSql}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
+
     const [rows] = await db.query(
       `SELECT l.*, u.Username as Username_utilisateur
        FROM logs_audit l
        LEFT JOIN utilisateurs u ON u.ID = l.ID_Utilisateur
-       ORDER BY l.Date_action DESC
-       LIMIT ?`,
-      [limit]
+       ${whereSql}
+       ORDER BY ${q.sortExpr} ${q.sortDir}
+       LIMIT ? OFFSET ?`,
+      [...params, q.limit, q.offset]
     );
-    res.json({ success: true, count: rows.length, data: rows });
+    res.json({
+      success: true,
+      count: rows.length,
+      data: rows,
+      pagination: paginationMeta(q.page, q.limit, total),
+      filtersApplied: {
+        search: q.search || null,
+        userId: req.query.userId ? Number(req.query.userId) : null,
+        action: req.query.action || null,
+        table: req.query.table || null,
+        from: req.query.from || null,
+        to: req.query.to || null
+      }
+    });
   } catch (error) {
     console.error('Erreur admin listAuditLogs:', error);
     res.status(500).json({ success: false, error: 'Erreur lecture audit' });

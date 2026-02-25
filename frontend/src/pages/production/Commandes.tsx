@@ -19,6 +19,7 @@ import {
   Upload,
 } from 'lucide-preact';
 import { useCommandes } from '../../hooks/useCommandes';
+import { usePermissions } from '../../hooks/usePermissions';
 import type { CommandeStatut } from '../../types/production.types';
 import { showToast } from '../../utils/toast';
 import { commandesApi } from '../../api/commandes';
@@ -53,6 +54,7 @@ const STATUT_LABELS: Record<CommandeStatut, string> = {
 };
 
 export const Commandes: FunctionComponent<CommandesListProps> = () => {
+  const { canWrite } = usePermissions();
   const {
     commandes,
     loading,
@@ -218,9 +220,11 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
             <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download} title="Exporter les commandes en XLSX">
               {isExporting ? 'Export...' : 'Exporter'}
             </ActionButton>
-            <ActionButton onClick={() => route('/production/commandes/nouveau')} icon={Plus} variant="accent">
-              Nouvelle commande
-            </ActionButton>
+            {canWrite('COMMANDES') && (
+              <ActionButton onClick={() => route('/production/commandes/nouveau')} icon={Plus} variant="accent">
+                Nouvelle commande
+              </ActionButton>
+            )}
           </>
         }
       />
@@ -261,11 +265,10 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${
-              showFilters
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${showFilters
                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                 : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
+              }`}
           >
             <Filter className="w-5 h-5" />
             <span>Filtres</span>
@@ -418,24 +421,23 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`text-xs font-medium ${
-                        cmd.priorite === 'urgente' ? 'text-red-600' :
-                        cmd.priorite === 'haute' ? 'text-orange-600' :
-                        cmd.priorite === 'normale' ? 'text-blue-600' :
-                        'text-gray-600'
-                      }`}>
+                      <span className={`text-xs font-medium ${cmd.priorite === 'urgente' ? 'text-red-600' :
+                          cmd.priorite === 'haute' ? 'text-orange-600' :
+                            cmd.priorite === 'normale' ? 'text-blue-600' :
+                              'text-gray-600'
+                        }`}>
                         {cmd.priorite.charAt(0).toUpperCase() + cmd.priorite.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button
-                           title="Voir les détails"
-                           onClick={() => route(`/production/commandes/${cmd.id}`)}
-                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                         >
-                           <Eye className="w-4 h-4" />
-                         </button>
+                          title="Voir les détails"
+                          onClick={() => route(`/production/commandes/${cmd.id}`)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           title="Modifier"
                           className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"

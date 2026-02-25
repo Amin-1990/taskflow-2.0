@@ -1,5 +1,63 @@
 const db = require('../config/database');
 
+/**
+ * Récupère les permissions d'un utilisateur (directes + rôles)
+ * @param {number} userId - ID de l'utilisateur
+ * @returns {Promise<{roles: Array, allowedPermissions: Array, deniedPermissions: Array}>}
+ */
+const getUserPermissions = async (userId) => {
+  const [directRows] = await db.query(
+    `SELECT p.Code_permission, up.Type
+     FROM utilisateurs_permissions up
+     JOIN permissions p ON p.ID = up.ID_Permission
+     WHERE up.ID_Utilisateur = ?
+       AND (up.Expiration IS NULL OR up.Expiration >= CURDATE())`,
+    [userId]
+  );
+
+  const [roleRows] = await db.query(
+    `SELECT DISTINCT p.Code_permission
+     FROM utilisateurs_roles ur
+     JOIN roles r ON r.ID = ur.ID_Role
+     JOIN roles_permissions rp ON rp.ID_Role = r.ID
+     JOIN permissions p ON p.ID = rp.ID_Permission
+     WHERE ur.ID_Utilisateur = ?
+       AND r.Est_actif = 1`,
+    [userId]
+  );
+
+  const [roles] = await db.query(
+    `SELECT r.ID, r.Code_role, r.Nom_role, r.Niveau_priorite
+     FROM utilisateurs_roles ur
+     JOIN roles r ON r.ID = ur.ID_Role
+     WHERE ur.ID_Utilisateur = ?
+       AND r.Est_actif = 1`,
+    [userId]
+  );
+
+  const allowed = new Set(roleRows.map((r) => r.Code_permission));
+  const denied = new Set();
+
+  for (const row of directRows) {
+    if (row.Type === 'REFUSER') {
+      denied.add(row.Code_permission);
+      allowed.delete(row.Code_permission);
+    }
+    if (row.Type === 'ACCORDER' && !denied.has(row.Code_permission)) {
+      allowed.add(row.Code_permission);
+    }
+  }
+
+  return {
+    roles,
+    allowedPermissions: Array.from(allowed),
+    deniedPermissions: Array.from(denied)
+  };
+};
+
+/**
+ * Middleware pour charger les permissions de l'utilisateur dans req.authz
+ */
 const hydrateAuthorization = async (req, res, next) => {
   try {
     if (!req.user?.ID) {
@@ -13,54 +71,12 @@ const hydrateAuthorization = async (req, res, next) => {
       return next();
     }
 
-    const userId = req.user.ID;
-
-    const [directRows] = await db.query(
-      `SELECT p.Code_permission, up.Type
-       FROM utilisateurs_permissions up
-       JOIN permissions p ON p.ID = up.ID_Permission
-       WHERE up.ID_Utilisateur = ?
-         AND (up.Expiration IS NULL OR up.Expiration >= CURDATE())`,
-      [userId]
-    );
-
-    const [roleRows] = await db.query(
-      `SELECT DISTINCT p.Code_permission
-       FROM utilisateurs_roles ur
-       JOIN roles r ON r.ID = ur.ID_Role
-       JOIN roles_permissions rp ON rp.ID_Role = r.ID
-       JOIN permissions p ON p.ID = rp.ID_Permission
-       WHERE ur.ID_Utilisateur = ?
-         AND r.Est_actif = 1`,
-      [userId]
-    );
-
-    const [roles] = await db.query(
-      `SELECT r.ID, r.Code_role, r.Nom_role, r.Niveau_priorite
-       FROM utilisateurs_roles ur
-       JOIN roles r ON r.ID = ur.ID_Role
-       WHERE ur.ID_Utilisateur = ?
-         AND r.Est_actif = 1`,
-      [userId]
-    );
-
-    const allowed = new Set(roleRows.map((r) => r.Code_permission));
-    const denied = new Set();
-
-    for (const row of directRows) {
-      if (row.Type === 'REFUSER') {
-        denied.add(row.Code_permission);
-        allowed.delete(row.Code_permission);
-      }
-      if (row.Type === 'ACCORDER' && !denied.has(row.Code_permission)) {
-        allowed.add(row.Code_permission);
-      }
-    }
+    const { roles, allowedPermissions, deniedPermissions } = await getUserPermissions(req.user.ID);
 
     req.authz = {
       roles,
-      allowedPermissions: allowed,
-      deniedPermissions: denied
+      allowedPermissions: new Set(allowedPermissions),
+      deniedPermissions: new Set(deniedPermissions)
     };
 
     next();
@@ -73,6 +89,10 @@ const hydrateAuthorization = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware pour exiger une permission spécifique
+ * @param {string} permissionCode 
+ */
 const requirePermission = (permissionCode) => {
   return async (req, res, next) => {
     await hydrateAuthorization(req, res, async () => {
@@ -95,6 +115,10 @@ const requirePermission = (permissionCode) => {
   };
 };
 
+/**
+ * Middleware pour exiger au moins une permission parmi une liste
+ * @param {string[]} permissionCodes 
+ */
 const requireAnyPermission = (permissionCodes) => {
   return async (req, res, next) => {
     await hydrateAuthorization(req, res, async () => {
@@ -118,6 +142,7 @@ const requireAnyPermission = (permissionCodes) => {
 };
 
 module.exports = {
+  getUserPermissions,
   hydrateAuthorization,
   requirePermission,
   requireAnyPermission

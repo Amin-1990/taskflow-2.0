@@ -15,6 +15,7 @@ import { ROUTES } from '../../constants';
 import { showToast } from '../../utils/toast';
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface PlanningPageProps {
   path?: string;
@@ -59,6 +60,7 @@ const formatDate = (date: string | null | undefined): string => {
 };
 
 export const Planning: FunctionComponent<PlanningPageProps> = () => {
+  const { canWrite } = usePermissions();
   const defaults = getDefaultWeek();
   const initialQuery = new URLSearchParams(window.location.search);
   const initialSemaine = parseInt(initialQuery.get('semaine') || String(defaults.week), 10);
@@ -415,21 +417,27 @@ export const Planning: FunctionComponent<PlanningPageProps> = () => {
         subtitle="Planning - edition semaine par semaine"
         actions={
           <>
-            <ActionButton onClick={handleDownloadTemplate} icon={Download}>
-              Template
-            </ActionButton>
-            <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-              {isImporting ? 'Import...' : 'Importer'}
-            </ActionButton>
+            {canWrite('PLANNING') && (
+              <ActionButton onClick={handleDownloadTemplate} icon={Download}>
+                Template
+              </ActionButton>
+            )}
+            {canWrite('PLANNING') && (
+              <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
+                {isImporting ? 'Import...' : 'Importer'}
+              </ActionButton>
+            )}
             <ActionButton onClick={() => void handleExport()} loading={isExporting} icon={Download}>
               {isExporting ? 'Export...' : 'Exporter'}
             </ActionButton>
             <ActionButton onClick={() => void loadGrid()} icon={RefreshCw}>
               Actualiser
             </ActionButton>
-            <ActionButton onClick={() => route(ROUTES.PRODUCTION_PLANNING_AUTO)} icon={Plus} variant="accent">
-              Planifier
-            </ActionButton>
+            {canWrite('PLANNING') && (
+              <ActionButton onClick={() => route(ROUTES.PRODUCTION_PLANNING_AUTO)} icon={Plus} variant="accent">
+                Planifier
+              </ActionButton>
+            )}
           </>
         }
       />
@@ -636,18 +644,19 @@ export const Planning: FunctionComponent<PlanningPageProps> = () => {
                       const dayInfo = getDayDateString(row, dayIndex);
                       const disabled = dayInfo?.isBeforeStart || false;
                       return (
-                      <td key={day.key} className={`px-3 py-3 text-center ${disabled ? 'bg-gray-100' : ''}`}>
-                        <button
-                          disabled={disabled}
-                          onClick={() => openEditModal(row, day.key)}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
-                          title="Editer la cellule"
-                        >
-                          {row.planification[day.key].planifie}/{row.planification[day.key].emballe}
-                          <Edit3 className="w-3 h-3 text-gray-500" />
-                        </button>
-                      </td>
-                    )})}
+                        <td key={day.key} className={`px-3 py-3 text-center ${disabled ? 'bg-gray-100' : ''}`}>
+                          <button
+                            disabled={disabled}
+                            onClick={() => openEditModal(row, day.key)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            title="Editer la cellule"
+                          >
+                            {row.planification[day.key].planifie}/{row.planification[day.key].emballe}
+                            <Edit3 className="w-3 h-3 text-gray-500" />
+                          </button>
+                        </td>
+                      )
+                    })}
                     <td className="px-3 py-3 text-center font-medium">
                       {row.total_planifie_semaine}/{row.total_emballe_semaine}
                     </td>

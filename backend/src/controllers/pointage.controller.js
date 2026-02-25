@@ -1,16 +1,14 @@
 const db = require('../config/database');
 const { logAction } = require('../services/audit.service');
 const pointageService = require('../services/pointage.service');
+const { getLocalDateTime, formatTimeForDB, formatDateForAPI } = require('../utils/datetime');
 
 const isValidIsoDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 
 const resolveTargetDate = (value) => {
   if (value === undefined || value === null || value === '') {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    const { formatDateForAPI } = require('../utils/datetime');
+    return formatDateForAPI(getLocalDateTime());
   }
   return String(value);
 };
@@ -255,8 +253,8 @@ exports.pointerArrivee = async (req, res) => {
       [targetDate]
     );
     
-    const heureArrivee = new Date();
-    const heureArriveeStr = heureArrivee.toTimeString().split(' ')[0];
+    const heureArrivee = getLocalDateTime();
+    const heureArriveeStr = formatTimeForDB(heureArrivee);
     
     // Calculer retard
     let retard = null;
@@ -379,8 +377,8 @@ exports.pointerDepart = async (req, res) => {
      }
      const oldValue = pointage[0];
      
-     const heureDepart = new Date();
-     const heureDepartStr = heureDepart.toTimeString().split(' ')[0];
+     const heureDepart = getLocalDateTime();
+     const heureDepartStr = formatTimeForDB(heureDepart);
      
      // Récupérer horaire prévu
      const [horaire] = await db.query(

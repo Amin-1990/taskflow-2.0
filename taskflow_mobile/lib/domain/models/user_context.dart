@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/services/timezone_service.dart';
 import 'user.dart';
 
 class UserContext extends Equatable {
@@ -28,7 +29,7 @@ class UserContext extends Equatable {
       lastName: user.lastName,
       line: user.site?.isNotEmpty == true ? user.site! : 'Ligne A',
       shift: 'Shift 1',
-      lastSync: lastSync ?? DateTime.now(),
+      lastSync: lastSync ?? TimezoneService.now(),
       isOnline: isOnline,
     );
   }
@@ -39,9 +40,9 @@ class UserContext extends Equatable {
       lastName: (json['lastName'] ?? json['last_name'] ?? '').toString(),
       line: (json['line'] ?? json['ligne'] ?? 'Ligne A').toString(),
       shift: (json['shift'] ?? 'Shift 1').toString(),
-      lastSync: DateTime.tryParse(
+      lastSync: TimezoneService.parseServerDateTime(
               (json['lastSync'] ?? json['last_sync'] ?? '').toString()) ??
-          DateTime.now(),
+          TimezoneService.now(),
       isOnline: (json['isOnline'] ?? json['is_online']) == true,
     );
   }

@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/services/timezone_service.dart';
 import '../../domain/models/intervention.dart';
 import '../../domain/models/maintenance_machine.dart';
 import '../../domain/models/type_machine.dart';
@@ -169,7 +170,7 @@ class InterventionRepository {
         description: description,
         priority: priority,
         status: InterventionStatus.enAttente,
-        dateDemande: DateTime.now(),
+        dateDemande: TimezoneService.now(),
         demandeurId: demandeurId,
       );
       _cachedInterventions = [local, ..._cachedInterventions];
@@ -381,13 +382,13 @@ class InterventionRepository {
         status: status,
         technicienId: technicianId ?? item.technicienId,
         datePrise: status == InterventionStatus.affectee
-            ? DateTime.now()
+            ? TimezoneService.now()
             : item.datePrise,
         dateDebut: status == InterventionStatus.enCours
-            ? DateTime.now()
+            ? TimezoneService.now()
             : item.dateDebut,
         dateFin: status == InterventionStatus.terminee
-            ? DateTime.now()
+            ? TimezoneService.now()
             : item.dateFin,
       );
       return updated!;
@@ -414,7 +415,7 @@ class InterventionRepository {
   }
 
   String _actionId(String prefix) =>
-      '$prefix-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
+      '$prefix-${TimezoneService.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
 }
 
 final _mockInterventions = <Intervention>[
@@ -433,8 +434,8 @@ final _mockInterventions = <Intervention>[
     description: 'Capteur instable, arrets intermittents.',
     priority: InterventionPriority.haute,
     status: InterventionStatus.enCours,
-    dateDemande: DateTime.now().subtract(const Duration(minutes: 50)),
-    dateDebut: DateTime.now().subtract(const Duration(minutes: 20)),
+    dateDemande: TimezoneService.now().subtract(const Duration(minutes: 50)),
+    dateDebut: TimezoneService.now().subtract(const Duration(minutes: 20)),
     technicienId: 'tech-1',
   ),
   Intervention(
@@ -452,8 +453,8 @@ final _mockInterventions = <Intervention>[
     description: 'Graissage des roulements et verification tension bande.',
     priority: InterventionPriority.moyenne,
     status: InterventionStatus.affectee,
-    dateDemande: DateTime.now().subtract(const Duration(hours: 1, minutes: 10)),
-    datePrise: DateTime.now().subtract(const Duration(hours: 1)),
+    dateDemande: TimezoneService.now().subtract(const Duration(hours: 1, minutes: 10)),
+    datePrise: TimezoneService.now().subtract(const Duration(hours: 1)),
     technicienId: 'tech-1',
   ),
   Intervention(
@@ -471,6 +472,6 @@ final _mockInterventions = <Intervention>[
     description: 'Controle periodique',
     priority: InterventionPriority.basse,
     status: InterventionStatus.enAttente,
-    dateDemande: DateTime.now().subtract(const Duration(minutes: 12)),
+    dateDemande: TimezoneService.now().subtract(const Duration(minutes: 12)),
   ),
 ];

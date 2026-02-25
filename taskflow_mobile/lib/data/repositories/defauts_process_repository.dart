@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/services/timezone_service.dart';
 import '../../domain/models/article.dart';
 import '../../domain/models/defaut_process.dart';
 import '../../domain/models/operateur.dart';
@@ -143,7 +144,7 @@ class DefautsProcessRepository {
       await _service.createDefautProcess(defaut);
     } on DioException {
       final id =
-          'defect-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
+          'defect-${TimezoneService.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
       await _pendingDao.enqueue(
           id: id, type: 'CREATE_DEFECT_PROCESS', data: defaut.toApiPayload());
     }
@@ -181,7 +182,7 @@ class DefautsProcessRepository {
       codeDefaut: (payload['Code_defaut'] ?? '').toString(),
       descriptionDefaut: (payload['Description_defaut'] ?? '').toString(),
       quantite: (payload['Quantite_concernee'] as num?)?.toInt() ?? 1,
-      dateEnregistrement: DateTime.now(),
+      dateEnregistrement: TimezoneService.now(),
       enregistreurId: (payload['ID_Enregistreur'] ?? '').toString(),
     );
   }

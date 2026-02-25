@@ -19,6 +19,30 @@ const optionalBoolBody = (name) =>
     .isBoolean().withMessage(`${name} doit etre un booleen`)
     .toBoolean();
 
+const adminListCommonQueryValidator = [
+  query('page')
+    .optional()
+    .isInt({ min: 1 }).withMessage('page doit etre >= 1')
+    .toInt(),
+  query('limit')
+    .optional()
+    .isInt({ min: 1, max: 100 }).withMessage('limit doit etre entre 1 et 100')
+    .toInt(),
+  query('search')
+    .optional()
+    .isString().withMessage('search doit etre une chaine')
+    .isLength({ max: 200 }).withMessage('search trop long')
+    .trim(),
+  query('sortBy')
+    .optional()
+    .isString().withMessage('sortBy doit etre une chaine')
+    .isLength({ max: 50 }).withMessage('sortBy invalide')
+    .trim(),
+  query('sortDir')
+    .optional()
+    .isIn(['asc', 'desc']).withMessage('sortDir doit etre asc ou desc')
+];
+
 exports.adminIdParamValidator = [positiveIntParam('id')];
 
 exports.adminCreateUserValidator = [
@@ -192,10 +216,100 @@ exports.adminReplaceRolePermissionsValidator = [
     .toInt()
 ];
 
-exports.adminAuditQueryValidator = [
-  query('limit')
+exports.adminCreatePermissionValidator = [
+  body('Code_permission')
+    .notEmpty().withMessage('Code_permission requis')
+    .trim()
+    .isLength({ min: 2, max: 100 }).withMessage('Code_permission doit faire 2-100 caracteres')
+    .matches(/^[A-Z0-9_]+$/).withMessage('Code_permission doit contenir A-Z, 0-9, _'),
+  body('Nom_permission')
+    .notEmpty().withMessage('Nom_permission requis')
+    .trim()
+    .isLength({ min: 2, max: 255 }).withMessage('Nom_permission doit faire 2-255 caracteres'),
+  body('Description')
+    .optional({ nullable: true })
+    .isString().withMessage('Description doit etre une chaine')
+    .isLength({ max: 2000 }).withMessage('Description trop longue'),
+  body('Categorie')
+    .optional({ nullable: true })
+    .isString().withMessage('Categorie doit etre une chaine')
+    .isLength({ min: 1, max: 100 }).withMessage('Categorie doit faire 1-100 caracteres')
+];
+
+exports.adminUsersListQueryValidator = [
+  ...adminListCommonQueryValidator,
+  query('status')
     .optional()
-    .isInt({ min: 1, max: 2000 }).withMessage('limit doit etre entre 1 et 2000')
-    .toInt()
+    .isIn(['active', 'inactive', 'locked']).withMessage('status invalide'),
+  query('roleId')
+    .optional()
+    .isInt({ min: 1 }).withMessage('roleId doit etre un entier positif')
+    .toInt(),
+  query('createdFrom')
+    .optional()
+    .isISO8601().withMessage('createdFrom doit etre une date valide (YYYY-MM-DD)'),
+  query('createdTo')
+    .optional()
+    .isISO8601().withMessage('createdTo doit etre une date valide (YYYY-MM-DD)')
+];
+
+exports.adminRolesListQueryValidator = [
+  ...adminListCommonQueryValidator,
+  query('active')
+    .optional()
+    .isIn(['0', '1']).withMessage('active doit etre 0 ou 1'),
+  query('system')
+    .optional()
+    .isIn(['0', '1']).withMessage('system doit etre 0 ou 1')
+];
+
+exports.adminPermissionsListQueryValidator = [
+  ...adminListCommonQueryValidator,
+  query('module')
+    .optional()
+    .isString().withMessage('module doit etre une chaine')
+    .isLength({ max: 100 }).withMessage('module invalide')
+    .trim()
+];
+
+exports.adminSessionsListQueryValidator = [
+  ...adminListCommonQueryValidator,
+  query('userId')
+    .optional()
+    .isInt({ min: 1 }).withMessage('userId doit etre un entier positif')
+    .toInt(),
+  query('active')
+    .optional()
+    .isIn(['0', '1']).withMessage('active doit etre 0 ou 1'),
+  query('from')
+    .optional()
+    .isISO8601().withMessage('from doit etre une date valide (YYYY-MM-DD)'),
+  query('to')
+    .optional()
+    .isISO8601().withMessage('to doit etre une date valide (YYYY-MM-DD)')
+];
+
+exports.adminAuditQueryValidator = [
+  ...adminListCommonQueryValidator,
+  query('userId')
+    .optional()
+    .isInt({ min: 1 }).withMessage('userId doit etre un entier positif')
+    .toInt(),
+  query('action')
+    .optional()
+    .isString().withMessage('action doit etre une chaine')
+    .isLength({ max: 120 }).withMessage('action invalide')
+    .trim(),
+  query('table')
+    .optional()
+    .isString().withMessage('table doit etre une chaine')
+    .isLength({ max: 120 }).withMessage('table invalide')
+    .trim(),
+  query('from')
+    .optional()
+    .isISO8601().withMessage('from doit etre une date valide (YYYY-MM-DD)'),
+  query('to')
+    .optional()
+    .isISO8601().withMessage('to doit etre une date valide (YYYY-MM-DD)')
 ];
 

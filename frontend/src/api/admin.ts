@@ -15,13 +15,15 @@ import type {
   ReplaceUserPermissionsPayload,
   CreateRolePayload,
   UpdateRolePayload,
-  ReplaceRolePermissionsPayload
+  ReplaceRolePermissionsPayload,
+  AdminListQuery,
+  CreatePermissionPayload
 } from '../types/admin.types';
 
 export const adminApi = {
   getDashboard: () => api.get<ApiResponse<AdminDashboard>>('/admin/dashboard'),
 
-  listUsers: () => api.get<ApiResponse<AdminUser[]>>('/admin/users'),
+  listUsers: (params?: AdminListQuery) => api.get<ApiResponse<AdminUser[]>>('/admin/users', { params }),
   getUserDetail: (id: number) => api.get<ApiResponse<AdminUserDetail>>(`/admin/users/${id}`),
   createUser: (payload: CreateAdminUserPayload) => api.post<ApiResponse<any>>('/admin/users', payload),
   updateUser: (id: number, payload: UpdateAdminUserPayload) => api.patch<ApiResponse<any>>(`/admin/users/${id}`, payload),
@@ -32,19 +34,24 @@ export const adminApi = {
   replaceUserRoles: (id: number, payload: ReplaceUserRolesPayload) => api.put<ApiResponse<any>>(`/admin/users/${id}/roles`, payload),
   replaceUserPermissions: (id: number, payload: ReplaceUserPermissionsPayload) =>
     api.put<ApiResponse<any>>(`/admin/users/${id}/permissions`, payload),
+  deleteUser: (id: number) => api.delete<ApiResponse<any>>(`/admin/users/${id}`),
 
-  listRoles: () => api.get<ApiResponse<AdminRole[]>>('/admin/roles'),
+  listRoles: (params?: AdminListQuery) => api.get<ApiResponse<AdminRole[]>>('/admin/roles', { params }),
+  getRolePermissions: (id: number) => api.get<ApiResponse<AdminPermission[]>>(`/admin/roles/${id}/permissions`),
   createRole: (payload: CreateRolePayload) => api.post<ApiResponse<any>>('/admin/roles', payload),
   updateRole: (id: number, payload: UpdateRolePayload) => api.patch<ApiResponse<any>>(`/admin/roles/${id}`, payload),
   replaceRolePermissions: (id: number, payload: ReplaceRolePermissionsPayload) =>
     api.put<ApiResponse<any>>(`/admin/roles/${id}/permissions`, payload),
+  deleteRole: (id: number) => api.delete<ApiResponse<any>>(`/admin/roles/${id}`),
 
-  listPermissions: () => api.get<ApiResponse<AdminPermission[]>>('/admin/permissions'),
+  listPermissions: (params?: AdminListQuery) => api.get<ApiResponse<AdminPermission[]>>('/admin/permissions', { params }),
+  createPermission: (payload: CreatePermissionPayload) => api.post<ApiResponse<any>>('/admin/permissions', payload),
+  deletePermission: (id: number) => api.delete<ApiResponse<any>>(`/admin/permissions/${id}`),
 
-  listSessions: () => api.get<ApiResponse<AdminSession[]>>('/admin/sessions'),
+  listSessions: (params?: AdminListQuery) => api.get<ApiResponse<AdminSession[]>>('/admin/sessions', { params }),
   revokeSession: (id: number) => api.patch<ApiResponse<any>>(`/admin/sessions/${id}/revoke`),
 
-  listAudit: (limit = 200) => api.get<ApiResponse<AdminAuditLog[]>>('/admin/audit', { params: { limit } })
+  listAudit: (params?: AdminListQuery) => api.get<ApiResponse<AdminAuditLog[]>>('/admin/audit', { params })
 };
 
 export default adminApi;

@@ -93,7 +93,10 @@ const menuItems: MenuItem[] = [
     icon: Shield,
     label: 'Administration',
     subItems: [
-      { icon: Shield, label: 'Panneau admin', path: ROUTES.ADMIN },
+      { icon: LayoutDashboard, label: 'Dashboard admin', path: ROUTES.ADMIN_DASHBOARD },
+      { icon: Users, label: 'Utilisateurs', path: ROUTES.ADMIN_USERS },
+      { icon: ClipboardCheck, label: 'Permissions', path: ROUTES.ADMIN_PERMISSIONS },
+      { icon: Shield, label: 'Matrice autorites', path: ROUTES.ADMIN_AUTHORITIES },
       { icon: Settings, label: 'Parametres', path: ROUTES.SETTINGS }
     ]
   }

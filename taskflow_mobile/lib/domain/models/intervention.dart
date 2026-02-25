@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/services/timezone_service.dart';
 import 'maintenance_machine.dart';
 
 enum InterventionStatus { enAttente, affectee, enCours, terminee, annulee }
@@ -62,14 +63,16 @@ class Intervention extends Equatable {
       description: rawDescription,
       priority: _priorityFromApi((json['Priorite'] ?? 'NORMALE').toString()),
       status: _statusFromApi((json['Statut'] ?? 'EN_ATTENTE').toString()),
-      dateDemande: DateTime.tryParse(
+      dateDemande: TimezoneService.parseServerDateTime(
               (json['Date_heure_demande'] ?? json['dateDemande'] ?? '')
                   .toString()) ??
-          DateTime.now(),
-      datePrise:
-          DateTime.tryParse((json['Date_heure_affectation'] ?? '').toString()),
-      dateDebut: DateTime.tryParse((json['Date_heure_debut'] ?? '').toString()),
-      dateFin: DateTime.tryParse((json['Date_heure_fin'] ?? '').toString()),
+          TimezoneService.now(),
+      datePrise: TimezoneService.parseServerDateTime(
+          (json['Date_heure_affectation'] ?? '').toString()),
+      dateDebut:
+          TimezoneService.parseServerDateTime((json['Date_heure_debut'] ?? '').toString()),
+      dateFin:
+          TimezoneService.parseServerDateTime((json['Date_heure_fin'] ?? '').toString()),
       technicienId: techId.isEmpty ? null : techId,
       technicienNom: techName.isEmpty ? null : techName,
       demandeurId: demandeur.isEmpty ? null : demandeur,

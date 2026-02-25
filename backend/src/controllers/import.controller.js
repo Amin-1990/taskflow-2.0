@@ -1,6 +1,7 @@
-﻿const db = require('../config/database');
+const db = require('../config/database');
 const importService = require('../services/import.service');
 const { logAction } = require('../services/audit.service');
+const { formatDateForAPI, formatDateTimeForDB, utcToLocal } = require('../utils/datetime');
 
 class ImportController {
   
@@ -423,7 +424,7 @@ class ImportController {
     const toDateOrNull = (value) => {
       if (value === null || value === undefined || value === '') return null;
       if (value instanceof Date && !Number.isNaN(value.getTime())) {
-        return value.toISOString().split('T')[0];
+        return formatDateForAPI(value);
       }
       const raw = String(value).trim();
       const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
@@ -436,7 +437,7 @@ class ImportController {
         return `${yyyy}-${String(Number(dmy[2])).padStart(2, '0')}-${String(Number(dmy[1])).padStart(2, '0')}`;
       }
       const parsed = new Date(raw);
-      if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+      if (!Number.isNaN(parsed.getTime())) return formatDateForAPI(parsed);
       return null;
     };
 
@@ -770,10 +771,10 @@ class ImportController {
           if (value > 20000 && value < 80000) {
             const excelEpoch = new Date(Date.UTC(1899, 11, 30));
             const ms = value * 24 * 60 * 60 * 1000;
-            return new Date(excelEpoch.getTime() + ms).toISOString().split('T')[0];
+            return formatDateForAPI(new Date(excelEpoch.getTime() + ms));
           }
           const d = new Date(value);
-          if (!Number.isNaN(d.getTime())) return d.toISOString().split('T')[0];
+          if (!Number.isNaN(d.getTime())) return formatDateForAPI(d);
           return null;
         }
         const raw = String(value).trim();
@@ -808,9 +809,9 @@ class ImportController {
           return `${yyyy}-${mm}-${dd}`;
         }
         const d = new Date(raw);
-        if (!Number.isNaN(d.getTime())) return d.toISOString().split('T')[0];
+        if (!Number.isNaN(d.getTime())) return formatDateForAPI(d);
         return null;
-      };
+        };
 
       const toIntOrNull = (value) => {
         if (value === null || value === undefined || value === '') return null;
@@ -1182,11 +1183,11 @@ class ImportController {
           const excelEpoch = new Date(Date.UTC(1899, 11, 30));
           const ms = value * 24 * 60 * 60 * 1000;
           const d = new Date(excelEpoch.getTime() + ms);
-          if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 19).replace('T', ' ');
+          if (!Number.isNaN(d.getTime())) return formatDateTimeForDB(d);
         }
         const raw = String(value).trim();
         const d = new Date(raw);
-        if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 19).replace('T', ' ');
+        if (!Number.isNaN(d.getTime())) return formatDateTimeForDB(d);
         return null;
       };
 
@@ -1318,7 +1319,10 @@ class ImportController {
               throw new Error('ID_Commande, ID_Operateur, ID_Poste et ID_Article sont requis (directement ou via correspondances)');
             }
 
-            if (!payload.Date_debut) payload.Date_debut = new Date().toISOString().slice(0, 19).replace('T', ' ');
+            if (!payload.Date_debut) {
+              const { getLocalDateTime } = require('../utils/datetime');
+              payload.Date_debut = formatDateTimeForDB(getLocalDateTime());
+            }
 
             const insertColumns = [];
             const insertValues = [];
@@ -1704,7 +1708,7 @@ class ImportController {
 
       const toDateOrNull = (value) => {
         if (value === null || value === undefined || value === '') return null;
-        if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().split('T')[0];
+        if (value instanceof Date && !Number.isNaN(value.getTime())) return formatDateForAPI(value);
         const raw = String(value).trim();
         const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
         if (ymd) return `${ymd[1]}-${String(Number(ymd[2])).padStart(2, '0')}-${String(Number(ymd[3])).padStart(2, '0')}`;
@@ -1714,7 +1718,7 @@ class ImportController {
           return `${yyyy}-${String(Number(dmy[2])).padStart(2, '0')}-${String(Number(dmy[1])).padStart(2, '0')}`;
         }
         const parsed = new Date(raw);
-        return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().split('T')[0];
+        return Number.isNaN(parsed.getTime()) ? null : formatDateForAPI(parsed);
       };
 
       const statutsAutorises = new Set(['operationnel', 'en_maintenance', 'hors_service']);

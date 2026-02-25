@@ -8,7 +8,6 @@ const {
   getSessionDurationDays,
   getSessionMaxCount
 } = require('../config/auth');
-const { getUserPermissions } = require('../middleware/authorization.middleware');
 
 const ACCESS_TOKEN_EXPIRE = process.env.ACCESS_TOKEN_EXPIRE || process.env.JWT_EXPIRE || '15m';
 const JWT_SECRET = getJwtSecret();
@@ -226,9 +225,6 @@ exports.login = async (req, res) => {
 
     const accessToken = buildAccessToken(user, sessionResult.insertId);
 
-    // Récupérer les permissions pour l'inclure dans la réponse
-    const { allowedPermissions } = await getUserPermissions(user.ID);
-
     await connection.commit();
 
     logAction({
@@ -254,8 +250,7 @@ exports.login = async (req, res) => {
           email: user.Email,
           nom_prenom: user.Nom_prenom,
           poste: user.Poste,
-          site: user.Site_affectation,
-          permissions: allowedPermissions
+          site: user.Site_affectation
         },
         sessionId: sessionResult.insertId,
         accessTokenExpiresIn: ACCESS_TOKEN_EXPIRE,
@@ -429,15 +424,11 @@ exports.getProfile = async (req, res) => {
       [req.user.ID]
     );
 
-    // Récupérer les permissions pour l'inclure dans la réponse
-    const { allowedPermissions } = await getUserPermissions(req.user.ID);
-
     return res.json({
       success: true,
       data: {
         ...users[0],
-        roles,
-        permissions: allowedPermissions
+        roles
       }
     });
   } catch (error) {

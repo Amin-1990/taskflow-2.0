@@ -34,7 +34,10 @@ import Horaires from './pages/personnel/Horaires';
 import Pointage from './pages/personnel/Pointage';
 import PostesGestion from './pages/personnel/PostesGestion';
 import { SettingsPage } from './pages/Settings';
-import AdminPanelPage from './pages/admin/AdminPanel';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
+import AdminAuthoritiesMatrixPage from './pages/admin/AdminAuthoritiesMatrixPage';
 
 import { ReferentielDefauts, NonConformitesProduction } from './pages/qualite';
 
@@ -159,7 +162,19 @@ export const App: FunctionalComponent = () => {
           <SettingsPage path="/" />
         </ProtectedRoute>
         <ProtectedRoute path="/admin" component={Layout}>
-          <AdminPanelPage path="/" />
+          <AdminDashboardPage path="/" />
+        </ProtectedRoute>
+        <ProtectedRoute path="/admin/dashboard" component={Layout}>
+          <AdminDashboardPage path="/" />
+        </ProtectedRoute>
+        <ProtectedRoute path="/admin/users" component={Layout}>
+          <AdminUsersPage path="/" />
+        </ProtectedRoute>
+        <ProtectedRoute path="/admin/permissions" component={Layout}>
+          <AdminPermissionsPage path="/" />
+        </ProtectedRoute>
+        <ProtectedRoute path="/admin/authorities" component={Layout}>
+          <AdminAuthoritiesMatrixPage path="/" />
         </ProtectedRoute>
       </Router>
     </div>

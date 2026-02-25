@@ -33,6 +33,7 @@ export interface AdminUser {
   Date_creation?: string;
   Date_modification?: string;
   Nom_prenom?: string | null;
+  Roles_labels?: string | null;
 }
 
 export interface AdminPermission {
@@ -42,6 +43,9 @@ export interface AdminPermission {
   Description?: string | null;
   Categorie?: string | null;
   Date_creation?: string;
+  roles_count?: number;
+  roles_labels?: string | null;
+  used_by_system_role?: number | boolean;
 }
 
 export interface AdminRole {
@@ -77,6 +81,15 @@ export interface AdminAuditLog {
   Table_concernee: string;
   Date_action: string;
   IP_address?: string | null;
+}
+
+export interface AdminListQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  sortDir?: 'asc' | 'desc';
+  [key: string]: string | number | undefined;
 }
 
 export interface AdminUserDetail {
@@ -136,4 +149,11 @@ export interface UpdateRolePayload {
 
 export interface ReplaceRolePermissionsPayload {
   permissionIds: number[];
+}
+
+export interface CreatePermissionPayload {
+  Code_permission: string;
+  Nom_permission: string;
+  Description?: string;
+  Categorie?: string;
 }

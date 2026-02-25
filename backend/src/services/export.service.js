@@ -1,6 +1,7 @@
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const { Parser } = require('json2csv');
+const { getLocalDateTime, formatDateForAPI } = require('../utils/datetime');
 
 class ExportService {
   
@@ -74,7 +75,7 @@ class ExportService {
     worksheet.mergeCells('A1:G1');
     
     // Date d'export
-    const dateRow = worksheet.addRow([`Généré le ${new Date().toLocaleDateString('fr-FR')}`]);
+    const dateRow = worksheet.addRow([`Généré le ${formatDateForAPI(getLocalDateTime())}`]);
     dateRow.font = { italic: true };
     worksheet.mergeCells('A2:G2');
     
@@ -126,7 +127,7 @@ class ExportService {
     // En-tête
     doc.fontSize(20).text(title, { align: 'center' });
     doc.moveDown();
-    doc.fontSize(10).text(`Généré le ${new Date().toLocaleDateString('fr-FR')}`, { align: 'right' });
+    doc.fontSize(10).text(`Généré le ${formatDateForAPI(getLocalDateTime())}`, { align: 'right' });
     doc.moveDown();
     
     return doc;

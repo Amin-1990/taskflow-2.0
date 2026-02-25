@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/services/timezone_service.dart';
 import '../../../../data/repositories/defauts_process_repository.dart';
 import '../../../../domain/models/article.dart';
 import '../../../../domain/models/defaut_process.dart';
@@ -67,7 +68,7 @@ class DefectsProcessState {
       isSubmitting: false,
       isOnline: true,
       pendingCount: 0,
-      now: DateTime.now(),
+      now: TimezoneService.now(),
       postes: const [],
       semaines: const [],
       operateurs: const [],
@@ -153,7 +154,7 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
   Future<void> initialize() async {
     await loadLookups();
     _clockTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      state = state.copyWith(now: DateTime.now());
+      state = state.copyWith(now: TimezoneService.now());
     });
     _syncTimer =
         Timer.periodic(const Duration(seconds: 25), (_) => syncPending());
@@ -165,7 +166,7 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
       final lookups = await _repository.loadLookups();
       final pending = await _repository.pendingCount();
 
-      final now = DateTime.now();
+      final now = TimezoneService.now();
       final week = _findCurrentWeek(lookups.semaines, now) ??
           (lookups.semaines.isNotEmpty ? lookups.semaines.first : null);
 
@@ -271,7 +272,7 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
       codeDefaut: state.selectedTypeDefaut!.code,
       descriptionDefaut: state.selectedTypeDefaut!.description,
       quantite: state.quantite,
-      dateEnregistrement: DateTime.now(),
+      dateEnregistrement: TimezoneService.now(),
       enregistreurId: enregistreurId,
     );
 

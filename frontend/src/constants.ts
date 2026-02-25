@@ -45,6 +45,10 @@ export const ROUTES = {
   RH: '/rh',
   SETTINGS: '/settings',
   ADMIN: '/admin',
+  ADMIN_DASHBOARD: '/admin/dashboard',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_PERMISSIONS: '/admin/permissions',
+  ADMIN_AUTHORITIES: '/admin/authorities',
   LOGIN: '/login',
 } as const;
 

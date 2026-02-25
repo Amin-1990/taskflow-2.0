@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../core/services/timezone_service.dart';
 import '../enums/task_status.dart';
 
 class Task extends Equatable {
@@ -28,9 +29,9 @@ class Task extends Equatable {
   final int producedQuantity;
 
   factory Task.fromJson(Map<String, dynamic> json) {
-    final start = DateTime.tryParse(
+    final start = TimezoneService.parseServerDateTime(
             (json['startTime'] ?? json['Date_debut'] ?? '').toString()) ??
-        DateTime.now();
+        TimezoneService.now();
     final durationMinutes =
         _toInt(json['activeDurationMinutes'] ?? json['Duree_minutes']);
 
@@ -45,7 +46,7 @@ class Task extends Equatable {
       startTime: start,
       activeDuration: durationMinutes > 0
           ? Duration(minutes: durationMinutes)
-          : DateTime.now().difference(start),
+          : TimezoneService.now().difference(start),
       status:
           taskStatusFromString((json['status'] ?? json['Statut'])?.toString()),
       targetQuantity:
