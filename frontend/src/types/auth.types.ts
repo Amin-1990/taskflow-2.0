@@ -24,6 +24,7 @@ export interface User {
   email: string;
   nom_prenom: string;
   poste: string;
+  permissions: string[];
 }
 
 export interface RegisterData {
