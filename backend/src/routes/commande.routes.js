@@ -16,11 +16,13 @@ const {
 } = require('../validators');
 const commandeController = require('../controllers/commande.controller');
 const authMiddleware = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
 
 // Routes spécifiques D'ABORD
 router.get(
     '/export/xlsx',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeController.exportCommandesXLSX
 );
 
@@ -28,12 +30,14 @@ router.get(
 router.get(
     '/export/csv',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeController.exportCommandesXLSX
 );
 
 router.get(
     '/statistiques/semaine/:semaineId',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     statistiquesSemaineValidator,
     validate,
     commandeController.getStatistiquesSemaine
@@ -42,6 +46,7 @@ router.get(
 router.get(
     '/semaine/:semaineId',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeBySemaineValidator,
     validate,
     commandeController.getCommandesBySemaine
@@ -50,6 +55,7 @@ router.get(
 router.get(
     '/article/:articleId',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeByArticleValidator,
     validate,
     commandeController.getCommandesByArticle
@@ -58,6 +64,7 @@ router.get(
 router.get(
     '/lot/:lot',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeLotValidator,
     validate,
     commandeController.getCommandeByLot
@@ -66,24 +73,28 @@ router.get(
 router.get(
     '/semaines-disponibles',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeController.getSemainesAvecCommandes
 );
 
 router.get(
     '/articles-filtres',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeController.getArticlesFiltres
 );
 
 router.get(
     '/articles-lots-filtres',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeController.getArticlesLotsFiltres
 );
 
 router.get(
     '/unites',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeController.getUnitesProduction
 );
 
@@ -91,18 +102,20 @@ router.get(
 router.get(
     '/:id',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     commandeIdValidator,
     validate,
     commandeController.getCommandeById
 );
 
 // Liste (pas de validation)
-router.get('/', authMiddleware, commandeController.getAllCommandes);
+router.get('/', authMiddleware, requirePermission('COMMANDES_READ'), commandeController.getAllCommandes);
 
 // POST
 router.post(
     '/',
     authMiddleware,
+    requirePermission('COMMANDES_WRITE'),
     createCommandeValidator,
     validate,
     commandeController.createCommande
@@ -112,6 +125,7 @@ router.post(
 router.put(
     '/:id',
     authMiddleware,
+    requirePermission('COMMANDES_WRITE'),
     updateCommandeValidator,
     validate,
     commandeController.updateCommande
@@ -121,6 +135,7 @@ router.put(
 router.patch(
     '/:id/facturer',
     authMiddleware,
+    requirePermission('COMMANDES_WRITE'),
     updateFactureeValidator,
     validate,
     commandeController.updateFacturee
@@ -132,6 +147,7 @@ router.patch(
 router.patch(
     '/:id/emballe',
     authMiddleware,
+    requirePermission('COMMANDES_WRITE'),
     updateQuantiteEmballe,
     validate,
     commandeController.updateQuantiteEmballe
@@ -141,6 +157,7 @@ router.patch(
 router.get(
     '/:id/emballage/stats',
     authMiddleware,
+    requirePermission('COMMANDES_READ'),
     emballageStatsValidator,
     validate,
     commandeController.getEmballageStats
@@ -150,6 +167,7 @@ router.get(
 router.post(
     '/:id/emballe/reset',
     authMiddleware,
+    requirePermission('COMMANDES_WRITE'),
     resetQuantiteEmballe,
     validate,
     commandeController.resetQuantiteEmballe
@@ -159,6 +177,7 @@ router.post(
 router.delete(
     '/:id',
     authMiddleware,
+    requirePermission('COMMANDES_WRITE'),
     commandeIdValidator,
     validate,
     commandeController.deleteCommande
