@@ -11,6 +11,7 @@ import FilterPanel from '../../components/common/FilterPanel';
 import PageHeader from '../../components/common/PageHeader';
 import type { Affectation, AffectationFilters, CreateAffectationPayload, UpdateAffectationPayload } from '../../types/affectations.types';
 import { showToast } from '../../utils/toast';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface AffectationsGestionProps { path?: string }
 interface EditableAffectation extends Affectation { _isNew?: boolean; _dirty?: boolean }
@@ -64,6 +65,7 @@ const newRow = (commandeId?: number): EditableAffectation => ({
 });
 
 export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = () => {
+  const { canWrite } = usePermissions();
   const dRange = useMemo(() => defaultRange(), []);
   const [rows, setRows] = useState<EditableAffectation[]>([]);
   const [filters, setFilters] = useState<FiltersState>({ ...dRange, recherche: '' });
@@ -141,7 +143,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
           });
           return next;
         });
-      } catch {}
+      } catch { }
     })();
   }, [weekIds, weekCmds]);
 
@@ -266,8 +268,8 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
     <div className="space-y-6">
       <PageHeader title="Gestion des affectations" subtitle="Import, export, edition et pagination" actions={
         <>
-          <ActionButton onClick={template} icon={Download}>Template</ActionButton>
-          <ActionButton onClick={() => fileInputRef.current?.click()} icon={Upload}>Importer</ActionButton>
+          {canWrite('AFFECTATIONS') && <ActionButton onClick={template} icon={Download}>Template</ActionButton>}
+          {canWrite('AFFECTATIONS') && <ActionButton onClick={() => fileInputRef.current?.click()} icon={Upload}>Importer</ActionButton>}
           <ActionButton onClick={exportCsv} icon={Download}>Exporter</ActionButton>
           <ActionButton onClick={async () => { await loadLookups(); await loadData(); }} icon={RefreshCw}>Actualiser</ActionButton>
         </>
@@ -297,9 +299,9 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 px-4 py-3">
           <h2 className="text-sm font-semibold text-gray-800">Table principale</h2>
           <div className="flex flex-wrap items-center gap-2">
-            <ActionButton onClick={addRow} icon={Plus}>Ajouter</ActionButton>
-            <ActionButton onClick={saveAll} icon={Save} loading={savingAll}>Enregistrer</ActionButton>
-            <ActionButton onClick={deleteSelected} icon={Trash2}>Supprimer selection</ActionButton>
+            {canWrite('AFFECTATIONS') && <ActionButton onClick={addRow} icon={Plus}>Ajouter</ActionButton>}
+            {canWrite('AFFECTATIONS') && <ActionButton onClick={saveAll} icon={Save} loading={savingAll}>Enregistrer</ActionButton>}
+            {canWrite('AFFECTATIONS') && <ActionButton onClick={deleteSelected} icon={Trash2}>Supprimer selection</ActionButton>}
           </div>
         </div>
 
