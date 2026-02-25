@@ -7,12 +7,14 @@ import defautsTypeMachineApi, { type DefautTypeMachine } from '../../api/defauts
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
 import FilterPanel from '../../components/common/FilterPanel';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface DefautsTypeMachineProps {
   path?: string;
 }
 
 export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = () => {
+  const { canWrite } = usePermissions();
   const {
     defauts,
     machineTypes,
@@ -101,16 +103,16 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
     try {
       const success = editingItem
         ? await updateDefaut(editingItem.ID, {
-            Code_defaut: code,
-            Nom_defaut: nom,
-            Description_defaut: description || null
-          })
+          Code_defaut: code,
+          Nom_defaut: nom,
+          Description_defaut: description || null
+        })
         : await createDefaut({
-            ID_Type_machine: selectedTypeMachineId as number,
-            Code_defaut: code,
-            Nom_defaut: nom,
-            Description_defaut: description || null
-          });
+          ID_Type_machine: selectedTypeMachineId as number,
+          Code_defaut: code,
+          Nom_defaut: nom,
+          Description_defaut: description || null
+        });
 
       if (success) {
         closeFormModal();
@@ -212,18 +214,24 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
         subtitle={`Total: ${total} defaut${total > 1 ? 's' : ''}`}
         actions={
           <>
-            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-              {isDownloadingTemplate ? 'Template...' : 'Template'}
-            </ActionButton>
-            <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-              {isImporting ? 'Import...' : 'Importer'}
-            </ActionButton>
+            {canWrite('DEFAUTS_TYPE_MACHINE') && (
+              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
+                {isDownloadingTemplate ? 'Template...' : 'Template'}
+              </ActionButton>
+            )}
+            {canWrite('DEFAUTS_TYPE_MACHINE') && (
+              <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
+                {isImporting ? 'Import...' : 'Importer'}
+              </ActionButton>
+            )}
             <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download}>
               {isExporting ? 'Export...' : 'Exporter'}
             </ActionButton>
-            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
-              Ajouter
-            </ActionButton>
+            {canWrite('DEFAUTS_TYPE_MACHINE') && (
+              <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+                Ajouter
+              </ActionButton>
+            )}
           </>
         }
       />
@@ -312,20 +320,24 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
                     <td className="px-6 py-4 text-gray-700">{item.Description_defaut || '-'}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
-                          title="Modifier"
-                          onClick={() => openEditModal(item)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          title="Supprimer"
-                          onClick={() => setDeleteId(item.ID)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canWrite('DEFAUTS_TYPE_MACHINE') && (
+                          <button
+                            title="Modifier"
+                            onClick={() => openEditModal(item)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canWrite('DEFAUTS_TYPE_MACHINE') && (
+                          <button
+                            title="Supprimer"
+                            onClick={() => setDeleteId(item.ID)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

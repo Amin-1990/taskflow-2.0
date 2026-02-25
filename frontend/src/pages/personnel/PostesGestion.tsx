@@ -6,6 +6,7 @@ import FilterPanel from '../../components/common/FilterPanel';
 import ActionButton from '../../components/common/ActionButton';
 import { postesApi } from '../../api/postes';
 import { showToast } from '../../utils/toast';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface PosteRow {
   ID: number;
@@ -20,6 +21,7 @@ const getApiErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.error || error?.error || fallback;
 
 const PostesGestion: FunctionComponent<PostesGestionProps> = () => {
+  const { canWrite } = usePermissions();
   const [postes, setPostes] = useState<PosteRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,9 +147,11 @@ const PostesGestion: FunctionComponent<PostesGestionProps> = () => {
         title="Gestion des postes"
         subtitle={`Total: ${postes.length} poste${postes.length > 1 ? 's' : ''}`}
         actions={(
-          <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
-            Ajouter
-          </ActionButton>
+          canWrite('POSTES') ? (
+            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+              Ajouter
+            </ActionButton>
+          ) : undefined
         )}
       />
 
@@ -203,20 +207,24 @@ const PostesGestion: FunctionComponent<PostesGestionProps> = () => {
                     <td className="px-6 py-4 text-gray-700">{poste.Description}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
-                          title="Modifier"
-                          onClick={() => openEditModal(poste)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          title="Supprimer"
-                          onClick={() => setDeleteId(poste.ID)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canWrite('POSTES') && (
+                          <button
+                            title="Modifier"
+                            onClick={() => openEditModal(poste)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canWrite('POSTES') && (
+                          <button
+                            title="Supprimer"
+                            onClick={() => setDeleteId(poste.ID)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
