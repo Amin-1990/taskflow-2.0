@@ -13,11 +13,13 @@ const {
 } = require('../validators');
 const personnelController = require('../controllers/personnel.controller');
 const authMiddleware = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
 
 // Routes de recherche spécifiques D'ABORD
 router.get(
   '/matricule/:matricule',
   authMiddleware,
+  requirePermission('PERSONNEL_READ'),
   personnelMatriculeValidator,
   validate,
   personnelController.getPersonnelByMatricule
@@ -26,6 +28,7 @@ router.get(
 router.get(
   '/statut/:statut',
   authMiddleware,
+  requirePermission('PERSONNEL_READ'),
   personnelByStatutValidator,
   validate,
   personnelController.getPersonnelByStatut
@@ -34,6 +37,7 @@ router.get(
 router.get(
   '/poste/:poste',
   authMiddleware,
+  requirePermission('PERSONNEL_READ'),
   personnelByPosteValidator,
   validate,
   personnelController.getPersonnelByPoste
@@ -42,6 +46,7 @@ router.get(
 router.get(
   '/site/:site',
   authMiddleware,
+  requirePermission('PERSONNEL_READ'),
   personnelBySiteValidator,
   validate,
   personnelController.getPersonnelBySite
@@ -51,18 +56,20 @@ router.get(
 router.get(
   '/:id',
   authMiddleware,
+  requirePermission('PERSONNEL_READ'),
   personnelIdValidator,
   validate,
   personnelController.getPersonnelById
 );
 
 // Liste (pas de validation)
-router.get('/', authMiddleware, personnelController.getAllPersonnel);
+router.get('/', authMiddleware, requirePermission('PERSONNEL_READ'), personnelController.getAllPersonnel);
 
 // POST
 router.post(
   '/',
   authMiddleware,
+  requirePermission('PERSONNEL_WRITE'),
   createPersonnelValidator,
   validate,
   personnelController.createPersonnel
@@ -72,6 +79,7 @@ router.post(
 router.put(
   '/:id',
   authMiddleware,
+  requirePermission('PERSONNEL_WRITE'),
   updatePersonnelValidator,
   validate,
   personnelController.updatePersonnel
@@ -81,6 +89,7 @@ router.put(
 router.patch(
   '/:id/statut',
   authMiddleware,
+  requirePermission('PERSONNEL_WRITE'),
   changeStatutValidator,
   validate,
   personnelController.changeStatut
@@ -90,6 +99,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware,
+  requirePermission('PERSONNEL_WRITE'),
   personnelIdValidator,
   validate,
   personnelController.deletePersonnel
