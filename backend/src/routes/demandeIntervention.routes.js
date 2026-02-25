@@ -11,11 +11,13 @@ const {
 } = require('../validators');
 const demandeController = require('../controllers/demandeIntervention.controller');
 const authMiddleware = require('../middleware/auth.middleware');
+const { requirePermission } = require('../middleware/authorization.middleware');
 
 // Routes spécifiques D'ABORD
 router.get(
   '/statistiques/dashboard',
   authMiddleware,
+  requirePermission('INTERVENTIONS_READ'),
   validate,
   demandeController.getStatistiquesMaintenance
 );
@@ -24,6 +26,7 @@ router.get(
 router.get(
   '/statut/:statut',
   authMiddleware,
+  requirePermission('INTERVENTIONS_READ'),
   interventionByStatutValidator,
   validate,
   demandeController.getDemandesByStatut
@@ -32,6 +35,7 @@ router.get(
 router.get(
   '/technicien/:id',
   authMiddleware,
+  requirePermission('INTERVENTIONS_READ'),
   interventionIdValidator,
   validate,
   demandeController.getDemandesByTechnicien
@@ -40,6 +44,7 @@ router.get(
 router.get(
   '/machine/:id/historique',
   authMiddleware,
+  requirePermission('INTERVENTIONS_READ'),
   interventionIdValidator,
   validate,
   demandeController.getHistoriqueMachine
@@ -48,6 +53,7 @@ router.get(
 router.get(
   '/export/xlsx',
   authMiddleware,
+  requirePermission('INTERVENTIONS_READ'),
   demandeController.exportInterventionsXLSX
 );
 
@@ -55,18 +61,20 @@ router.get(
 router.get(
   '/:id',
   authMiddleware,
+  requirePermission('INTERVENTIONS_READ'),
   interventionIdValidator,
   validate,
   demandeController.getDemandeById
 );
 
 // Liste (pas de validation)
-router.get('/', authMiddleware, demandeController.getAllDemandes);
+router.get('/', authMiddleware, requirePermission('INTERVENTIONS_READ'), demandeController.getAllDemandes);
 
 // POST
 router.post(
   '/',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   createInterventionValidator,
   validate,
   demandeController.createDemande
@@ -75,6 +83,7 @@ router.post(
 router.put(
   '/:id',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   updateInterventionValidator,
   validate,
   demandeController.updateDemande
@@ -84,6 +93,7 @@ router.put(
 router.patch(
   '/:id/affecter',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   assignInterventionValidator,
   validate,
   demandeController.affecterTechnicien
@@ -92,6 +102,7 @@ router.patch(
 router.patch(
   '/:id/demarrer',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   interventionIdValidator,
   validate,
   demandeController.demarrerIntervention
@@ -100,6 +111,7 @@ router.patch(
 router.patch(
   '/:id/terminer',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   completeInterventionValidator,
   validate,
   demandeController.terminerIntervention
@@ -108,6 +120,7 @@ router.patch(
 router.patch(
   '/:id/annuler',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   interventionIdValidator,
   validate,
   demandeController.annulerIntervention
@@ -116,6 +129,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware,
+  requirePermission('INTERVENTIONS_WRITE'),
   interventionIdValidator,
   validate,
   demandeController.deleteDemande
