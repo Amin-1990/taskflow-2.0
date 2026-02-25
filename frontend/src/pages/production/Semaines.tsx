@@ -20,12 +20,14 @@ import { useSemaines } from '../../hooks/useSemaines';
 import { showToast } from '../../utils/toast';
 import { semainesApi } from '../../api/semaines';
 import ActionButton from '../../components/common/ActionButton';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface SemainesProps {
   path?: string;
 }
 
 export const Semaines: FunctionComponent<SemainesProps> = () => {
+  const { canWrite } = usePermissions();
   const {
     semaines,
     loading,
@@ -152,12 +154,16 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-            {isDownloadingTemplate ? 'Template...' : 'Template'}
-          </ActionButton>
-          <ActionButton onClick={() => setShowImportModal(true)} loading={loadingImport} icon={Upload}>
-            {loadingImport ? 'Import...' : 'Importer'}
-          </ActionButton>
+          {canWrite('SEMAINES') && (
+            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
+              {isDownloadingTemplate ? 'Template...' : 'Template'}
+            </ActionButton>
+          )}
+          {canWrite('SEMAINES') && (
+            <ActionButton onClick={() => setShowImportModal(true)} loading={loadingImport} icon={Upload}>
+              {loadingImport ? 'Import...' : 'Importer'}
+            </ActionButton>
+          )}
           <ActionButton onClick={handleExport} disabled={loading || semaines.length === 0} icon={Download}>
             Exporter
           </ActionButton>
@@ -192,11 +198,10 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
           </div>
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${
-              showFilters
+            className={`flex items-center space-x-2 px-4 py-2 rounded-lg border ${showFilters
                 ? 'bg-blue-50 border-blue-300 text-blue-700'
                 : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-            }`}
+              }`}
           >
             <Filter className="w-5 h-5" />
             <span>Filtres</span>
@@ -323,13 +328,15 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
                         {new Date(semaine.Date_fin).toLocaleDateString('fr-FR')}
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          title="Supprimer"
-                          onClick={() => handleDeleteClick(semaine.ID)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canWrite('SEMAINES') && (
+                          <button
+                            title="Supprimer"
+                            onClick={() => handleDeleteClick(semaine.ID)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -358,11 +365,10 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
               <button
                 key={i + 1}
                 onClick={() => setPage(i + 1)}
-                className={`px-3 py-1 rounded-lg ${
-                  page === i + 1
+                className={`px-3 py-1 rounded-lg ${page === i + 1
                     ? 'bg-blue-600 text-white'
                     : 'border border-gray-300 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 {i + 1}
               </button>
