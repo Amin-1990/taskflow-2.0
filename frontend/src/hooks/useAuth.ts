@@ -1,6 +1,5 @@
 /**
- * Hook personnalisé pour gérer l'authentification
- * Fournit l'état utilisateur et les fonctions d'auth à tous les composants
+ * Hook personnalise pour gerer l'authentification
  */
 
 import { useEffect, useState, useCallback } from 'preact/hooks';
@@ -10,29 +9,21 @@ import { setSession, logout as apiLogout, isAuthenticated as checkAuth } from '.
 import { showToast } from '../utils/toast';
 import type { User } from '../types/auth.types';
 
-/**
- * Interface pour la valeur de retour du hook
- */
 interface UseAuthReturn {
-  user: User | null;                    // Utilisateur connecté
-  loading: boolean;                      // En cours de chargement
-  error: string | null;                  // Message d'erreur
-  isAuthenticated: boolean;               // Est connecté ?
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<{
     success: boolean;
     error?: string;
   }>;
   logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;      // Recharger le profil
-  checkAuthStatus: () => boolean;         // Vérifier rapidement
+  refreshUser: () => Promise<void>;
+  checkAuthStatus: () => boolean;
 }
 
-/**
- * Hook useAuth
- * @returns {UseAuthReturn} État et fonctions d'authentification
- */
 export const useAuth = (): UseAuthReturn => {
-  // États
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,18 +44,13 @@ export const useAuth = (): UseAuthReturn => {
       username: String(username),
       email: String(email),
       nom_prenom: String(nomPrenom),
-      poste: String(poste),
+      poste: String(poste)
     };
   }, []);
 
-  /**
-   * Vérifier l'authentification au chargement
-   * Si token présent, on récupère le profil
-   */
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('token');
-      
       if (!token) {
         setLoading(false);
         return;
@@ -75,15 +61,14 @@ export const useAuth = (): UseAuthReturn => {
         if (response.data.success && response.data.data) {
           const normalized = normalizeUser(response.data.data);
           setUser(normalized);
-          console.log('✅ Utilisateur authentifié:', normalized?.nom_prenom || normalized?.username || 'N/A');
         } else {
-          // Token invalide ou expiré
           localStorage.removeItem('token');
+          localStorage.removeItem('refreshToken');
           localStorage.removeItem('sessionId');
         }
-      } catch (err) {
-        console.error('❌ Erreur vérification auth:', err);
+      } catch {
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('sessionId');
       } finally {
         setLoading(false);
@@ -93,11 +78,6 @@ export const useAuth = (): UseAuthReturn => {
     initAuth();
   }, [normalizeUser]);
 
-  /**
-   * Fonction de connexion
-   * @param username - Nom d'utilisateur
-   * @param password - Mot de passe
-   */
   const login = useCallback(async (username: string, password: string) => {
     setLoading(true);
     setError(null);
@@ -106,42 +86,34 @@ export const useAuth = (): UseAuthReturn => {
 
     try {
       const response = await authApi.login({ username, password });
-      
+
       if (response.data.success && response.data.data) {
-        const { token, user, sessionId } = response.data.data;
+        const { token, accessToken, refreshToken, user, sessionId } = response.data.data;
         const normalizedUser = normalizeUser(user);
         if (!normalizedUser) {
           throw new Error('Profil utilisateur invalide');
         }
-        
-        // Sauvegarder la session
-        setSession(token, sessionId, normalizedUser);
+
+        const access = accessToken || token;
+        setSession(access, refreshToken, sessionId, normalizedUser);
         setUser(normalizedUser);
-        
-        console.log('✅ Connexion réussie:', normalizedUser.nom_prenom);
-        
-        // Mettre à jour le toast
+
         showToast.update(toastId, `Bienvenue ${normalizedUser.nom_prenom} !`, 'success');
-        
-        // Rediriger vers le dashboard
         route('/', true);
-        
+
         return { success: true };
-      } else {
-        throw new Error('Réponse invalide du serveur');
       }
+
+      throw new Error('Reponse invalide du serveur');
     } catch (err: any) {
-      console.error('❌ Erreur connexion:', err);
-      
-      // Extraire le message d'erreur
       let errorMessage = 'Erreur de connexion';
-      
+
       if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       showToast.update(toastId, errorMessage, 'error');
       setError(errorMessage);
       return { success: false, error: errorMessage };
@@ -150,52 +122,37 @@ export const useAuth = (): UseAuthReturn => {
     }
   }, [normalizeUser]);
 
-  /**
-   * Fonction de déconnexion
-   */
   const logout = useCallback(async () => {
     setLoading(true);
-    
-    const toastId = showToast.loading('Déconnexion...');
-    
+
+    const toastId = showToast.loading('Deconnexion...');
+
     try {
-      // Appeler l'API de déconnexion
       await authApi.logout();
-      showToast.update(toastId, 'À bientôt !', 'success');
-    } catch (err) {
-      console.error('❌ Erreur déconnexion API:', err);
-      showToast.update(toastId, 'Erreur lors de la déconnexion', 'error');
+      showToast.update(toastId, 'A bientot !', 'success');
+    } catch {
+      showToast.update(toastId, 'Erreur lors de la deconnexion', 'error');
     } finally {
-      // Nettoyer le localStorage et l'état
       setTimeout(() => {
-        apiLogout(); // Cette fonction redirige déjà vers /login
+        apiLogout();
         setUser(null);
         setLoading(false);
-      }, 1000); // Petit délai pour voir le toast
+      }, 1000);
     }
   }, []);
 
-  /**
-   * Recharger le profil utilisateur
-   * Utile après une mise à jour du profil
-   */
   const refreshUser = useCallback(async () => {
     try {
       const response = await authApi.getProfile();
       if (response.data.success && response.data.data) {
         const normalized = normalizeUser(response.data.data);
         setUser(normalized);
-        console.log('✅ Profil mis à jour');
       }
-    } catch (err) {
-      console.error('❌ Erreur recharge profil:', err);
+    } catch {
+      // noop
     }
   }, [normalizeUser]);
 
-  /**
-   * Vérifier rapidement l'état d'authentification
-   * @returns {boolean} true si authentifié
-   */
   const checkAuthStatus = useCallback((): boolean => {
     return checkAuth() && !!user;
   }, [user]);

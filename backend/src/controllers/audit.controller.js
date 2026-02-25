@@ -261,6 +261,9 @@ exports.createLog = async (req, res) => {
       });
     }
     
+    const actorId = req.user?.ID || ID_Utilisateur || null;
+    const actorUsername = req.user?.Username || Username || null;
+
     const [result] = await db.query(
       `INSERT INTO logs_audit (
         ID_Utilisateur, Username, Action, Table_concernee,
@@ -268,8 +271,8 @@ exports.createLog = async (req, res) => {
         IP_address, User_agent, Date_action
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
-        ID_Utilisateur || null,
-        Username || null,
+        actorId,
+        actorUsername,
         Action,
         Table_concernee,
         ID_Enregistrement || null,

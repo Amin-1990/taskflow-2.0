@@ -2,7 +2,7 @@
  * API Service pour la gestion du Personnel
  */
 
-import client from '../utils/api-client'; // À adapter selon votre client HTTP
+import { api as client } from '../services/api';
 import type { Personnel, PersonnelFilters } from '../types/personnel.types';
 
 export const personnelAPI = {
@@ -110,3 +110,4 @@ export const personnelAPI = {
     window.URL.revokeObjectURL(url);
   },
 };
+

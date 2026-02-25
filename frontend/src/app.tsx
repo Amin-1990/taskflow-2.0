@@ -34,6 +34,7 @@ import Horaires from './pages/personnel/Horaires';
 import Pointage from './pages/personnel/Pointage';
 import PostesGestion from './pages/personnel/PostesGestion';
 import { SettingsPage } from './pages/Settings';
+import AdminPanelPage from './pages/admin/AdminPanel';
 
 import { ReferentielDefauts, NonConformitesProduction } from './pages/qualite';
 
@@ -157,9 +158,13 @@ export const App: FunctionalComponent = () => {
         <ProtectedRoute path="/settings" component={Layout}>
           <SettingsPage path="/" />
         </ProtectedRoute>
+        <ProtectedRoute path="/admin" component={Layout}>
+          <AdminPanelPage path="/" />
+        </ProtectedRoute>
       </Router>
     </div>
   );
 };
 
 export default App;
+

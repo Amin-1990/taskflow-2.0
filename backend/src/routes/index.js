@@ -27,6 +27,7 @@ const semainesRoutes = require('./semaines.routes');
 const filtresRoutes = require('./filtres.routes');
 const echelonsRoutes = require('./echelons.routes');
 const mobileAppRoutes = require('./mobileApp.routes');
+const adminRoutes = require('./admin.routes');
 
 // Route de santÃ© (publique)
 router.get('/health', (req, res) => {
@@ -66,6 +67,7 @@ router.use('/semaines', semainesRoutes);
 router.use('/filtres', filtresRoutes);
 router.use('/echelons', echelonsRoutes);
 router.use('/mobile-app', mobileAppRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;
 

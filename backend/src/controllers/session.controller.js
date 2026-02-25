@@ -1,5 +1,12 @@
 const db = require('../config/database');
 const { logAction } = require('../services/audit.service');
+const { getSessionMaxCount } = require('../config/auth');
+
+const sanitizeSession = (session) => {
+  if (!session) return session;
+  const { Token_session, ...safe } = session;
+  return safe;
+};
 
 // Helper pour extraire IP et User-Agent
 const getAuditInfo = (req) => ({
@@ -22,7 +29,7 @@ exports.getAllSessions = async (req, res) => {
     res.json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows.map(sanitizeSession)
     });
   } catch (error) {
     console.error('Erreur getAllSessions:', error);
@@ -45,7 +52,7 @@ exports.getSessionsByUser = async (req, res) => {
     res.json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows.map(sanitizeSession)
     });
   } catch (error) {
     console.error('Erreur getSessionsByUser:', error);
@@ -76,7 +83,7 @@ exports.getSessionById = async (req, res) => {
     
     res.json({
       success: true,
-      data: rows[0]
+      data: sanitizeSession(rows[0])
     });
   } catch (error) {
     console.error('Erreur getSessionById:', error);
@@ -106,7 +113,7 @@ exports.getSessionByToken = async (req, res) => {
     
     res.json({
       success: true,
-      data: rows[0]
+      data: sanitizeSession(rows[0])
     });
   } catch (error) {
     console.error('Erreur getSessionByToken:', error);
@@ -142,13 +149,13 @@ exports.createSession = async (req, res) => {
       [ID_Utilisateur]
     );
     
-    const MAX_SESSIONS = 5; // À mettre dans .env plus tard
+    const MAX_SESSIONS = getSessionMaxCount();
     
     if (activeSessions[0].count >= MAX_SESSIONS) {
       // Déconnecter la plus ancienne session
       await db.query(
-        `UPDATE sessions SET Est_active = 0, Date_modification = NOW() 
-         WHERE ID_Utilisateur = ? AND Est_active = 1 
+        `UPDATE sessions SET Est_active = 0 
+WHERE ID_Utilisateur = ? AND Est_active = 1 
          ORDER BY Date_connexion ASC LIMIT 1`,
         [ID_Utilisateur]
       );
@@ -157,9 +164,7 @@ exports.createSession = async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO sessions (
         ID_Utilisateur, Token_session, IP_address, User_agent,
-        Date_connexion, Derniere_activite, Date_expiration, Est_active,
-        Date_creation
-      ) VALUES (?, ?, ?, ?, NOW(), NOW(), ?, 1, NOW())`,
+        Date_connexion, Derniere_activite, Date_expiration, Est_active) VALUES (?, ?, ?, ?, NOW(), NOW(), ?, 1)`,
       [
         ID_Utilisateur,
         Token_session,
@@ -191,7 +196,7 @@ exports.createSession = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Session créée avec succès',
-      data: newSession[0]
+      data: sanitizeSession(newSession[0])
     });
   } catch (error) {
     console.error('Erreur createSession:', error);
@@ -259,7 +264,7 @@ exports.deconnecterSession = async (req, res) => {
     }
     
     const [result] = await db.query(
-      'UPDATE sessions SET Est_active = 0, Date_modification = NOW() WHERE ID = ?',
+      'UPDATE sessions SET Est_active = 0 WHERE ID = ?',
       [sessionId]
     );
     
@@ -296,7 +301,7 @@ exports.deconnecterToutesSessions = async (req, res) => {
     const userId = req.params.userId;
     
     const [result] = await db.query(
-      'UPDATE sessions SET Est_active = 0, Date_modification = NOW() WHERE ID_Utilisateur = ?',
+      'UPDATE sessions SET Est_active = 0 WHERE ID_Utilisateur = ?',
       [userId]
     );
     
@@ -333,7 +338,7 @@ exports.nettoyerSessionsExpirees = async (req, res) => {
     const [result] = await db.query(
       `DELETE FROM sessions 
        WHERE Date_expiration < NOW() 
-          OR (Est_active = 0 AND Date_modification < DATE_SUB(NOW(), INTERVAL 7 DAY))`
+          OR (Est_active = 0 AND Derniere_activite < DATE_SUB(NOW(), INTERVAL 7 DAY))`
     );
     
     res.json({
@@ -442,3 +447,5 @@ exports.verifierToken = async (req, res) => {
     });
   }
 };
+
+

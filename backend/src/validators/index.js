@@ -16,6 +16,9 @@ const planningValidators = require('./planning.validators');
 const horaireValidators = require('./horaire.validators');
 const authValidators = require('./auth.validators');
 const echelonsValidators = require('./echelons.validators');
+const adminValidators = require('./admin.validators');
+const auditValidators = require('./audit.validators');
+const sessionValidators = require('./session.validators');
 
 module.exports = {
   // Common validators
@@ -55,5 +58,14 @@ module.exports = {
   ...authValidators,
 
   // Echelons validators
-  ...echelonsValidators
+  ...echelonsValidators,
+
+  // Admin validators
+  ...adminValidators,
+
+  // Audit validators
+  ...auditValidators,
+
+  // Session validators
+  ...sessionValidators
 };

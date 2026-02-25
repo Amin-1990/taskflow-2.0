@@ -1,5 +1,5 @@
 export const APP_NAME = 'Taskflow 2.0';
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://10.0.1.6:3000/api';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:3000/api';
 
 export const ROLES = {
   ADMIN: 'admin',
@@ -44,6 +44,7 @@ export const ROUTES = {
   QUALITY_NON_CONFORMITES: '/qualite/non-conformites-production',
   RH: '/rh',
   SETTINGS: '/settings',
+  ADMIN: '/admin',
   LOGIN: '/login',
 } as const;
 
@@ -54,3 +55,5 @@ export const COLORS = {
   warning: '#f59e0b',
   danger: '#ef4444',
 } as const;
+
+

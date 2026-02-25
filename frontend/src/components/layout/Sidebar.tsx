@@ -18,9 +18,11 @@ import {
   Zap,
   CalendarDays,
   Box,
-  UserCheck
+  UserCheck,
+  Shield
 } from 'lucide-preact';
 import { ROUTES } from '../../constants';
+import { logout as apiLogout } from '../../services/api';
 
 interface SubMenuItem {
   icon: any;
@@ -87,7 +89,14 @@ const menuItems: MenuItem[] = [
       { icon: Activity, label: 'Non conformites production', path: ROUTES.QUALITY_NON_CONFORMITES }
     ]
   },
-  { icon: Settings, label: 'Parametres', path: ROUTES.SETTINGS }
+  {
+    icon: Shield,
+    label: 'Administration',
+    subItems: [
+      { icon: Shield, label: 'Panneau admin', path: ROUTES.ADMIN },
+      { icon: Settings, label: 'Parametres', path: ROUTES.SETTINGS }
+    ]
+  }
 ];
 
 export const Sidebar: FunctionComponent = () => {
@@ -98,8 +107,7 @@ export const Sidebar: FunctionComponent = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    route('/login');
+    apiLogout();
   };
 
   const toggleMenu = (label: string) => {
@@ -218,3 +226,5 @@ export const Sidebar: FunctionComponent = () => {
     </aside>
   );
 };
+
+

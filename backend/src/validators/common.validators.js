@@ -195,3 +195,11 @@ exports.phoneValidator = (fieldName = 'Telephone', required = true) => {
       .matches(/^[0-9\s\-\+\(\)]+$/).withMessage(`${fieldName} invalide`)
   ];
 };
+
+
+exports.userIdValidator = [
+  param('userId')
+    .isInt({ min: 1 }).withMessage('Le userId doit etre un nombre entier positif')
+    .toInt()
+];
+

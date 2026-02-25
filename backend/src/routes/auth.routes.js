@@ -2,23 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { validate } = require('../middleware/validation.middleware');
 const {
-  registerValidator,
   loginValidator,
-  refreshTokenValidator,
-  updateProfileValidator,
-  changePasswordValidator
+  refreshTokenValidator
 } = require('../validators');
 const authController = require('../controllers/auth.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 
-// Routes PUBLIQUES (pas de auth)
-router.post(
-  '/register',
-  registerValidator,
-  validate,
-  authController.register
-);
-
+// Creation utilisateur: uniquement via /api/admin/users
 router.post(
   '/login',
   loginValidator,
@@ -33,7 +23,6 @@ router.post(
   authController.refreshToken
 );
 
-// Routes PROTÉGÉES (avec auth)
 router.post(
   '/logout',
   authMiddleware,
