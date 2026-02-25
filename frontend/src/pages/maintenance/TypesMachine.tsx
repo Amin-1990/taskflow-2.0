@@ -8,12 +8,14 @@ import typesMachineApi from '../../api/typesMachine';
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
 import FilterPanel from '../../components/common/FilterPanel';
+import { usePermissions } from '../../hooks/usePermissions';
 
 interface TypesMachineProps {
   path?: string;
 }
 
 export const TypesMachine: FunctionComponent<TypesMachineProps> = () => {
+  const { canWrite } = usePermissions();
   const {
     typesMachine,
     loading,
@@ -176,18 +178,24 @@ export const TypesMachine: FunctionComponent<TypesMachineProps> = () => {
         subtitle={`Total: ${total} type${total > 1 ? 's' : ''}`}
         actions={
           <>
-            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-              {isDownloadingTemplate ? 'Template...' : 'Template'}
-            </ActionButton>
-            <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-              {isImporting ? 'Import...' : 'Importer'}
-            </ActionButton>
+            {canWrite('TYPES_MACHINE') && (
+              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
+                {isDownloadingTemplate ? 'Template...' : 'Template'}
+              </ActionButton>
+            )}
+            {canWrite('TYPES_MACHINE') && (
+              <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
+                {isImporting ? 'Import...' : 'Importer'}
+              </ActionButton>
+            )}
             <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download}>
               {isExporting ? 'Export...' : 'Exporter'}
             </ActionButton>
-            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
-              Ajouter
-            </ActionButton>
+            {canWrite('TYPES_MACHINE') && (
+              <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+                Ajouter
+              </ActionButton>
+            )}
           </>
         }
       />
@@ -249,20 +257,24 @@ export const TypesMachine: FunctionComponent<TypesMachineProps> = () => {
                     <td className="px-6 py-4 text-gray-700">{item.Type_machine}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
-                        <button
-                          title="Modifier"
-                          onClick={() => openEditModal(item)}
-                          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          title="Supprimer"
-                          onClick={() => setDeleteId(item.ID)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {canWrite('TYPES_MACHINE') && (
+                          <button
+                            title="Modifier"
+                            onClick={() => openEditModal(item)}
+                            className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canWrite('TYPES_MACHINE') && (
+                          <button
+                            title="Supprimer"
+                            onClick={() => setDeleteId(item.ID)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
