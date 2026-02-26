@@ -4,3 +4,4 @@
 
 export { usePersonnel } from './usePersonnel';
 export { usePersonnelFilters } from './usePersonnelFilters';
+export { useAdminDashboard } from './useAdminDashboard';

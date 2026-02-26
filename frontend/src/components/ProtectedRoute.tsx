@@ -35,8 +35,6 @@ export const ProtectedRoute: FunctionalComponent<ProtectedRouteProps> = (props) 
   useEffect(() => {
     // Si le chargement est terminé ET que l'utilisateur n'est pas authentifié
     if (!loading && !isAuthenticated) {
-      console.log('🚫 Accès non autorisé, redirection vers login');
-      
       // Sauvegarder l'URL demandée pour y revenir après connexion
       sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
       

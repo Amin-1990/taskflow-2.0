@@ -1,52 +1,27 @@
 const db = require('../config/database');
 
 /**
- * Récupère les permissions d'un utilisateur (directes + rôles)
+ * Récupère les permissions d'un utilisateur depuis matrice_autorisation
  * @param {number} userId - ID de l'utilisateur
  * @returns {Promise<{roles: Array, allowedPermissions: Array, deniedPermissions: Array}>}
  */
 const getUserPermissions = async (userId) => {
-  const [directRows] = await db.query(
-    `SELECT p.Code_permission, up.Type
-     FROM utilisateurs_permissions up
-     JOIN permissions p ON p.ID = up.ID_Permission
-     WHERE up.ID_Utilisateur = ?
-       AND (up.Expiration IS NULL OR up.Expiration >= CURDATE())`,
+  // Récupérer les permissions depuis matrice_autorisation
+  const [permissionRows] = await db.query(
+    `SELECT p.Code_permission, ma.Valeur
+     FROM matrice_autorisation ma
+     JOIN permissions p ON p.ID = ma.ID_Permission
+     WHERE ma.ID_Utilisateur = ?
+       AND ma.Valeur = 1`,
     [userId]
   );
 
-  const [roleRows] = await db.query(
-    `SELECT DISTINCT p.Code_permission
-     FROM utilisateurs_roles ur
-     JOIN roles r ON r.ID = ur.ID_Role
-     JOIN roles_permissions rp ON rp.ID_Role = r.ID
-     JOIN permissions p ON p.ID = rp.ID_Permission
-     WHERE ur.ID_Utilisateur = ?
-       AND r.Est_actif = 1`,
-    [userId]
-  );
+  // Pour l'instant, pas de gestion des rôles depuis matrice_autorisation
+  // On pourrait étendre la table pour inclure les rôles si nécessaire
+  const roles = [];
 
-  const [roles] = await db.query(
-    `SELECT r.ID, r.Code_role, r.Nom_role, r.Niveau_priorite
-     FROM utilisateurs_roles ur
-     JOIN roles r ON r.ID = ur.ID_Role
-     WHERE ur.ID_Utilisateur = ?
-       AND r.Est_actif = 1`,
-    [userId]
-  );
-
-  const allowed = new Set(roleRows.map((r) => r.Code_permission));
+  const allowed = new Set(permissionRows.map((r) => r.Code_permission));
   const denied = new Set();
-
-  for (const row of directRows) {
-    if (row.Type === 'REFUSER') {
-      denied.add(row.Code_permission);
-      allowed.delete(row.Code_permission);
-    }
-    if (row.Type === 'ACCORDER' && !denied.has(row.Code_permission)) {
-      allowed.add(row.Code_permission);
-    }
-  }
 
   return {
     roles,

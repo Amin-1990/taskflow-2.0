@@ -19,7 +19,11 @@ import {
   CalendarDays,
   Box,
   UserCheck,
-  Shield
+  Shield,
+  Lock,
+  Key,
+  Monitor,
+  History
 } from 'lucide-preact';
 import { ROUTES } from '../../constants';
 import { logout as apiLogout } from '../../services/api';
@@ -93,13 +97,14 @@ const menuItems: MenuItem[] = [
     icon: Shield,
     label: 'Administration',
     subItems: [
-      { icon: LayoutDashboard, label: 'Dashboard admin', path: ROUTES.ADMIN_DASHBOARD },
-      { icon: Users, label: 'Utilisateurs', path: ROUTES.ADMIN_USERS },
-      { icon: ClipboardCheck, label: 'Permissions', path: ROUTES.ADMIN_PERMISSIONS },
-      { icon: Shield, label: 'Matrice autorites', path: ROUTES.ADMIN_AUTHORITIES },
-      { icon: Settings, label: 'Parametres', path: ROUTES.SETTINGS }
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
+      { icon: Users, label: 'Utilisateurs', path: '/admin/utilisateurs' },
+      { icon: Key, label: 'Matrice permissions', path: '/admin/matrice' },
+      { icon: Monitor, label: 'Sessions', path: '/admin/sessions' },
+      { icon: History, label: 'Audit', path: '/admin/audit' }
     ]
-  }
+  },
+  { icon: Settings, label: 'Parametres', path: ROUTES.SETTINGS }
 ];
 
 export const Sidebar: FunctionComponent = () => {

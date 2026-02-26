@@ -42,6 +42,7 @@ export interface AdminPermission {
   Nom_permission: string;
   Description?: string | null;
   Categorie?: string | null;
+  Nom_module?: string | null;
   Date_creation?: string;
   roles_count?: number;
   roles_labels?: string | null;
@@ -66,6 +67,7 @@ export interface AdminSession {
   Username?: string;
   Email?: string;
   IP_address?: string | null;
+  User_agent?: string | null;
   Date_connexion?: string;
   Derniere_activite?: string;
   Date_expiration?: string;
@@ -79,6 +81,8 @@ export interface AdminAuditLog {
   Username_utilisateur?: string | null;
   Action: string;
   Table_concernee: string;
+  Ancienne_valeur?: string | null;
+  Nouvelle_valeur?: string | null;
   Date_action: string;
   IP_address?: string | null;
 }

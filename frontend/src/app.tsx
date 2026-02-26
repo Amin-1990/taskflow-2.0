@@ -34,10 +34,14 @@ import Horaires from './pages/personnel/Horaires';
 import Pointage from './pages/personnel/Pointage';
 import PostesGestion from './pages/personnel/PostesGestion';
 import { SettingsPage } from './pages/Settings';
-import AdminDashboardPage from './pages/admin/AdminDashboardPage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AdminPermissionsPage from './pages/admin/AdminPermissionsPage';
-import AdminAuthoritiesMatrixPage from './pages/admin/AdminAuthoritiesMatrixPage';
+
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { AdminUsers } from './pages/admin/AdminUsers';
+import { AdminUserDetail } from './pages/admin/AdminUserDetail';
+import { AdminUserCreate } from './pages/admin/AdminUserCreate';
+import { AdminMatrice } from './pages/admin/AdminMatrice';
+import { AdminSessions } from './pages/admin/AdminSessions';
+import { AdminAudit } from './pages/admin/AdminAudit';
 
 import { ReferentielDefauts, NonConformitesProduction } from './pages/qualite';
 
@@ -159,27 +163,40 @@ export const App: FunctionalComponent = () => {
         </ProtectedRoute>
 
         <ProtectedRoute path="/settings" component={Layout}>
-          <SettingsPage path="/" />
-        </ProtectedRoute>
+           <SettingsPage path="/" />
+         </ProtectedRoute>
+
         <ProtectedRoute path="/admin" component={Layout}>
-          <AdminDashboardPage path="/" />
+          <AdminDashboard path="/" />
         </ProtectedRoute>
-        <ProtectedRoute path="/admin/dashboard" component={Layout}>
-          <AdminDashboardPage path="/" />
+
+        <ProtectedRoute path="/admin/utilisateurs" component={Layout}>
+          <AdminUsers path="/" />
         </ProtectedRoute>
-        <ProtectedRoute path="/admin/users" component={Layout}>
-          <AdminUsersPage path="/" />
+
+        <ProtectedRoute path="/admin/utilisateurs/nouveau" component={Layout}>
+          <AdminUserCreate path="/" />
         </ProtectedRoute>
-        <ProtectedRoute path="/admin/permissions" component={Layout}>
-          <AdminPermissionsPage path="/" />
+
+        <ProtectedRoute path="/admin/utilisateurs/:id" component={Layout}>
+          <AdminUserDetail path="/" />
         </ProtectedRoute>
-        <ProtectedRoute path="/admin/authorities" component={Layout}>
-          <AdminAuthoritiesMatrixPage path="/" />
+
+        <ProtectedRoute path="/admin/matrice" component={Layout}>
+          <AdminMatrice path="/" />
         </ProtectedRoute>
-      </Router>
-    </div>
-  );
-};
+
+        <ProtectedRoute path="/admin/sessions" component={Layout}>
+          <AdminSessions path="/" />
+        </ProtectedRoute>
+
+        <ProtectedRoute path="/admin/audit" component={Layout}>
+          <AdminAudit path="/" />
+        </ProtectedRoute>
+        </Router>
+        </div>
+        );
+        };
 
 export default App;
 

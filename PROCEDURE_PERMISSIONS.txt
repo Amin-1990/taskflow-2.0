@@ -1,0 +1,254 @@
+================================================
+TASKFLOW 2.0 — PROCÉDURE : AJOUT D'UN NOUVEAU MODULE
+================================================
+Version : 1.0
+Date    : 2026-02-25
+Auteur  : Équipe TaskFlow
+
+Ce fichier est LA RÉFÉRENCE OBLIGATOIRE pour tout
+développeur qui ajoute un nouveau module à l'application.
+Le respecter garantit que les permissions apparaissent
+automatiquement dans la matrice d'administration.
+
+================================================
+RÈGLE FONDAMENTALE
+================================================
+
+Toute page ou fonctionnalité accessible par un utilisateur
+DOIT être protégée par une permission.
+
+Une permission = une action sur un module.
+Format obligatoire : MODULE_ACTION
+
+================================================
+CONVENTION DE NOMMAGE
+================================================
+
+Format   : MODULE_ACTION
+Exemples : COMMANDES_READ
+           COMMANDES_WRITE
+           COMMANDES_DELETE
+           PERSONNEL_EXPORT
+           PLANNING_IMPORT
+
+ACTIONS disponibles :
+  READ    → consulter / visualiser une page ou liste
+  WRITE   → créer et modifier des enregistrements
+  DELETE  → supprimer définitivement
+  EXPORT  → exporter en CSV / Excel
+  IMPORT  → importer depuis un fichier
+
+Règles strictes :
+  - Toujours en MAJUSCULES
+  - Séparateur underscore uniquement ( _ )
+  - Pas d'espaces, pas de tirets, pas d'accents
+  - Le préfixe MODULE doit être identique pour
+    toutes les permissions du même module
+  - Pas de permission sans Categorie et Nom_module
+
+================================================
+ÉTAPES OBLIGATOIRES — À SUIVRE DANS L'ORDRE
+================================================
+
+────────────────────────────────────────────────
+ÉTAPE 1 — Insérer les permissions en base de données
+────────────────────────────────────────────────
+
+Ouvrir le fichier : migration_permissions.sql
+Ajouter le bloc suivant dans la section "ÉTAPE 4"
+en respectant le format existant :
+
+  -- ── MODULE : NOM_MODULE ──────────────────────
+  ('NOM_MODULE_READ',   'Voir [nom]',     'Description courte', 'CATEGORIE', 'Nom affiché', ORDRE, NOW()),
+  ('NOM_MODULE_WRITE',  'Modifier [nom]', 'Description courte', 'CATEGORIE', 'Nom affiché', ORDRE, NOW()),
+  ('NOM_MODULE_DELETE', 'Supprimer [nom]','Description courte', 'CATEGORIE', 'Nom affiché', ORDRE, NOW()),
+
+Champs obligatoires :
+  Code_permission   → NOM_MODULE_ACTION (majuscules, underscore)
+  Nom_permission    → Libellé court affiché dans l'UI (ex: "Voir les commandes")
+  Description       → Phrase explicative pour l'administrateur
+  Categorie         → Groupe du module : PRODUCTION / RH / MAINTENANCE /
+                      QUALITE / CATALOGUE / REPORTING / SYSTEME / ADMIN
+  Nom_module        → Nom affiché dans la matrice (ex: "Livraisons")
+  Ordre_affichage   → Entier pour le tri dans l'UI (voir tableau ci-dessous)
+
+Tableau des ordres par catégorie :
+  DASHBOARD      →  1 - 9
+  PRODUCTION     → 10 - 19
+  RH             → 20 - 29
+  MAINTENANCE    → 30 - 39
+  QUALITE        → 40 - 49
+  CATALOGUE      → 50 - 59
+  REPORTING      → 60 - 69
+  SYSTEME        → 70 - 79
+  ADMIN          → 90 - 99
+  (nouveau groupe → 80 - 89, puis discuter avec l'équipe)
+
+Exécuter le script SQL sur la base de données.
+La vue v_matrice_autorisation se met à jour instantanément.
+La matrice dans l'interface admin affiche les nouvelles colonnes
+SANS aucune modification du frontend.
+
+────────────────────────────────────────────────
+ÉTAPE 2 — Protéger les routes backend
+────────────────────────────────────────────────
+
+Chaque route Express du nouveau module doit déclarer
+sa permission requise via le middleware d'autorisation.
+
+Format standard :
+
+  router.get('/',
+    authMiddleware,
+    requirePermission('NOM_MODULE_READ'),
+    controller.list
+  );
+
+  router.post('/',
+    authMiddleware,
+    requirePermission('NOM_MODULE_WRITE'),
+    controller.create
+  );
+
+  router.patch('/:id',
+    authMiddleware,
+    requirePermission('NOM_MODULE_WRITE'),
+    controller.update
+  );
+
+  router.delete('/:id',
+    authMiddleware,
+    requirePermission('NOM_MODULE_DELETE'),
+    controller.delete
+  );
+
+Règle : une route sans requirePermission est une faille de sécurité.
+Toute route non protégée sera refusée en revue de code.
+
+────────────────────────────────────────────────
+ÉTAPE 3 — Protéger les composants frontend
+────────────────────────────────────────────────
+
+Chaque page et chaque bouton sensible doit vérifier
+la permission côté frontend AVANT d'afficher l'élément.
+
+Utiliser le hook existant :
+
+  const { hasPermission } = usePermissions();
+
+Exemples :
+
+  // Protéger une page entière
+  if (!hasPermission('NOM_MODULE_READ')) {
+    return <PageNonAutorisee />;
+  }
+
+  // Afficher un bouton conditionnellement
+  {hasPermission('NOM_MODULE_WRITE') && (
+    <Button>Créer</Button>
+  )}
+
+  // Afficher le bouton supprimer
+  {hasPermission('NOM_MODULE_DELETE') && (
+    <Button variant="danger">Supprimer</Button>
+  )}
+
+Important : la vérification frontend est pour l'expérience
+utilisateur (cacher les boutons). La vraie sécurité est
+assurée par le middleware backend (étape 2).
+Les deux sont obligatoires.
+
+────────────────────────────────────────────────
+ÉTAPE 4 — Assigner les permissions aux rôles existants
+────────────────────────────────────────────────
+
+Après insertion en base, vérifier quels rôles doivent
+recevoir les nouvelles permissions :
+
+  SUPER_ADMIN   → reçoit automatiquement toutes les permissions
+                  (géré par la migration, rien à faire)
+
+  FULL_ACCESS   → à vérifier selon le module, ajouter manuellement :
+    INSERT INTO roles_permissions (ID_Role, ID_Permission)
+    SELECT 2, ID FROM permissions WHERE Categorie = 'NOM_CATEGORIE';
+
+  LECTURE_SEULE → reçoit automatiquement les _READ
+                  (géré par la migration, rien à faire)
+
+  Autres rôles  → à traiter via l'interface d'administration
+                  ou via un INSERT ciblé si nécessaire.
+
+────────────────────────────────────────────────
+ÉTAPE 5 — Vérification finale (checklist)
+────────────────────────────────────────────────
+
+Avant de pousser votre code, vérifier chaque point :
+
+  [ ] Les permissions sont insérées en base de données
+  [ ] Elles apparaissent dans la matrice admin (interface)
+  [ ] Chaque route GET est protégée par _READ
+  [ ] Chaque route POST/PATCH/PUT est protégée par _WRITE
+  [ ] Chaque route DELETE est protégée par _DELETE
+  [ ] Le frontend vérifie hasPermission avant chaque page
+  [ ] Le frontend masque les boutons selon les permissions
+  [ ] Le rôle SUPER_ADMIN peut accéder à tout le module
+  [ ] Le rôle LECTURE_SEULE ne peut que consulter
+  [ ] Un utilisateur sans permission voit "Accès refusé"
+  [ ] Les logs d'audit enregistrent les actions sensibles
+
+================================================
+EXEMPLE COMPLET — Module "Livraisons"
+================================================
+
+-- 1. SQL à ajouter dans migration_permissions.sql
+INSERT INTO permissions
+  (Code_permission, Nom_permission, Description, Categorie, Nom_module, Ordre_affichage, Date_creation)
+VALUES
+  ('LIVRAISONS_READ',   'Voir les livraisons',    'Consulter la liste des livraisons',      'PRODUCTION', 'Livraisons', 14, NOW()),
+  ('LIVRAISONS_WRITE',  'Modifier les livraisons','Créer et modifier les livraisons',       'PRODUCTION', 'Livraisons', 14, NOW()),
+  ('LIVRAISONS_DELETE', 'Supprimer une livraison','Suppression définitive d une livraison', 'PRODUCTION', 'Livraisons', 14, NOW()),
+  ('LIVRAISONS_EXPORT', 'Exporter les livraisons','Export CSV des livraisons',              'PRODUCTION', 'Livraisons', 14, NOW())
+ON DUPLICATE KEY UPDATE Nom_permission = VALUES(Nom_permission);
+
+-- 2. Backend (routes/livraisons.js)
+router.get('/',     authMiddleware, requirePermission('LIVRAISONS_READ'),   ctrl.list);
+router.post('/',    authMiddleware, requirePermission('LIVRAISONS_WRITE'),  ctrl.create);
+router.patch('/:id',authMiddleware, requirePermission('LIVRAISONS_WRITE'),  ctrl.update);
+router.delete('/:id',authMiddleware,requirePermission('LIVRAISONS_DELETE'), ctrl.delete);
+
+-- 3. Frontend (pages/Livraisons.tsx)
+const { hasPermission } = usePermissions();
+if (!hasPermission('LIVRAISONS_READ')) return <PageNonAutorisee />;
+{hasPermission('LIVRAISONS_WRITE')  && <Button>Nouvelle livraison</Button>}
+{hasPermission('LIVRAISONS_DELETE') && <Button>Supprimer</Button>}
+{hasPermission('LIVRAISONS_EXPORT') && <Button>Exporter</Button>}
+
+================================================
+QUESTIONS FRÉQUENTES
+================================================
+
+Q : Mon module a des sous-pages, comment gérer ?
+R : Une seule permission READ couvre toutes les sous-pages
+    en lecture. Si une sous-page a une action spécifique
+    et sensible, créer une permission dédiée.
+    Exemple : PLANNING_READ couvre la vue hebdomadaire
+    ET la vue chronologique. PLANNING_WRITE couvre
+    toutes les modifications.
+
+Q : Dois-je créer DELETE si mon module ne supprime pas ?
+R : Non. Créer uniquement les actions réellement disponibles.
+    Un module lecture seule n'a que READ.
+
+Q : Peut-on avoir des permissions plus granulaires ?
+R : Oui, si le besoin métier le justifie. Exemple :
+    COMMANDES_VALIDATE pour valider sans modifier.
+    Discuter avec l'équipe avant d'ajouter des actions
+    non standard (hors READ/WRITE/DELETE/EXPORT/IMPORT).
+
+Q : Que faire si j'oublie cette procédure ?
+R : La revue de code bloquera la PR. Toute route sans
+    requirePermission sera refusée automatiquement.
+
+================================================
+FIN DE LA PROCÉDURE
+================================================

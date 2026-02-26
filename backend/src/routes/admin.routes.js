@@ -57,4 +57,7 @@ router.patch('/sessions/:id/revoke', requirePermission('SESSION_MANAGE'), adminI
 
 router.get('/audit', requirePermission('AUDIT_READ'), adminAuditQueryValidator, validate, adminController.listAuditLogs);
 
+router.get('/matrice', requirePermission('ADMIN_PERMISSIONS_READ'), validate, adminController.getMatrice);
+router.patch('/matrice', requirePermission('ADMIN_PERMISSIONS_WRITE'), validate, adminController.updateMatrice);
+
 module.exports = router;

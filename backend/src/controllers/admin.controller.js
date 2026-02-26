@@ -1071,3 +1071,124 @@ exports.forceExpireUserSessions = async (req, res) => {
     res.status(500).json({ success: false, error: 'Erreur expiration sessions utilisateur' });
   }
 };
+
+/**
+ * GET /api/admin/matrice
+ * Retourne la matrice complète permissions × utilisateurs
+ * Permission requise: ADMIN_PERMISSIONS_READ
+ */
+exports.getMatrice = async (req, res) => {
+  try {
+    // Charger les utilisateurs actifs
+    const [users] = await db.query(
+      `SELECT u.ID, u.Username, u.Email, u.Est_actif, p.Nom_prenom
+       FROM utilisateurs u
+       LEFT JOIN personnel p ON p.ID = u.ID_Personnel
+       WHERE u.Est_actif = 1
+       ORDER BY u.Username ASC`
+    );
+
+    // Charger les permissions groupées par module
+    const [permissions] = await db.query(
+      `SELECT ID, Code_permission, Nom_permission, Categorie, Nom_module
+       FROM permissions
+       ORDER BY Nom_module ASC, Ordre_affichage ASC, Nom_permission ASC`
+    );
+
+    // Charger les valeurs actuelles de la matrice
+    const [values] = await db.query(
+      `SELECT ID_Utilisateur as userId, ID_Permission as permissionId, Valeur as valeur
+       FROM matrice_autorisation
+       WHERE Valeur = 1`
+    );
+
+    res.json({
+      success: true,
+      data: {
+        users: users.map(u => ({
+          ID: u.ID,
+          Username: u.Username,
+          Email: u.Email,
+          Nom_prenom: u.Nom_prenom
+        })),
+        permissions: permissions.map(p => ({
+          ID: p.ID,
+          Code_permission: p.Code_permission,
+          Nom_permission: p.Nom_permission,
+          Categorie: p.Categorie,
+          Nom_module: p.Nom_module
+        })),
+        values: values
+      }
+    });
+  } catch (error) {
+    console.error('Erreur admin getMatrice:', error);
+    res.status(500).json({ success: false, error: 'Erreur chargement matrice' });
+  }
+};
+
+/**
+ * PATCH /api/admin/matrice
+ * Met à jour une valeur de la matrice (userId, permissionId, valeur: 0|1)
+ * Permission requise: ADMIN_PERMISSIONS_WRITE
+ */
+exports.updateMatrice = async (req, res) => {
+  try {
+    const { userId, permissionId, valeur } = req.body;
+
+    // Validation
+    if (!Number.isInteger(userId) || !Number.isInteger(permissionId) || ![0, 1].includes(valeur)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Paramètres invalides (userId, permissionId, valeur: 0|1)'
+      });
+    }
+
+    // Vérifier que l'utilisateur et la permission existent
+    const [[user]] = await db.query('SELECT ID FROM utilisateurs WHERE ID = ?', [userId]);
+    const [[permission]] = await db.query('SELECT ID FROM permissions WHERE ID = ?', [permissionId]);
+
+    if (!user || !permission) {
+      return res.status(404).json({
+        success: false,
+        error: 'Utilisateur ou permission introuvable'
+      });
+    }
+
+    if (valeur === 1) {
+      // INSERT ou UPDATE à 1
+      await db.query(
+        `INSERT INTO matrice_autorisation (ID_Utilisateur, ID_Permission, Valeur)
+         VALUES (?, ?, 1)
+         ON DUPLICATE KEY UPDATE Valeur = 1`,
+        [userId, permissionId]
+      );
+    } else {
+      // DELETE (ou UPDATE à 0 selon le schéma)
+      await db.query(
+        `DELETE FROM matrice_autorisation
+         WHERE ID_Utilisateur = ? AND ID_Permission = ?`,
+        [userId, permissionId]
+      );
+    }
+
+    // Ajouter à l'audit
+    await logAction({
+      ID_Utilisateur: req.user?.id,
+      Username: req.user?.username,
+      Action: `Matrice permission ${valeur === 1 ? 'ACCORDÉE' : 'RÉVOQUÉE'}`,
+      Table_concernee: 'matrice_autorisation',
+      Ancienne_valeur: null,
+      Nouvelle_valeur: `userId=${userId}, permissionId=${permissionId}, valeur=${valeur}`,
+      IP_address: req.ip
+    });
+
+    res.json({
+      success: true,
+      message: `Permission ${valeur === 1 ? 'accordée' : 'révoquée'}`
+    });
+  } catch (error) {
+    console.error('Erreur admin updateMatrice:', error);
+    res.status(500).json({ success: false, error: 'Erreur mise à jour matrice' });
+  }
+};

@@ -38,13 +38,15 @@ export const useAuth = (): UseAuthReturn => {
     const email = raw.email ?? raw.Email ?? raw.personnel_email ?? '';
     const nomPrenom = raw.nom_prenom ?? raw.Nom_prenom ?? username;
     const poste = raw.poste ?? raw.Poste ?? '';
+    const permissions = raw.permissions ?? raw.Permissions ?? [];
 
     return {
       id: Number(id),
       username: String(username),
       email: String(email),
       nom_prenom: String(nomPrenom),
-      poste: String(poste)
+      poste: String(poste),
+      permissions: Array.isArray(permissions) ? permissions : []
     };
   }, []);
 
@@ -58,6 +60,7 @@ export const useAuth = (): UseAuthReturn => {
 
       try {
         const response = await authApi.getProfile();
+        
         if (response.data.success && response.data.data) {
           const normalized = normalizeUser(response.data.data);
           setUser(normalized);

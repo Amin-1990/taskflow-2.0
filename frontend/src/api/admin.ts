@@ -51,7 +51,10 @@ export const adminApi = {
   listSessions: (params?: AdminListQuery) => api.get<ApiResponse<AdminSession[]>>('/admin/sessions', { params }),
   revokeSession: (id: number) => api.patch<ApiResponse<any>>(`/admin/sessions/${id}/revoke`),
 
-  listAudit: (params?: AdminListQuery) => api.get<ApiResponse<AdminAuditLog[]>>('/admin/audit', { params })
+  listAudit: (params?: AdminListQuery) => api.get<ApiResponse<AdminAuditLog[]>>('/admin/audit', { params }),
+
+  getMatrice: () => api.get<ApiResponse<any>>('/admin/matrice'),
+  updateMatrice: (payload: any) => api.patch<ApiResponse<any>>('/admin/matrice', payload)
 };
 
 export default adminApi;
