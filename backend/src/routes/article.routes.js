@@ -15,6 +15,15 @@ const authMiddleware = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/authorization.middleware');
 
 // Routes spécifiques D'ABORD
+
+// Export routes (before :id routes to avoid conflicts)
+router.get(
+  '/export/xlsx',
+  authMiddleware,
+  requirePermission('ARTICLES_READ'),
+  articleController.exportXLSX
+);
+
 router.get(
   '/code/:code',
   authMiddleware,

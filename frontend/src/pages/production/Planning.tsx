@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Page Planning Hebdomadaire - Grille unique
  * Basee sur /api/planning/grille/semaine
  */
@@ -579,23 +579,23 @@ export const Planning: FunctionComponent<PlanningPageProps> = () => {
           <div className="p-8 text-center text-gray-600">Chargement...</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[1400px]">
+            <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-700">
                 <tr>
-                  <th className="px-3 py-3 text-left">N°</th>
-                  <th className="px-3 py-3 text-left">Article</th>
-                  <th className="px-3 py-3 text-left">Lot</th>
-                  <th className="px-3 py-3 text-left">Priorite</th>
-                  <th className="px-3 py-3 text-left">Date debut</th>
-                  <th className="px-3 py-3 text-right">Qte totale</th>
-                  <th className="px-3 py-3 text-right">Quantite a facturer</th>
-                  <th className="px-3 py-3 text-right">Reste</th>
-                  <th className="px-3 py-3 text-right">Stock emballe</th>
-                  <th className="px-3 py-3 text-right">Stock non emballe</th>
+                  <th className="px-2 py-2 text-left w-8">N°</th>
+                  <th className="px-2 py-2 text-left flex-1 min-w-max">Article</th>
+                  <th className="px-2 py-2 text-left w-16">Lot</th>
+                  <th className="px-2 py-2 text-left w-16">Priorite</th>
+                  <th className="px-2 py-2 text-left w-20">Date debut</th>
+                  <th className="px-2 py-2 text-right w-16">Qte totale</th>
+                  <th className="px-2 py-2 text-right w-20">Quantite a facturer</th>
+                  <th className="px-2 py-2 text-right w-12">Reste</th>
+                  <th className="px-2 py-2 text-right w-16">Stock emballe</th>
+                  <th className="px-2 py-2 text-right w-16">Stock non emballe</th>
                   {DAYS.map((day) => (
-                    <th key={day.key} className="px-3 py-3 text-center">{day.label} P/E</th>
+                    <th key={day.key} className="px-1 py-2 text-center text-xs">{day.label} P/E</th>
                   ))}
-                  <th className="px-3 py-3 text-center">Total Semaine P/E</th>
+                  <th className="px-1 py-2 text-center text-xs">Total P/E</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -608,56 +608,56 @@ export const Planning: FunctionComponent<PlanningPageProps> = () => {
                 )}
                 {filteredRows.map((row, index) => (
                   <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-3">{index + 1}</td>
-                    <td className="px-3 py-3">
+                    <td className="px-2 py-2 text-xs">{index + 1}</td>
+                    <td className="px-2 py-2">
                       <button
                         onClick={() => void openArticleModal(row.article_id)}
-                        className="font-medium text-blue-700 hover:underline inline-flex items-center gap-1"
+                        className="font-medium text-blue-700 hover:underline inline-flex items-center gap-1 text-xs"
                       >
                         <FileText className="w-3 h-3" />
                         {row.article_code || '-'}
                       </button>
                       <div className="text-xs text-gray-500">{row.article_nom || ''}</div>
                     </td>
-                    <td className="px-3 py-3">{row.lot || '-'}</td>
-                    <td className="px-3 py-3">
-                      <span className="px-2 py-1 rounded text-xs capitalize bg-gray-100 text-gray-700">
+                    <td className="px-2 py-2 text-xs">{row.lot || '-'}</td>
+                    <td className="px-2 py-2">
+                      <span className="px-1 py-0.5 rounded text-xs capitalize bg-gray-100 text-gray-700">
                         {row.priorite || '-'}
                       </span>
                     </td>
-                    <td className="px-3 py-3">
+                    <td className="px-2 py-2">
                       <input
                         type="date"
                         value={row.date_debut_planification || ''}
                         min={selectedWeek?.dateDebut}
                         max={selectedWeek?.dateFin}
                         onChange={(e) => void handleDateDebutChange(row, (e.target as HTMLInputElement).value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-xs"
+                        className="px-1 py-1 border border-gray-300 rounded text-xs w-full"
                       />
                     </td>
-                    <td className="px-3 py-3 text-right">{row.quantite_totale}</td>
-                    <td className="px-3 py-3 text-right">{row.quantite_facturee_semaine ?? row.quantite_facturee}</td>
-                    <td className="px-3 py-3 text-right">{row.reste_a_facturer}</td>
-                    <td className="px-3 py-3 text-right">{row.quantite_emballee_commande}</td>
-                    <td className="px-3 py-3 text-right">{row.stock_non_emballe}</td>
+                    <td className="px-2 py-2 text-right text-xs">{row.quantite_totale}</td>
+                    <td className="px-2 py-2 text-right text-xs">{row.quantite_facturee_semaine ?? row.quantite_facturee}</td>
+                    <td className="px-2 py-2 text-right text-xs">{row.reste_a_facturer}</td>
+                    <td className="px-2 py-2 text-right text-xs">{row.quantite_emballee_commande}</td>
+                    <td className="px-2 py-2 text-right text-xs">{row.stock_non_emballe}</td>
                     {DAYS.map((day, dayIndex) => {
                       const dayInfo = getDayDateString(row, dayIndex);
                       const disabled = dayInfo?.isBeforeStart || false;
                       return (
-                        <td key={day.key} className={`px-3 py-3 text-center ${disabled ? 'bg-gray-100' : ''}`}>
+                        <td key={day.key} className={`px-1 py-2 text-center text-xs ${disabled ? 'bg-gray-100' : ''}`}>
                           <button
                             disabled={disabled}
                             onClick={() => openEditModal(row, day.key)}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded border border-gray-200 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs"
                             title="Editer la cellule"
                           >
                             {row.planification[day.key].planifie}/{row.planification[day.key].emballe}
-                            <Edit3 className="w-3 h-3 text-gray-500" />
+                            <Edit3 className="w-2 h-2 text-gray-500" />
                           </button>
                         </td>
                       )
                     })}
-                    <td className="px-3 py-3 text-center font-medium">
+                    <td className="px-1 py-2 text-center text-xs font-medium">
                       {row.total_planifie_semaine}/{row.total_emballe_semaine}
                     </td>
                   </tr>

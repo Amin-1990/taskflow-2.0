@@ -66,16 +66,22 @@ export const planningManuelService = {
       return { rows: [] as ManualPlanningRow[], weekOption: null };
     }
 
-    const commandesRes = await api.get(`/commandes/semaine/${(weekCommande || weekPlanification).id}`);
+    const [commandesRes, articlesRes] = await Promise.all([
+      api.get(`/commandes/semaine/${(weekCommande || weekPlanification).id}`),
+      api.get('/articles'),
+    ]);
     const commandes = (commandesRes.data?.data || []) as any[];
+    const articles = (articlesRes.data?.data || []) as any[];
     const gridRows = (gridRes.data?.data?.commandes || []) as any[];
     const existingByCommande = new Map<number, any>(gridRows.map((r) => [r.commande_id, r]));
+    const articleById = new Map<number, any>(articles.map((a) => [a.ID, a]));
 
     const rows: ManualPlanningRow[] = commandes
       .filter((c) => (unite === 'Toutes' ? true : (c.Unite_production || '') === unite))
       .map((cmd) => {
         const existing = existingByCommande.get(cmd.ID);
         const lot = String(cmd.Lot || '');
+        const article = articleById.get(existing?.article_id || cmd.ID_Article || 0);
         return {
           id: existing?.id || null,
           commandeId: cmd.ID,
@@ -85,7 +91,8 @@ export const planningManuelService = {
           lot,
           unite: String(cmd.Unite_production || existing?.unite_production || ''),
           priorite: (cmd.priorite || existing?.priorite || null) as any,
-          objectifSemaine: Number(existing?.quantite_facturee_semaine || 0),
+          objectifSemaine: Number(cmd.Quantite || 0),
+          tempsTheorique: Number(article?.Temps_theorique || 0),
           planification: {
             lundi: { ...ZERO_PLAN.lundi, ...(existing?.planification?.lundi || {}) },
             mardi: { ...ZERO_PLAN.mardi, ...(existing?.planification?.mardi || {}) },

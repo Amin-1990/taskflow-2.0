@@ -16,23 +16,24 @@ export interface ManualDayCell {
 }
 
 export interface ManualPlanningRow {
-  id: number | null;
-  commandeId: number;
-  articleId: number | null;
-  articleCode: string;
-  articleNom: string;
-  lot: string;
-  unite: string;
-  priorite: 'basse' | 'normale' | 'haute' | 'urgente' | null;
-  objectifSemaine: number;
-  planification: Record<DayKey, ManualDayCell>;
-  totalPlanifie: number;
-  totalEmballe: number;
-  identifiantLot: string;
-  dateDebutPlanification: string | null;
-  stockEmballePrecedent: number;
-  semainePrecedenteCode: string | null;
-}
+   id: number | null;
+   commandeId: number;
+   articleId: number | null;
+   articleCode: string;
+   articleNom: string;
+   lot: string;
+   unite: string;
+   priorite: 'basse' | 'normale' | 'haute' | 'urgente' | null;
+   objectifSemaine: number;
+   tempsTheorique: number;
+   planification: Record<DayKey, ManualDayCell>;
+   totalPlanifie: number;
+   totalEmballe: number;
+   identifiantLot: string;
+   dateDebutPlanification: string | null;
+   stockEmballePrecedent: number;
+   semainePrecedenteCode: string | null;
+ }
 
 export interface AutoWeekCell {
   planningId: number | null;

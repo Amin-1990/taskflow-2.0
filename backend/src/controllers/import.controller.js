@@ -1,10 +1,11 @@
 const db = require('../config/database');
 const importService = require('../services/import.service');
+const affectationService = require('../services/affectation.service');
 const { logAction } = require('../services/audit.service');
 const { formatDateForAPI, formatDateTimeForDB, utcToLocal } = require('../utils/datetime');
 
 class ImportController {
-  
+
   /**
    * Template commandes
    */
@@ -19,13 +20,13 @@ class ImportController {
         { header: 'Priorité', key: 'priorite', width: 12, example: 'normale' },
         { header: 'Unité de production/Nom', key: 'unite_production', width: 24, example: 'Unite 1' }
       ];
-      
+
       const buffer = await importService.generateTemplate(columns, 'Commandes');
-      
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=template_commandes.xlsx');
       res.send(buffer);
-      
+
     } catch (error) {
       console.error('Erreur template commandes:', error);
       res.status(500).json({ error: error.message });
@@ -73,67 +74,57 @@ class ImportController {
   }
 
   /**
-   * Template affectations
-   */
+    * Template affectations
+    */
   async getTemplateAffectations(req, res) {
     try {
       const columns = [
-        { header: 'ID', key: 'id', width: 10, example: '' },
-        { header: 'ID_Commande', key: 'id_commande', width: 14, example: '' },
         { header: 'Code_article', key: 'code_article', width: 18, example: 'ART-001' },
         { header: 'Lot', key: 'lot', width: 14, example: 'L001' },
-        { header: 'ID_Operateur', key: 'id_operateur', width: 14, example: '' },
-        { header: 'Operateur_nom', key: 'operateur_nom', width: 24, example: 'Jean Martin' },
         { header: 'Matricule', key: 'matricule', width: 14, example: 'EMP001' },
-        { header: 'ID_Poste', key: 'id_poste', width: 10, example: '' },
         { header: 'Poste_description', key: 'poste_description', width: 22, example: 'Assemblage' },
-        { header: 'ID_Semaine', key: 'id_semaine', width: 12, example: '' },
-        { header: 'Semaine', key: 'semaine', width: 14, example: 'S10-2026' },
-        { header: 'ID_Article', key: 'id_article', width: 12, example: '' },
         { header: 'Date_debut', key: 'date_debut', width: 22, example: '2026-02-21 08:00:00' },
-        { header: 'Date_fin', key: 'date_fin', width: 22, example: '' },
-        { header: 'Duree', key: 'duree', width: 12, example: '' },
+        { header: 'Date_fin', key: 'date_fin', width: 22, example: '2026-02-21 17:00:00' },
         { header: 'Heure_supp', key: 'heure_supp', width: 12, example: '0' },
-        { header: 'Quantite_produite', key: 'quantite_produite', width: 18, example: '' },
-        { header: 'Commentaire', key: 'commentaire', width: 30, example: 'Import CSV' }
+        { header: 'Quantite_produite', key: 'quantite_produite', width: 18, example: '50' }
       ];
 
       const buffer = await importService.generateTemplate(columns, 'Affectations');
 
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-      res.setHeader('Content-Disposition', 'attachment; filename=template_affectations.xlsx');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_affectations_simplifie.xlsx');
       res.send(buffer);
     } catch (error) {
       console.error('Erreur template affectations:', error);
       res.status(500).json({ error: error.message });
     }
   }
-  
+
   /**
     * Template semaines
     */
-   async getTemplateSemaines(req, res) {
-     try {
-       const columns = [
-         { header: 'Code semaine', key: 'code_semaine', width: 15, example: 'S01' },
-         { header: 'NumÃ©ro semaine', key: 'numero_semaine', width: 15, example: '1' },
-         { header: 'AnnÃ©e', key: 'annee', width: 12, example: '2026' },
-         { header: 'Mois', key: 'mois', width: 10, example: '1' },
-         { header: 'Date dÃ©but', key: 'date_debut', width: 15, example: '2026-01-01' },
-         { header: 'Date fin', key: 'date_fin', width: 15, example: '2026-01-07' }
-       ];
-       
-       const buffer = await importService.generateTemplate(columns, 'Semaines');
-       
-       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-       res.setHeader('Content-Disposition', 'attachment; filename=template_semaines.xlsx');
-       res.send(buffer);
-       
-     } catch (error) {
-       console.error('Erreur template semaines:', error);
-       res.status(500).json({ error: error.message });
-     }
-   }
+  async getTemplateSemaines(req, res) {
+    try {
+      const columns = [
+        { header: 'Code semaine', key: 'code_semaine', width: 15, example: 'S01' },
+        { header: 'NumÃ©ro semaine', key: 'numero_semaine', width: 15, example: '1' },
+        { header: 'AnnÃ©e', key: 'annee', width: 12, example: '2026' },
+        { header: 'Mois', key: 'mois', width: 10, example: '1' },
+        { header: 'Date dÃ©but', key: 'date_debut', width: 15, example: '2026-01-01' },
+        { header: 'Date fin', key: 'date_fin', width: 15, example: '2026-01-07' }
+      ];
+
+      const buffer = await importService.generateTemplate(columns, 'Semaines');
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=template_semaines.xlsx');
+      res.send(buffer);
+
+    } catch (error) {
+      console.error('Erreur template semaines:', error);
+      res.status(500).json({ error: error.message });
+    }
+  }
 
   /**
     * Template personnel
@@ -159,13 +150,13 @@ class ImportController {
         { header: 'Numero_CNSS', key: 'numero_cnss', width: 18, example: 'CNSS123456' },
         { header: 'Commentaire', key: 'commentaire', width: 35, example: 'Import initial' }
       ];
-      
+
       const buffer = await importService.generateTemplate(columns, 'Personnel');
-      
+
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', 'attachment; filename=template_personnel.xlsx');
       res.send(buffer);
-      
+
     } catch (error) {
       console.error('Erreur template personnel:', error);
       res.status(500).json({ error: error.message });
@@ -711,20 +702,20 @@ class ImportController {
       connection.release();
     }
   }
-  
+
   /**
    * Import commandes
    */
   async importCommandes(req, res) {
     const connection = await db.getConnection();
-    
+
     try {
       await connection.beginTransaction();
-      
+
       if (!req.file) {
         return res.status(400).json({ error: 'Fichier requis' });
       }
-      
+
       const data = await importService.readExcel(req.file.buffer);
       const errors = [];
       const resultats = [];
@@ -811,7 +802,7 @@ class ImportController {
         const d = new Date(raw);
         if (!Number.isNaN(d.getTime())) return formatDateForAPI(d);
         return null;
-        };
+      };
 
       const toIntOrNull = (value) => {
         if (value === null || value === undefined || value === '') return null;
@@ -925,9 +916,9 @@ class ImportController {
         await connection.rollback();
         return res.status(400).json({ error: 'Erreurs de validation', details: errors });
       }
-      
+
       await connection.commit();
-      
+
       // Audit
       await logAction({
         ID_Utilisateur: req.user?.ID,
@@ -936,13 +927,13 @@ class ImportController {
         Table_concernee: 'commandes',
         Nouvelle_valeur: { count: resultats.length }
       });
-      
+
       res.json({
         success: true,
         message: `${resultats.length} commandes importÃ©es`,
         data: resultats
       });
-      
+
     } catch (error) {
       await connection.rollback();
       console.error('Erreur import commandes:', error);
@@ -1186,6 +1177,30 @@ class ImportController {
           if (!Number.isNaN(d.getTime())) return formatDateTimeForDB(d);
         }
         const raw = String(value).trim();
+
+        // Parse DD/MM/YYYY or DD/MM/YY HH:MM(:SS) format
+        const dateMatch = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?$/);
+        if (dateMatch) {
+          const day = parseInt(dateMatch[1], 10);
+          const month = parseInt(dateMatch[2], 10);
+          let year = parseInt(dateMatch[3], 10);
+          if (year < 100) year += 2000;
+          const hour = parseInt(dateMatch[4], 10);
+          const minute = parseInt(dateMatch[5], 10);
+          const second = parseInt(dateMatch[6] || '0', 10);
+
+          const d = new Date(year, month - 1, day, hour, minute, second);
+          if (!Number.isNaN(d.getTime())) {
+            const yyyy = d.getFullYear();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            const hh = String(d.getHours()).padStart(2, '0');
+            const mi = String(d.getMinutes()).padStart(2, '0');
+            const ss = String(d.getSeconds()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+          }
+        }
+
         const d = new Date(raw);
         if (!Number.isNaN(d.getTime())) return formatDateTimeForDB(d);
         return null;
@@ -1260,6 +1275,20 @@ class ImportController {
             idSemaine = semaines[0]?.ID || null;
           }
 
+          const dateDebutParsed = toDateTimeOrNull(getCell(row, ['date debut', 'date_debut']));
+          const dateFinParsed = toDateTimeOrNull(getCell(row, ['date fin', 'date_fin']));
+
+          // Auto-resolution of ID_Semaine from Date_debut if still missing
+          if (!idSemaine && dateDebutParsed) {
+            const [semRows] = await connection.query(
+              'SELECT ID FROM semaines WHERE ? BETWEEN Date_debut AND Date_fin LIMIT 1',
+              [dateDebutParsed.split(' ')[0]]
+            );
+            if (semRows.length > 0) {
+              idSemaine = semRows[0].ID;
+            }
+          }
+
           let idArticle = toIntOrNull(getCell(row, ['id article', 'id_article']));
           if (!idArticle && codeArticle) {
             const [articles] = await connection.query(
@@ -1276,19 +1305,42 @@ class ImportController {
             idArticle = commandes[0]?.ID_Article || null;
           }
 
+          let dureeCalculated = toIntOrNull(getCell(row, ['duree']));
+          if (!dureeCalculated && dateDebutParsed && dateFinParsed) {
+            const start = new Date(dateDebutParsed);
+            const end = new Date(dateFinParsed);
+            if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+              try {
+                // Calculer la durée en prenant en compte les horaires, pauses et jours fériés
+                dureeCalculated = await affectationService.calculateDurationWithHoraires(
+                  connection,
+                  start,
+                  end
+                );
+              } catch (durationError) {
+                console.warn(`⚠️ Erreur calcul durée ligne ${rowNumber}:`, durationError.message);
+                // Fallback: calcul simple en minutes
+                const diffMs = end.getTime() - start.getTime();
+                dureeCalculated = Math.max(0, Math.floor(diffMs / (1000 * 60)));
+              }
+            }
+          }
+
           const payload = {
             ID_Commande: idCommande,
             ID_Operateur: idOperateur,
             ID_Poste: idPoste,
             ID_Article: idArticle,
             ID_Semaine: idSemaine,
-            Date_debut: toDateTimeOrNull(getCell(row, ['date debut', 'date_debut'])),
-            Date_fin: toDateTimeOrNull(getCell(row, ['date fin', 'date_fin'])),
-            Duree: toIntOrNull(getCell(row, ['duree'])),
+            Date_debut: dateDebutParsed,
+            Date_fin: dateFinParsed,
+            Duree: dureeCalculated,
             Heure_supp: toFloatOrNull(getCell(row, ['heure supp', 'heure_supp', 'heures supp'])),
             Quantite_produite: toIntOrNull(getCell(row, ['quantite produite', 'quantite_produite'])),
             Commentaire: getCell(row, ['commentaire'])
           };
+
+          console.log(`[AFFECTATIONS IMPORT] Ligne ${rowNumber} - ID_Commande: ${idCommande}, ID_Semaine: ${idSemaine}, Duree: ${dureeCalculated}`);
 
           if (affectationId) {
             const [existing] = await connection.query(
@@ -1316,12 +1368,32 @@ class ImportController {
             resultats.push({ ligne: rowNumber, id: affectationId, action: 'updated' });
           } else {
             if (!payload.ID_Commande || !payload.ID_Operateur || !payload.ID_Poste || !payload.ID_Article) {
-              throw new Error('ID_Commande, ID_Operateur, ID_Poste et ID_Article sont requis (directement ou via correspondances)');
+              const missing = [];
+              if (!payload.ID_Commande) missing.push(`Commande (Article: ${codeArticle || 'non fourni'}, Lot: ${lot || 'non fourni'}) introuvable`);
+              if (!payload.ID_Operateur) missing.push(`Personnel (Matricule: ${matricule || 'non fourni'}, Nom: ${operateurNom || 'non fourni'}) introuvable`);
+              if (!payload.ID_Poste) missing.push(`Poste (Description: ${posteDescription || 'non fourni'}) introuvable`);
+              if (!payload.ID_Article) missing.push(`Article (Code: ${codeArticle || 'non fourni'}) introuvable`);
+              throw new Error(`Données obligatoires manquantes ou invalides : ${missing.join(' | ')}`);
             }
 
             if (!payload.Date_debut) {
               const { getLocalDateTime } = require('../utils/datetime');
               payload.Date_debut = formatDateTimeForDB(getLocalDateTime());
+            }
+
+            // Fix for check_dates constraint: Date_fin must be > Date_debut
+            if (payload.Date_fin) {
+              const start = new Date(payload.Date_debut);
+              const end = new Date(payload.Date_fin);
+              if (end <= start) {
+                if (end.getTime() === start.getTime()) {
+                  // If exactly equal, add 1 minute to satisfy the > constraint
+                  end.setMinutes(end.getMinutes() + 1);
+                  payload.Date_fin = formatDateTimeForDB(end);
+                } else {
+                  throw new Error(`La date de fin (${payload.Date_fin}) ne peut pas être avant la date de début (${payload.Date_debut})`);
+                }
+              }
             }
 
             const insertColumns = [];
@@ -1345,11 +1417,13 @@ class ImportController {
             resultats.push({ ligne: rowNumber, id: insert.insertId, action: 'created' });
           }
         } catch (importError) {
+          console.error(`[AFFECTATIONS IMPORT] Erreur ligne ${rowNumber}:`, importError.message);
           errors.push(`Ligne ${rowNumber}: ${importError.message}`);
         }
       }
 
       if (errors.length > 0) {
+        console.warn('[AFFECTATIONS IMPORT] Erreurs de validation:', errors);
         await connection.rollback();
         return res.status(400).json({ error: 'Erreurs de validation', details: errors });
       }
@@ -1976,11 +2050,11 @@ class ImportController {
       connection.release();
     }
   }
-  
+
   /**
     * Template articles
     */
-   async getTemplateArticles(req, res) {
+  async getTemplateArticles(req, res) {
     try {
       const columns = [
         { header: 'Code article', key: 'code_article', width: 18, example: 'REF-A23' },
@@ -2013,463 +2087,463 @@ class ImportController {
   /**
     * Import articles
     */
-   async importArticles(req, res) {
-     const connection = await db.getConnection();
-     
-     try {
-       await connection.beginTransaction();
-       
-       if (!req.file) {
-         return res.status(400).json({ error: 'Fichier requis' });
-       }
-       
-       const data = await importService.readExcel(req.file.buffer);
-       const errors = [];
-       const resultats = [];
+  async importArticles(req, res) {
+    const connection = await db.getConnection();
 
-       const normalizeKey = (key) =>
-         String(key || '')
-           .normalize('NFD')
-           .replace(/[\u0300-\u036f]/g, '')
-           .toLowerCase()
-           .replace(/[^a-z0-9]+/g, ' ')
-           .trim();
+    try {
+      await connection.beginTransaction();
 
-       const normalizeRow = (row) => {
-         const normalized = {};
-         Object.entries(row || {}).forEach(([k, v]) => {
-           normalized[normalizeKey(k)] = v;
-         });
-         return normalized;
-       };
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
 
-       const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
-         if (value === null || value === undefined) return true;
-         return String(value).trim() === '';
-       });
+      const data = await importService.readExcel(req.file.buffer);
+      const errors = [];
+      const resultats = [];
 
-       const getCell = (row, keys) => {
-         for (const key of keys) {
-           if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-             return row[key];
-           }
-         }
-         return null;
-       };
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
 
-       const toIntOrNull = (value, fieldLabel, rowNumber) => {
-         if (value === null || value === undefined || value === '') return null;
-         const n = parseInt(String(value).trim(), 10);
-         if (Number.isNaN(n)) {
-           errors.push(`Ligne ${rowNumber}: ${fieldLabel} doit etre un nombre entier`);
-           return null;
-         }
-         return n;
-       };
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
 
-       const toFloatOrNull = (value, fieldLabel, rowNumber) => {
-         if (value === null || value === undefined || value === '') return null;
-         const normalized = String(value).replace(',', '.').trim();
-         const n = parseFloat(normalized);
-         if (Number.isNaN(n)) {
-           errors.push(`Ligne ${rowNumber}: ${fieldLabel} doit etre un nombre`);
-           return null;
-         }
-         return n;
-       };
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
 
-       const toDateOrNull = (value) => {
-         if (value === null || value === undefined || value === '') return null;
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
 
-         if (value instanceof Date && !Number.isNaN(value.getTime())) {
-           return value.toISOString().split('T')[0];
-         }
+      const toIntOrNull = (value, fieldLabel, rowNumber) => {
+        if (value === null || value === undefined || value === '') return null;
+        const n = parseInt(String(value).trim(), 10);
+        if (Number.isNaN(n)) {
+          errors.push(`Ligne ${rowNumber}: ${fieldLabel} doit etre un nombre entier`);
+          return null;
+        }
+        return n;
+      };
 
-         if (typeof value === 'number' && Number.isFinite(value)) {
-           // Excel serial date (days since 1899-12-30)
-           if (value > 20000 && value < 80000) {
-             const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-             const ms = value * 24 * 60 * 60 * 1000;
-             const date = new Date(excelEpoch.getTime() + ms);
-             return date.toISOString().split('T')[0];
-           }
-           const maybeTs = new Date(value);
-           if (!Number.isNaN(maybeTs.getTime())) {
-             return maybeTs.toISOString().split('T')[0];
-           }
-           return null;
-         }
+      const toFloatOrNull = (value, fieldLabel, rowNumber) => {
+        if (value === null || value === undefined || value === '') return null;
+        const normalized = String(value).replace(',', '.').trim();
+        const n = parseFloat(normalized);
+        if (Number.isNaN(n)) {
+          errors.push(`Ligne ${rowNumber}: ${fieldLabel} doit etre un nombre`);
+          return null;
+        }
+        return n;
+      };
 
-         if (typeof value === 'object') {
-           const nested = value.result ?? value.text ?? value.richText ?? null;
-           if (nested !== null) return toDateOrNull(nested);
-           return null;
-         }
+      const toDateOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
 
-         const raw = String(value).trim();
-         if (!raw || ['-', 'n/a', 'na', 'null'].includes(raw.toLowerCase())) return null;
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return value.toISOString().split('T')[0];
+        }
 
-         const dmy = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-         if (dmy) {
-           const day = Number(dmy[1]);
-           const month = Number(dmy[2]);
-           const year = Number(dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]);
-           const date = new Date(Date.UTC(year, month - 1, day));
-           if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
-           return null;
-         }
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          // Excel serial date (days since 1899-12-30)
+          if (value > 20000 && value < 80000) {
+            const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+            const ms = value * 24 * 60 * 60 * 1000;
+            const date = new Date(excelEpoch.getTime() + ms);
+            return date.toISOString().split('T')[0];
+          }
+          const maybeTs = new Date(value);
+          if (!Number.isNaN(maybeTs.getTime())) {
+            return maybeTs.toISOString().split('T')[0];
+          }
+          return null;
+        }
 
-         const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-         if (ymd) {
-           const year = Number(ymd[1]);
-           const month = Number(ymd[2]);
-           const day = Number(ymd[3]);
-           const date = new Date(Date.UTC(year, month - 1, day));
-           if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
-           return null;
-         }
+        if (typeof value === 'object') {
+          const nested = value.result ?? value.text ?? value.richText ?? null;
+          if (nested !== null) return toDateOrNull(nested);
+          return null;
+        }
 
-         const parsed = new Date(raw);
-         if (!Number.isNaN(parsed.getTime())) {
-           return parsed.toISOString().split('T')[0];
-         }
-         return null;
-       };
+        const raw = String(value).trim();
+        if (!raw || ['-', 'n/a', 'na', 'null'].includes(raw.toLowerCase())) return null;
 
-       const normalizeBooleanTinyInt = (value, defaultValue = 0) => {
-         if (value === null || value === undefined || value === '') return defaultValue;
-         const raw = String(value).trim().toLowerCase();
-         if (['1', 'true', 'oui', 'yes', 'vrai'].includes(raw)) return 1;
-         if (['0', 'false', 'non', 'no', 'faux'].includes(raw)) return 0;
-         const n = parseInt(raw, 10);
-         if (!Number.isNaN(n)) return n > 0 ? 1 : 0;
-         return defaultValue;
-       };
+        const dmy = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (dmy) {
+          const day = Number(dmy[1]);
+          const month = Number(dmy[2]);
+          const year = Number(dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]);
+          const date = new Date(Date.UTC(year, month - 1, day));
+          if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
+          return null;
+        }
 
-       const normalizeStatut = (value) => {
-         if (!value) return 'normale';
-         const raw = String(value).trim().toLowerCase();
-         if (raw === 'nouveau') return 'nouveau';
-         if (['passage de revision', 'passage de révision'].includes(raw)) return 'passage de révision';
-         if (raw === 'normale') return 'normale';
-         if (['obsolete', 'obsolète'].includes(raw)) return 'obsolète';
-         return 'normale';
-       };
-       
-       for (let i = 0; i < data.length; i += 1) {
-         const rowNumber = i + 2;
-         const row = normalizeRow(data[i]);
-         if (isRowEmpty(row)) continue;
+        const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (ymd) {
+          const year = Number(ymd[1]);
+          const month = Number(ymd[2]);
+          const day = Number(ymd[3]);
+          const date = new Date(Date.UTC(year, month - 1, day));
+          if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
+          return null;
+        }
 
-         try {
-           const codeArticleRaw = getCell(row, ['code article', 'code_article', 'code']);
-           const codeArticle = codeArticleRaw ? String(codeArticleRaw).trim() : '';
-           if (!codeArticle) {
-             errors.push(`Ligne ${rowNumber}: Code article requis`);
-             continue;
-           }
+        const parsed = new Date(raw);
+        if (!Number.isNaN(parsed.getTime())) {
+          return parsed.toISOString().split('T')[0];
+        }
+        return null;
+      };
 
-           const client = getCell(row, ['client']);
-           const tempsTheorique = toFloatOrNull(getCell(row, ['temps theorique', 'temps_theorique']), 'Temps theorique', rowNumber);
-           const tempsReel = toFloatOrNull(getCell(row, ['temps reel', 'temps_reel']), 'Temps reel', rowNumber);
-           const indiceRevision = getCell(row, ['indice revision', 'indice_revision']);
-           const dateRevision = toDateOrNull(getCell(row, ['date revision', 'date_revision']));
-           const nombrePostes = toIntOrNull(getCell(row, ['nombre postes', 'nombre_postes']), 'Nombre postes', rowNumber);
-           const lienDossierClient = getCell(row, ['lien dossier client', 'lien_dossier_client']);
-           const lienPhoto = getCell(row, ['lien photo', 'lien_photo']);
-           const lienDossierTechnique = getCell(row, ['lien dossier technique', 'lien_dossier_technique']);
-           const ctrlElect = normalizeBooleanTinyInt(getCell(row, ['ctrl elect disponible', 'ctrl_elect_disponible']), 0);
-           const commentaire = getCell(row, ['commentaire']);
-           const valide = normalizeBooleanTinyInt(getCell(row, ['valide']), 1);
-           const statut = normalizeStatut(getCell(row, ['statut']));
+      const normalizeBooleanTinyInt = (value, defaultValue = 0) => {
+        if (value === null || value === undefined || value === '') return defaultValue;
+        const raw = String(value).trim().toLowerCase();
+        if (['1', 'true', 'oui', 'yes', 'vrai'].includes(raw)) return 1;
+        if (['0', 'false', 'non', 'no', 'faux'].includes(raw)) return 0;
+        const n = parseInt(raw, 10);
+        if (!Number.isNaN(n)) return n > 0 ? 1 : 0;
+        return defaultValue;
+      };
 
-           const [existing] = await connection.query(
-             'SELECT ID FROM articles WHERE Code_article = ? LIMIT 1',
-             [codeArticle]
-           );
+      const normalizeStatut = (value) => {
+        if (!value) return 'normale';
+        const raw = String(value).trim().toLowerCase();
+        if (raw === 'nouveau') return 'nouveau';
+        if (['passage de revision', 'passage de révision'].includes(raw)) return 'passage de révision';
+        if (raw === 'normale') return 'normale';
+        if (['obsolete', 'obsolète'].includes(raw)) return 'obsolète';
+        return 'normale';
+      };
 
-           const payload = [
-             client || null,
-             tempsTheorique,
-             tempsReel,
-             indiceRevision || null,
-             dateRevision || null,
-             nombrePostes,
-             lienDossierClient || null,
-             lienPhoto || null,
-             lienDossierTechnique || null,
-             ctrlElect,
-             commentaire || null,
-             valide,
-             statut
-           ];
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
 
-           if (existing.length > 0) {
-             await connection.query(
-               `UPDATE articles SET
+        try {
+          const codeArticleRaw = getCell(row, ['code article', 'code_article', 'code']);
+          const codeArticle = codeArticleRaw ? String(codeArticleRaw).trim() : '';
+          if (!codeArticle) {
+            errors.push(`Ligne ${rowNumber}: Code article requis`);
+            continue;
+          }
+
+          const client = getCell(row, ['client']);
+          const tempsTheorique = toFloatOrNull(getCell(row, ['temps theorique', 'temps_theorique']), 'Temps theorique', rowNumber);
+          const tempsReel = toFloatOrNull(getCell(row, ['temps reel', 'temps_reel']), 'Temps reel', rowNumber);
+          const indiceRevision = getCell(row, ['indice revision', 'indice_revision']);
+          const dateRevision = toDateOrNull(getCell(row, ['date revision', 'date_revision']));
+          const nombrePostes = toIntOrNull(getCell(row, ['nombre postes', 'nombre_postes']), 'Nombre postes', rowNumber);
+          const lienDossierClient = getCell(row, ['lien dossier client', 'lien_dossier_client']);
+          const lienPhoto = getCell(row, ['lien photo', 'lien_photo']);
+          const lienDossierTechnique = getCell(row, ['lien dossier technique', 'lien_dossier_technique']);
+          const ctrlElect = normalizeBooleanTinyInt(getCell(row, ['ctrl elect disponible', 'ctrl_elect_disponible']), 0);
+          const commentaire = getCell(row, ['commentaire']);
+          const valide = normalizeBooleanTinyInt(getCell(row, ['valide']), 1);
+          const statut = normalizeStatut(getCell(row, ['statut']));
+
+          const [existing] = await connection.query(
+            'SELECT ID FROM articles WHERE Code_article = ? LIMIT 1',
+            [codeArticle]
+          );
+
+          const payload = [
+            client || null,
+            tempsTheorique,
+            tempsReel,
+            indiceRevision || null,
+            dateRevision || null,
+            nombrePostes,
+            lienDossierClient || null,
+            lienPhoto || null,
+            lienDossierTechnique || null,
+            ctrlElect,
+            commentaire || null,
+            valide,
+            statut
+          ];
+
+          if (existing.length > 0) {
+            await connection.query(
+              `UPDATE articles SET
                  Client = ?, Temps_theorique = ?, Temps_reel = ?,
                  Indice_revision = ?, Date_revision = ?, Nombre_postes = ?,
                  Lien_dossier_client = ?, Lien_photo = ?, Lien_dossier_technique = ?,
                  Ctrl_elect_disponible = ?, Commentaire = ?, valide = ?, statut = ?
                 WHERE ID = ?`,
-               [...payload, existing[0].ID]
-             );
-             resultats.push({ id: existing[0].ID, code: codeArticle, action: 'updated' });
-           } else {
-             const [result] = await connection.query(
-               `INSERT INTO articles (
+              [...payload, existing[0].ID]
+            );
+            resultats.push({ id: existing[0].ID, code: codeArticle, action: 'updated' });
+          } else {
+            const [result] = await connection.query(
+              `INSERT INTO articles (
                  Code_article, Client, Temps_theorique, Temps_reel,
                  Indice_revision, Date_revision, Nombre_postes,
                  Lien_dossier_client, Lien_photo, Lien_dossier_technique,
                  Ctrl_elect_disponible, Commentaire, valide, statut
                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-               [codeArticle, ...payload]
-             );
-             resultats.push({ id: result.insertId, code: codeArticle, action: 'created' });
-           }
-         } catch (importError) {
-           console.error('Erreur import article:', importError);
-         }
-       }
+              [codeArticle, ...payload]
+            );
+            resultats.push({ id: result.insertId, code: codeArticle, action: 'created' });
+          }
+        } catch (importError) {
+          console.error('Erreur import article:', importError);
+        }
+      }
 
-       if (errors.length > 0) {
-         await connection.rollback();
-         return res.status(400).json({ error: 'Erreurs de validation', details: errors });
-       }
-       
-       await connection.commit();
-       
-       await logAction({
-         ID_Utilisateur: req.user?.ID,
-         Username: req.user?.Username,
-         Action: 'IMPORT',
-         Table_concernee: 'articles',
-         Nouvelle_valeur: { count: resultats.length }
-       });
-       
-       res.json({
-         success: true,
-         message: `${resultats.length} articles importes`,
-         data: resultats
-       });
-       
-     } catch (error) {
-       await connection.rollback();
-       console.error('Erreur import articles:', error);
-       res.status(500).json({ error: error.message });
-     } finally {
-       connection.release();
-     }
-   }
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'articles',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      res.json({
+        success: true,
+        message: `${resultats.length} articles importes`,
+        data: resultats
+      });
+
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import articles:', error);
+      res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
   /**
     * Import personnel
     */
   async importPersonnel(req, res) {
-     const connection = await db.getConnection();
-     
-     try {
-       await connection.beginTransaction();
-       
-       if (!req.file) {
-         return res.status(400).json({ error: 'Fichier requis' });
-       }
-       
-       const data = await importService.readExcel(req.file.buffer);
-       const resultats = [];
-       const errors = [];
+    const connection = await db.getConnection();
 
-       const normalizeKey = (key) =>
-         String(key || '')
-           .normalize('NFD')
-           .replace(/[\u0300-\u036f]/g, '')
-           .toLowerCase()
-           .replace(/[^a-z0-9]+/g, ' ')
-           .trim();
+    try {
+      await connection.beginTransaction();
 
-       const normalizeRow = (row) => {
-         const normalized = {};
-         Object.entries(row || {}).forEach(([k, v]) => {
-           normalized[normalizeKey(k)] = v;
-         });
-         return normalized;
-       };
+      if (!req.file) {
+        return res.status(400).json({ error: 'Fichier requis' });
+      }
 
-       const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
-         if (value === null || value === undefined) return true;
-         return String(value).trim() === '';
-       });
+      const data = await importService.readExcel(req.file.buffer);
+      const resultats = [];
+      const errors = [];
 
-       const getCell = (row, keys) => {
-         for (const key of keys) {
-           if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-             return row[key];
-           }
-         }
-         return null;
-       };
+      const normalizeKey = (key) =>
+        String(key || '')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, ' ')
+          .trim();
 
-       const toDateOrNull = (value) => {
-         if (value === null || value === undefined || value === '') return null;
+      const normalizeRow = (row) => {
+        const normalized = {};
+        Object.entries(row || {}).forEach(([k, v]) => {
+          normalized[normalizeKey(k)] = v;
+        });
+        return normalized;
+      };
 
-         if (value instanceof Date && !Number.isNaN(value.getTime())) {
-           return value.toISOString().split('T')[0];
-         }
+      const isRowEmpty = (row) => Object.values(row || {}).every((value) => {
+        if (value === null || value === undefined) return true;
+        return String(value).trim() === '';
+      });
 
-         if (typeof value === 'number' && Number.isFinite(value)) {
-           if (value > 20000 && value < 80000) {
-             const excelEpoch = new Date(Date.UTC(1899, 11, 30));
-             const ms = value * 24 * 60 * 60 * 1000;
-             const date = new Date(excelEpoch.getTime() + ms);
-             return date.toISOString().split('T')[0];
-           }
-           const maybeTs = new Date(value);
-           if (!Number.isNaN(maybeTs.getTime())) return maybeTs.toISOString().split('T')[0];
-           return null;
-         }
+      const getCell = (row, keys) => {
+        for (const key of keys) {
+          if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+            return row[key];
+          }
+        }
+        return null;
+      };
 
-         const raw = String(value).trim();
-         if (!raw || ['-', 'n/a', 'na', 'null'].includes(raw.toLowerCase())) return null;
+      const toDateOrNull = (value) => {
+        if (value === null || value === undefined || value === '') return null;
 
-         const dmy = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
-         if (dmy) {
-           const day = Number(dmy[1]);
-           const month = Number(dmy[2]);
-           const year = Number(dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]);
-           const date = new Date(Date.UTC(year, month - 1, day));
-           if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
-         }
+        if (value instanceof Date && !Number.isNaN(value.getTime())) {
+          return value.toISOString().split('T')[0];
+        }
 
-         const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
-         if (ymd) {
-           const year = Number(ymd[1]);
-           const month = Number(ymd[2]);
-           const day = Number(ymd[3]);
-           const date = new Date(Date.UTC(year, month - 1, day));
-           if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
-         }
+        if (typeof value === 'number' && Number.isFinite(value)) {
+          if (value > 20000 && value < 80000) {
+            const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+            const ms = value * 24 * 60 * 60 * 1000;
+            const date = new Date(excelEpoch.getTime() + ms);
+            return date.toISOString().split('T')[0];
+          }
+          const maybeTs = new Date(value);
+          if (!Number.isNaN(maybeTs.getTime())) return maybeTs.toISOString().split('T')[0];
+          return null;
+        }
 
-         const parsed = new Date(raw);
-         if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
-         return null;
-       };
+        const raw = String(value).trim();
+        if (!raw || ['-', 'n/a', 'na', 'null'].includes(raw.toLowerCase())) return null;
 
-       for (let i = 0; i < data.length; i += 1) {
-         const rowNumber = i + 2;
-         const row = normalizeRow(data[i]);
-         if (isRowEmpty(row)) continue;
+        const dmy = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+        if (dmy) {
+          const day = Number(dmy[1]);
+          const month = Number(dmy[2]);
+          const year = Number(dmy[3].length === 2 ? `20${dmy[3]}` : dmy[3]);
+          const date = new Date(Date.UTC(year, month - 1, day));
+          if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
+        }
 
-         const nomPrenomRaw = getCell(row, ['nom prenom', 'nom_prenom', 'nom et prenom']);
-         const matriculeRaw = getCell(row, ['matricule']);
-         const dateEmbaucheRaw = getCell(row, ['date embauche', 'date_embauche']);
+        const ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (ymd) {
+          const year = Number(ymd[1]);
+          const month = Number(ymd[2]);
+          const day = Number(ymd[3]);
+          const date = new Date(Date.UTC(year, month - 1, day));
+          if (!Number.isNaN(date.getTime())) return date.toISOString().split('T')[0];
+        }
 
-         const Nom_prenom = nomPrenomRaw ? String(nomPrenomRaw).trim() : '';
-         const Matricule = matriculeRaw ? String(matriculeRaw).trim() : '';
-         const Date_embauche = toDateOrNull(dateEmbaucheRaw);
+        const parsed = new Date(raw);
+        if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().split('T')[0];
+        return null;
+      };
 
-         if (!Nom_prenom) errors.push(`Ligne ${rowNumber}: Nom_prenom requis`);
-         if (!Matricule) errors.push(`Ligne ${rowNumber}: Matricule requis`);
-         if (!Date_embauche) errors.push(`Ligne ${rowNumber}: Date_embauche valide requise`);
-         if (!Nom_prenom || !Matricule || !Date_embauche) continue;
+      for (let i = 0; i < data.length; i += 1) {
+        const rowNumber = i + 2;
+        const row = normalizeRow(data[i]);
+        if (isRowEmpty(row)) continue;
 
-         const Qr_code = getCell(row, ['qr code', 'qr_code']) || null;
-         const Email = getCell(row, ['email']) || null;
-         const Date_naissance = toDateOrNull(getCell(row, ['date naissance', 'date_naissance']));
-         const Adresse = getCell(row, ['adresse']) || null;
-         const Ville = getCell(row, ['ville']) || null;
-         const Code_postal = getCell(row, ['code postal', 'code_postal']) || null;
-         const Telephone = getCell(row, ['telephone', 'tel', 'telephone']) || null;
-         const Poste = getCell(row, ['poste']) || 'Operateur';
-         const StatutRaw = getCell(row, ['statut']);
-         const Statut = String(StatutRaw || 'actif').toLowerCase() === 'inactif' ? 'inactif' : 'actif';
-         const Type_contrat = getCell(row, ['type contrat', 'type_contrat']) || 'CDI';
-         const Date_fin_contrat = toDateOrNull(getCell(row, ['date fin contrat', 'date_fin_contrat']));
-         const Site_affectation = getCell(row, ['site affectation', 'site_affectation', 'site']) || null;
-         const Numero_CNSS = getCell(row, ['numero cnss', 'numero_cnss', 'cnss']) || null;
-         const Commentaire = getCell(row, ['commentaire']) || null;
+        const nomPrenomRaw = getCell(row, ['nom prenom', 'nom_prenom', 'nom et prenom']);
+        const matriculeRaw = getCell(row, ['matricule']);
+        const dateEmbaucheRaw = getCell(row, ['date embauche', 'date_embauche']);
 
-         try {
-           const [existing] = await connection.query(
-             'SELECT ID FROM personnel WHERE Matricule = ? LIMIT 1',
-             [Matricule]
-           );
+        const Nom_prenom = nomPrenomRaw ? String(nomPrenomRaw).trim() : '';
+        const Matricule = matriculeRaw ? String(matriculeRaw).trim() : '';
+        const Date_embauche = toDateOrNull(dateEmbaucheRaw);
 
-           const payload = [
-             Nom_prenom,
-             Matricule,
-             Qr_code,
-             Date_embauche,
-             Email,
-             Date_naissance,
-             Adresse,
-             Ville,
-             Code_postal,
-             Telephone,
-             Poste,
-             Statut,
-             Type_contrat,
-             Date_fin_contrat,
-             Site_affectation,
-             Numero_CNSS,
-             Commentaire
-           ];
+        if (!Nom_prenom) errors.push(`Ligne ${rowNumber}: Nom_prenom requis`);
+        if (!Matricule) errors.push(`Ligne ${rowNumber}: Matricule requis`);
+        if (!Date_embauche) errors.push(`Ligne ${rowNumber}: Date_embauche valide requise`);
+        if (!Nom_prenom || !Matricule || !Date_embauche) continue;
 
-           if (existing.length > 0) {
-             await connection.query(
-               `UPDATE personnel SET
+        const Qr_code = getCell(row, ['qr code', 'qr_code']) || null;
+        const Email = getCell(row, ['email']) || null;
+        const Date_naissance = toDateOrNull(getCell(row, ['date naissance', 'date_naissance']));
+        const Adresse = getCell(row, ['adresse']) || null;
+        const Ville = getCell(row, ['ville']) || null;
+        const Code_postal = getCell(row, ['code postal', 'code_postal']) || null;
+        const Telephone = getCell(row, ['telephone', 'tel', 'telephone']) || null;
+        const Poste = getCell(row, ['poste']) || 'Operateur';
+        const StatutRaw = getCell(row, ['statut']);
+        const Statut = String(StatutRaw || 'actif').toLowerCase() === 'inactif' ? 'inactif' : 'actif';
+        const Type_contrat = getCell(row, ['type contrat', 'type_contrat']) || 'CDI';
+        const Date_fin_contrat = toDateOrNull(getCell(row, ['date fin contrat', 'date_fin_contrat']));
+        const Site_affectation = getCell(row, ['site affectation', 'site_affectation', 'site']) || null;
+        const Numero_CNSS = getCell(row, ['numero cnss', 'numero_cnss', 'cnss']) || null;
+        const Commentaire = getCell(row, ['commentaire']) || null;
+
+        try {
+          const [existing] = await connection.query(
+            'SELECT ID FROM personnel WHERE Matricule = ? LIMIT 1',
+            [Matricule]
+          );
+
+          const payload = [
+            Nom_prenom,
+            Matricule,
+            Qr_code,
+            Date_embauche,
+            Email,
+            Date_naissance,
+            Adresse,
+            Ville,
+            Code_postal,
+            Telephone,
+            Poste,
+            Statut,
+            Type_contrat,
+            Date_fin_contrat,
+            Site_affectation,
+            Numero_CNSS,
+            Commentaire
+          ];
+
+          if (existing.length > 0) {
+            await connection.query(
+              `UPDATE personnel SET
                  Nom_prenom = ?, Matricule = ?, Qr_code = ?, Date_embauche = ?, Email = ?,
                  Date_naissance = ?, Adresse = ?, Ville = ?, Code_postal = ?, Telephone = ?,
                  Poste = ?, Statut = ?, Type_contrat = ?, Date_fin_contrat = ?,
                  Site_affectation = ?, Numero_CNSS = ?, Commentaire = ?, Date_modification = NOW()
                 WHERE ID = ?`,
-               [...payload, existing[0].ID]
-             );
-             resultats.push({ id: existing[0].ID, matricule: Matricule, action: 'updated' });
-           } else {
-             const [insert] = await connection.query(
-               `INSERT INTO personnel (
+              [...payload, existing[0].ID]
+            );
+            resultats.push({ id: existing[0].ID, matricule: Matricule, action: 'updated' });
+          } else {
+            const [insert] = await connection.query(
+              `INSERT INTO personnel (
                  Nom_prenom, Matricule, Qr_code, Date_embauche, Email,
                  Date_naissance, Adresse, Ville, Code_postal, Telephone,
                  Poste, Statut, Type_contrat, Date_fin_contrat,
                  Site_affectation, Numero_CNSS, Commentaire, Date_creation
                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-               payload
-             );
-             resultats.push({ id: insert.insertId, matricule: Matricule, action: 'created' });
-           }
-         } catch (importError) {
-           errors.push(`Ligne ${rowNumber}: ${importError.message}`);
-         }
-       }
+              payload
+            );
+            resultats.push({ id: insert.insertId, matricule: Matricule, action: 'created' });
+          }
+        } catch (importError) {
+          errors.push(`Ligne ${rowNumber}: ${importError.message}`);
+        }
+      }
 
-       if (errors.length > 0) {
-         await connection.rollback();
-         return res.status(400).json({ error: 'Erreurs de validation', details: errors });
-       }
-       
-       await connection.commit();
-       
-       await logAction({
-         ID_Utilisateur: req.user?.ID,
-         Username: req.user?.Username,
-         Action: 'IMPORT',
-         Table_concernee: 'personnel',
-         Nouvelle_valeur: { count: resultats.length }
-       });
-       
-       res.json({
-         success: true,
-         message: `${resultats.length} employÃ©s importÃ©s`,
-         data: resultats
-       });
-       
-     } catch (error) {
-       await connection.rollback();
-       console.error('Erreur import personnel:', error);
-       res.status(500).json({ error: error.message });
-     } finally {
-       connection.release();
-     }
-   }
+      if (errors.length > 0) {
+        await connection.rollback();
+        return res.status(400).json({ error: 'Erreurs de validation', details: errors });
+      }
+
+      await connection.commit();
+
+      await logAction({
+        ID_Utilisateur: req.user?.ID,
+        Username: req.user?.Username,
+        Action: 'IMPORT',
+        Table_concernee: 'personnel',
+        Nouvelle_valeur: { count: resultats.length }
+      });
+
+      res.json({
+        success: true,
+        message: `${resultats.length} employÃ©s importÃ©s`,
+        data: resultats
+      });
+
+    } catch (error) {
+      await connection.rollback();
+      console.error('Erreur import personnel:', error);
+      res.status(500).json({ error: error.message });
+    } finally {
+      connection.release();
+    }
+  }
 
   /**
    * Import defauts produit

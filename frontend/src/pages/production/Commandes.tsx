@@ -26,6 +26,8 @@ import { commandesApi } from '../../api/commandes';
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
 import FilterPanel from '../../components/common/FilterPanel';
+import Modal from '../../components/common/Modal';
+import { CommandeForm } from '../../components/production/CommandeForm';
 
 interface CommandesListProps {
   path?: string;
@@ -72,10 +74,14 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
     clearFiltres,
     deleteCommande,
     updateStatut,
+    articles,
+    createCommande,
+    fetchArticles,
   } = useCommandes();
 
   const [showFilters, setShowFilters] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
+  const [showNewCommandeModal, setShowNewCommandeModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [unitesProduction, setUnitesProduction] = useState<string[]>([]);
@@ -83,9 +89,10 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
   const totalPages = Math.max(1, pages || 0);
   const currentPage = Math.min(Math.max(1, page), totalPages);
 
-  // Charger les articles au montage
+  // Charger les articles et unités au montage
   useEffect(() => {
     console.log('📦 Module Production - Commandes');
+    fetchArticles();
   }, []);
 
   useEffect(() => {
@@ -193,6 +200,17 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
     await updateStatut(id, newStatut);
   };
 
+  const handleCreateCommande = async (data: any) => {
+    const result = await createCommande(data);
+    if (result) {
+      setShowNewCommandeModal(false);
+      setRecherche('');
+      setFiltres({});
+      setPage(1);
+      showToast.success('Commande créée avec succès');
+    }
+  };
+
   if (loading && (!commandes || commandes.length === 0)) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -221,7 +239,7 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
               {isExporting ? 'Export...' : 'Exporter'}
             </ActionButton>
             {canWrite('COMMANDES') && (
-              <ActionButton onClick={() => route('/production/commandes/nouveau')} icon={Plus} variant="accent">
+              <ActionButton onClick={() => setShowNewCommandeModal(true)} icon={Plus} variant="accent">
                 Nouvelle commande
               </ActionButton>
             )}
@@ -494,6 +512,21 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
           </button>
         </div>
       </div>
+
+      {/* Modal Nouvelle Commande */}
+      <Modal
+        isOpen={showNewCommandeModal}
+        title="Nouvelle commande"
+        onClose={() => setShowNewCommandeModal(false)}
+        size="lg"
+      >
+        <CommandeForm
+          mode="create"
+          articles={articles}
+          onSubmit={handleCreateCommande}
+          onCancel={() => setShowNewCommandeModal(false)}
+        />
+      </Modal>
 
       {/* Dialog de confirmation de suppression */}
       {deleteId && (

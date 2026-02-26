@@ -29,6 +29,14 @@ const csvEscape = (v: unknown) => {
   const s = v === null || v === undefined ? '' : String(v);
   return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : s;
 };
+const formatDuration = (minutes?: number | null) => {
+  if (!minutes || minutes <= 0) return '-';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0 && mins > 0) return `${hours}h ${mins}min`;
+  if (hours > 0) return `${hours}h`;
+  return `${mins}min`;
+};
 
 const defaultRange = () => {
   const now = new Date();
@@ -258,7 +266,12 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
       await loadData();
       showToast.success('Import XLSX termine');
     } catch (e: any) {
-      showToast.error(e?.error || e?.message || 'Erreur import');
+      if (e?.details && Array.isArray(e.details)) {
+        showToast.error(`${e.error}: ${e.details.slice(0, 3).join(', ')}${e.details.length > 3 ? '...' : ''}`);
+        console.error('Détails import:', e.details);
+      } else {
+        showToast.error(e?.error || e?.message || 'Erreur import');
+      }
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
@@ -311,7 +324,6 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
               <thead className="bg-gray-50 text-gray-700">
                 <tr>
                   <th className="px-2 py-2 text-left"><input type="checkbox" checked={allPageSel} onChange={toggleSelPage} /></th>
-                  <th className="px-2 py-2 text-left">Affectation</th>
                   <th className="px-2 py-2 text-left">Operateur</th>
                   <th className="px-2 py-2 text-left">Semaine</th>
                   <th className="px-2 py-2 text-left">Article</th>
@@ -323,7 +335,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paged.length === 0 && <tr><td colSpan={10} className="px-3 py-8 text-center text-gray-500">Aucun enregistrement</td></tr>}
+                {paged.length === 0 && <tr><td colSpan={9} className="px-3 py-8 text-center text-gray-500">Aucun enregistrement</td></tr>}
                 {paged.map((row) => {
                   const opInput = `op-${row.ID}`;
                   const artInput = `art-${row.ID}`;
@@ -338,14 +350,13 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                   return (
                     <tr key={row.ID}>
                       <td className="px-2 py-2"><input type="checkbox" checked={selected.has(row.ID)} onChange={() => toggleSel(row.ID)} /></td>
-                      <td className="px-2 py-2">{row._isNew ? 'Nouveau' : `#${row.ID}`}</td>
                       <td className="px-2 py-2">
                         <input list={opInput} value={opVal} onChange={(e) => {
                           const v = (e.target as HTMLInputElement).value;
                           setOpQuery((p) => ({ ...p, [row.ID]: v }));
                           const m = operateurs.find((o) => o.label.toLowerCase() === v.toLowerCase());
                           if (m) patchRow(row.ID, { ID_Operateur: m.id });
-                        }} className="w-52 rounded border border-gray-300 px-2 py-1" />
+                        }} className="w-50 rounded border border-gray-300 px-2 py-1" />
                         <datalist id={opInput}>{fOps.map((o) => <option key={o.id} value={o.label} />)}</datalist>
                       </td>
                       <td className="px-2 py-2">
@@ -353,7 +364,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                           const v = toNumOrNull((e.target as HTMLSelectElement).value);
                           patchRow(row.ID, { ID_Semaine: v, ID_Article: null });
                           setArtQuery((p) => ({ ...p, [row.ID]: '' }));
-                        }} className="w-28 rounded border border-gray-300 px-2 py-1">
+                        }} className="w-24 rounded border border-gray-300 px-2 py-1">
                           <option value="">Semaine</option>
                           {weeks.map((w) => <option key={w.id} value={w.id}>{w.label}</option>)}
                         </select>
@@ -373,13 +384,13 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                           setPosteQuery((p) => ({ ...p, [row.ID]: v }));
                           const m = postes.find((p) => p.label.toLowerCase() === v.toLowerCase());
                           if (m) patchRow(row.ID, { ID_Poste: m.id });
-                        }} className="w-44 rounded border border-gray-300 px-2 py-1" />
+                        }} className="w-40 rounded border border-gray-300 px-2 py-1" />
                         <datalist id={posteInput}>{fPostes.map((p) => <option key={p.id} value={p.label} />)}</datalist>
                       </td>
-                      <td className="px-2 py-2"><input type="datetime-local" value={toInputDateTime(row.Date_debut)} onChange={(e) => patchRow(row.ID, { Date_debut: fromInputDateTime((e.target as HTMLInputElement).value) || row.Date_debut })} className="rounded border border-gray-300 px-2 py-1" /></td>
-                      <td className="px-2 py-2"><input type="datetime-local" value={toInputDateTime(row.Date_fin)} onChange={(e) => patchRow(row.ID, { Date_fin: fromInputDateTime((e.target as HTMLInputElement).value) })} className="rounded border border-gray-300 px-2 py-1" /></td>
-                      <td className="px-2 py-2"><input type="number" value={row.Duree ?? ''} onChange={(e) => patchRow(row.ID, { Duree: toNumOrNull((e.target as HTMLInputElement).value) })} className="w-20 rounded border border-gray-300 px-2 py-1" /></td>
-                      <td className="px-2 py-2"><input type="number" step="0.5" value={row.Heure_supp ?? ''} onChange={(e) => patchRow(row.ID, { Heure_supp: toNumOrNull((e.target as HTMLInputElement).value) })} className="w-20 rounded border border-gray-300 px-2 py-1" /></td>
+                      <td className="px-2 py-2"><input type="datetime-local" value={toInputDateTime(row.Date_debut)} onChange={(e) => patchRow(row.ID, { Date_debut: fromInputDateTime((e.target as HTMLInputElement).value) || row.Date_debut })} className="w-42 rounded border border-gray-300 px-2 py-1" /></td>
+                      <td className="px-2 py-2"><input type="datetime-local" value={toInputDateTime(row.Date_fin)} onChange={(e) => patchRow(row.ID, { Date_fin: fromInputDateTime((e.target as HTMLInputElement).value) })} className="w-42 rounded border border-gray-300 px-2 py-1" /></td>
+                      <td className="px-2 py-2 text-gray-700 min-w-24">{formatDuration(row.Duree)}</td>
+                      <td className="px-2 py-2"><input type="number" step="0.5" value={row.Heure_supp ?? ''} onChange={(e) => patchRow(row.ID, { Heure_supp: toNumOrNull((e.target as HTMLInputElement).value) })} className="w-16 rounded border border-gray-300 px-2 py-1" /></td>
                     </tr>
                   );
                 })}

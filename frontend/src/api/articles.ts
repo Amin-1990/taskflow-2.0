@@ -148,12 +148,12 @@ export const articlesApi = {
     (articlesApi.ensureValidId(id), api.patch<ApiResponse<Article>>(`/articles/${id}/valider`, { valide })),
 
   /**
-   * Exporter les articles en CSV
-   * @param params - Paramètres de filtrage (optionnel)
-   * @returns Fichier CSV en blob
-   */
-  exportCSV: (params?: FiltresArticles) =>
-    api.get<Blob>('/articles/export/csv', {
+    * Exporter les articles en XLSX
+    * @param params - Paramètres de filtrage (optionnel)
+    * @returns Fichier XLSX en blob
+    */
+  exportXLSX: (params?: FiltresArticles) =>
+    api.get<Blob>('/articles/export/xlsx', {
       params,
       responseType: 'blob'
     } as any),
@@ -191,7 +191,7 @@ export const {
   getByStatut,
   getByClient,
   toggleValide,
-  exportCSV,
+  exportXLSX,
   getTemplateImport,
   importArticles,
 } = articlesApi;

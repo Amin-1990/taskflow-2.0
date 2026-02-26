@@ -64,9 +64,10 @@ class AffectationService {
     }
   }
 
-  async cloturerAffectation(affectationId, dateFin, dureeSeconds, auditInfo = {}, user = {}) {
+  async cloturerAffectation(affectationId, dateFin, dureeSeconds, auditInfo = {}, user = {}, connection = null) {
+    const useConnection = connection || db;
     try {
-      const [existing] = await db.query(
+      const [existing] = await useConnection.query(
         'SELECT * FROM affectations WHERE ID = ?',
         [affectationId]
       );
@@ -77,14 +78,21 @@ class AffectationService {
 
       const oldValue = existing[0];
 
-      await db.query(
+      // Calculer la durée en minutes avec horaires, pauses et jours fériés
+      const dureeMinutes = await this.calculateDurationWithHoraires(
+        useConnection,
+        new Date(oldValue.Date_debut),
+        new Date(dateFin)
+      );
+
+      await useConnection.query(
         `UPDATE affectations
          SET Date_fin = ?, Duree = ?, Date_modification = NOW()
          WHERE ID = ?`,
-        [dateFin, dureeSeconds, affectationId]
+        [dateFin, dureeMinutes, affectationId]
       );
 
-      const [updated] = await db.query(
+      const [updated] = await useConnection.query(
         'SELECT * FROM affectations WHERE ID = ?',
         [affectationId]
       );
@@ -186,7 +194,9 @@ class AffectationService {
         );
 
         const now = new Date();
-        const dureeSeconds = this._calculateDurationSeconds(
+        // Calculer la durée en minutes avec horaires, pauses et jours fériés
+        const dureeMinutes = await this.calculateDurationWithHoraires(
+          connection,
           new Date(affectation.Date_debut),
           now
         );
@@ -197,7 +207,7 @@ class AffectationService {
                Commentaire = CONCAT(COALESCE(Commentaire, ''), ' | Cloture auto - Commande terminee'),
                Date_modification = NOW()
            WHERE ID = ?`,
-          [dureeSeconds, affectation.ID]
+          [dureeMinutes, affectation.ID]
         );
 
         const [newValue] = await connection.query(
@@ -246,9 +256,135 @@ class AffectationService {
     });
   }
 
+  /**
+   * Calcule la durée d'une affectation en prenant en compte:
+   * - Les horaires de travail (table horaires)
+   * - Les pauses (table pauses)
+   * - Les jours non travaillés / fériés
+   * 
+   * @param {Object} connection - Connexion MySQL
+   * @param {Date|string} dateDebut - Début de l'affectation
+   * @param {Date|string} dateFin - Fin de l'affectation
+   * @returns {Promise<number>} Durée en minutes
+   */
+  async calculateDurationWithHoraires(connection, dateDebut, dateFin) {
+    try {
+      const debut = new Date(dateDebut);
+      const fin = new Date(dateFin);
+
+      // 1. Récupérer tous les horaires entre ces deux dates
+      const debutStr = this._formatDateMySQL(debut);
+      const finStr = this._formatDateMySQL(fin);
+
+      const [horaires] = await connection.query(
+        `SELECT Date, Heure_debut, Heure_fin, Est_ouvert, Est_jour_ferie
+         FROM horaires
+         WHERE Date >= ? AND Date <= ?
+         ORDER BY Date ASC`,
+        [debutStr, finStr]
+      );
+
+      if (horaires.length === 0) {
+        // Fallback: calcul simple en minutes
+        const diffMs = Math.max(0, fin.getTime() - debut.getTime());
+        return Math.floor(diffMs / (1000 * 60));
+      }
+
+      let totalMinutes = 0;
+
+      // 2. Parcourir chaque jour de l'intervalle
+      for (const horaire of horaires) {
+        // Ignorer les jours non ouvert ou fériés
+        if (horaire.Est_ouvert === 0 || horaire.Est_jour_ferie === 1) {
+          continue;
+        }
+
+        const dayDate = new Date(horaire.Date);
+        const horaireDebut = new Date(`${horaire.Date} ${horaire.Heure_debut}`);
+        const horaireFin = new Date(`${horaire.Date} ${horaire.Heure_fin}`);
+
+        // Déterminer l'heure réelle de début/fin pour ce jour
+        let dayStart = horaireDebut;
+        let dayEnd = horaireFin;
+
+        // Si c'est le premier jour, utiliser l'heure de début de l'affectation
+        if (this._isSameDay(debut, dayDate)) {
+          dayStart = new Date(Math.max(debut.getTime(), horaireDebut.getTime()));
+        }
+
+        // Si c'est le dernier jour, utiliser l'heure de fin de l'affectation
+        if (this._isSameDay(fin, dayDate)) {
+          dayEnd = new Date(Math.min(fin.getTime(), horaireFin.getTime()));
+        }
+
+        if (dayEnd <= dayStart) continue;
+
+        // 3. Récupérer les pauses pour ce jour
+        const dayDateStr = horaire.Date;
+        const [pauses] = await connection.query(
+          `SELECT Heure_debut, Heure_fin FROM pauses
+           WHERE Date = ?`,
+          [dayDateStr]
+        );
+
+        // Calculer la durée brute du jour
+        let dayDurationMs = dayEnd.getTime() - dayStart.getTime();
+
+        // 4. Soustraire les pauses qui chevauchent
+        for (const pause of pauses) {
+          const pauseDebut = new Date(`${dayDateStr} ${pause.Heure_debut}`);
+          const pauseFin = new Date(`${dayDateStr} ${pause.Heure_fin}`);
+
+          // Calculer le chevauchement entre [dayStart, dayEnd] et [pauseDebut, pauseFin]
+          const overlapStart = Math.max(dayStart.getTime(), pauseDebut.getTime());
+          const overlapEnd = Math.min(dayEnd.getTime(), pauseFin.getTime());
+
+          if (overlapEnd > overlapStart) {
+            dayDurationMs -= (overlapEnd - overlapStart);
+          }
+        }
+
+        totalMinutes += Math.max(0, Math.floor(dayDurationMs / (1000 * 60)));
+      }
+
+      return totalMinutes;
+
+    } catch (error) {
+      console.error('❌ Erreur dans calculateDurationWithHoraires:', error);
+      // Fallback: calcul simple
+      const diffMs = Math.max(0, fin.getTime() - debut.getTime());
+      return Math.floor(diffMs / (1000 * 60));
+    }
+  }
+
+  /**
+   * Formule simple de durée en secondes (fallback)
+   */
   _calculateDurationSeconds(debut, fin) {
     const diff = Math.max(0, (fin.getTime() - debut.getTime()) / 1000);
     return Math.floor(diff);
+  }
+
+  /**
+   * Vérifie si deux dates sont le même jour
+   */
+  _isSameDay(date1, date2) {
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    return d1.getFullYear() === d2.getFullYear()
+      && d1.getMonth() === d2.getMonth()
+      && d1.getDate() === d2.getDate();
+  }
+
+  /**
+   * Formate une date au format MySQL (YYYY-MM-DD)
+   */
+  _formatDateMySQL(date) {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   async terminerAffectation(affectationId, quantiteProduite, connection) {
@@ -261,13 +397,18 @@ class AffectationService {
       throw new Error('Affectation non trouvee');
     }
 
-    const dureeSeconds = this._calculateDurationSeconds(new Date(existing[0].Date_debut), now);
+    // Calculer la durée en minutes avec horaires, pauses et jours fériés
+    const dureeMinutes = await this.calculateDurationWithHoraires(
+      connection,
+      new Date(existing[0].Date_debut),
+      now
+    );
 
     await connection.query(
       `UPDATE affectations
        SET Date_fin = ?, Duree = ?, Quantite_produite = ?, Date_modification = NOW()
        WHERE ID = ?`,
-      [now, dureeSeconds, quantiteProduite, affectationId]
+      [now, dureeMinutes, quantiteProduite, affectationId]
     );
 
     const [updated] = await connection.query(

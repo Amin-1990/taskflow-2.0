@@ -1,0 +1,36 @@
+const mysql = require('mysql2/promise');
+const dotenv = require('dotenv');
+const path = require('path');
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+async function run() {
+    const connection = await mysql.createConnection({
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'taskflow'
+    });
+
+    try {
+        const [rows] = await connection.execute(\"SHOW CREATE TABLE affectations\");
+    const createSql = rows[0]['Create Table'];
+        console.log('--- SHOW CREATE TABLE affectations ---');
+        console.log(createSql);
+
+        const checkMatch = createSql.match(/CONSTRAINT `([^`]+)` CHECK \(([^)]+)\)/gi);
+        if (checkMatch) {
+            console.log('\n--- Found Constraints ---');
+            checkMatch.forEach(m => console.log(m));
+        } else {
+            console.log('\nNo CHECK constraints found with manual regex.');
+        }
+
+    } catch (err) {
+        console.error('Error:', err.message);
+    } finally {
+        await connection.end();
+    }
+}
+
+run();

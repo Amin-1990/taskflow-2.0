@@ -21,11 +21,17 @@ const DAYS: Array<{ key: DayKey; label: string }> = [
 ];
 
 const formatDayDate = (startDate: string | null | undefined, dayIndex: number) => {
-  if (!startDate) return '--/--';
-  const d = new Date(startDate);
-  d.setDate(d.getDate() + dayIndex);
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
-};
+   if (!startDate) return '--/--';
+   const d = new Date(startDate);
+   d.setDate(d.getDate() + dayIndex);
+   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+ };
+
+ const formatDuration = (minutes: number): string => {
+   const hours = Math.floor(minutes / 60);
+   const mins = minutes % 60;
+   return `${hours}h${mins}min`;
+ };
 
 const getWeekNumber = (date: Date): number => {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -51,6 +57,8 @@ export const SuiviRealisation: FunctionComponent<SuiviRealisationProps> = () => 
   const [saving, setSaving] = useState(false);
   const [rows, setRows] = useState<ManualPlanningRow[]>([]);
   const [initial, setInitial] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const loadBase = async () => {
     const [years, units] = await Promise.all([
@@ -112,6 +120,12 @@ export const SuiviRealisation: FunctionComponent<SuiviRealisationProps> = () => 
       return true;
     });
   }, [rows, priorite, articleSearch]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedRows = useMemo(() => {
+    return filteredRows.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  }, [filteredRows, currentPage, pageSize]);
 
   const updateEmballe = (rowIdx: number, day: DayKey, value: number) => {
     setRows((prev) =>
@@ -215,72 +229,130 @@ export const SuiviRealisation: FunctionComponent<SuiviRealisationProps> = () => 
         </select>
       </div>
 
+      <div className="bg-white rounded-lg shadow-sm p-4">
+         <div className="flex justify-between items-center">
+           <div className="space-y-2">
+             <div className="text-sm">
+               <span className="text-gray-600">Temps théorique demandé :</span>
+               <span className="font-bold text-blue-600 ml-2">{formatDuration(filteredRows.reduce((sum, r) => sum + (r.objectifSemaine * r.tempsTheorique), 0))}</span>
+             </div>
+             <div className="text-sm">
+               <span className="text-gray-600">Temps théorique réalisé :</span>
+               <span className="font-bold text-green-600 ml-2">{formatDuration(filteredRows.reduce((sum, r) => sum + (r.totalEmballe * r.tempsTheorique), 0))}</span>
+             </div>
+           </div>
+           <button
+             disabled={saving}
+             onClick={() => void saveAll()}
+             className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
+           >
+             {saving ? 'Sauvegarde...' : 'Sauvegarder'}
+           </button>
+         </div>
+       </div>
+
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-gray-600">Chargement...</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1300px] text-sm">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-3 py-2 text-left">Commande</th>
-                  <th className="px-2 py-2 text-right whitespace-nowrap w-28">Qte a facturer</th>
-                  <th className="px-3 py-2 text-center">Semaine precedente / report</th>
-                  {DAYS.map((d, idx) => (
-                    <th key={d.key} className="px-3 py-2 text-center">
-                      <div>{d.label}</div>
-                      <div className="text-xs text-gray-500">{formatDayDate(selectedWeek?.dateDebut, idx)}</div>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filteredRows.length === 0 && (
-                  <tr><td colSpan={9} className="px-3 py-8 text-center text-gray-500">Aucune commande</td></tr>
-                )}
-                {filteredRows.map((r) => {
+          <div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                     <th className="px-2 py-2 text-left whitespace-nowrap w-56">Commande</th>
+                     <th className="px-2 py-2 text-center whitespace-nowrap flex-1">Qte a facturer</th>
+                     <th className="px-2 py-2 text-center whitespace-nowrap w-16">Stock</th>
+                     {DAYS.map((d, idx) => (
+                       <th key={d.key} className="px-3 py-2 text-center">
+                         <div>{d.label}</div>
+                         <div className="text-xs text-gray-500">{formatDayDate(selectedWeek?.dateDebut, idx)}</div>
+                       </th>
+                     ))}
+                     <th className="px-2 py-2 text-center whitespace-nowrap w-16">Reste</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredRows.length === 0 && (
+                    <tr><td colSpan={9} className="px-3 py-8 text-center text-gray-500">Aucune commande</td></tr>
+                  )}
+                  {pagedRows.map((r) => {
                   const rowIdx = rows.findIndex((x) => x.commandeId === r.commandeId);
                   return (
                     <tr key={r.commandeId}>
-                      <td className="px-3 py-2">
-                        <div className="font-medium">{r.articleCode}</div>
-                        <div className="text-xs text-gray-500">Lot {r.lot || '-'} | {r.unite || '-'} | {r.priorite || '-'}</div>
-                      </td>
-                      <td className="px-3 py-2 text-right">{r.objectifSemaine}</td>
-                      <td className="px-3 py-2 text-center text-xs">
-                        <div>{r.semainePrecedenteCode || '-'}</div>
-                        <div className="text-gray-500">Stock prev: {r.stockEmballePrecedent}</div>
-                      </td>
+                      <td className="px-2 py-2">
+                         <div className="font-medium text-xs">{r.articleCode}</div>
+                         <div className="text-xs text-gray-500">Lot {r.lot || '-'} • {r.priorite || '-'}</div>
+                         <div className="flex gap-3 mt-1">
+                           <div className="font-bold text-xs text-blue-600">Qte : {r.objectifSemaine}</div>
+                           <div className="text-xs text-amber-600">T/pz : {r.tempsTheorique} min</div>
+                         </div>
+                       </td>
+                      <td className="px-2 py-2 text-center">{r.objectifSemaine}</td>
+                      <td className="px-2 py-2 text-center text-xs whitespace-nowrap">
+                         <div className="text-gray-600">{r.stockEmballePrecedent}</div>
+                       </td>
                       {DAYS.map((d) => (
-                        <td key={d.key} className="px-3 py-2">
+                        <td key={d.key} className="px-2 py-2">
                           <div className="flex items-center justify-center">
                             <input
                               type="number"
                               min={0}
                               value={r.planification[d.key].emballe}
                               onInput={(e) => updateEmballe(rowIdx, d.key, parseInt((e.target as HTMLInputElement).value || '0', 10))}
-                              className="w-20 px-2 py-1 border border-gray-300 rounded text-right"
+                              className="w-16 px-1 py-1 border border-gray-300 rounded text-center text-xs"
                             />
                           </div>
                         </td>
                       ))}
+                      <td className="px-2 py-2 text-center text-xs">
+                        <div className={Math.max(0, r.objectifSemaine - r.totalEmballe) === 0 ? 'text-green-600 font-bold' : 'text-orange-600 font-bold'}>
+                          {Math.max(0, r.objectifSemaine - r.totalEmballe)}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 px-4 py-3 text-sm">
+              <div className="text-gray-600">{filteredRows.length} enregistrement(s)</div>
+              <div className="flex items-center gap-2">
+                <label className="text-gray-600">Par page</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number((e.target as HTMLSelectElement).value));
+                    setPage(1);
+                  }}
+                  className="rounded border border-gray-300 px-2 py-1"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+                <button
+                  onClick={() => setPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage <= 1}
+                  className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+                >
+                  Prec
+                </button>
+                <span className="min-w-20 text-center text-gray-700">{currentPage} / {totalPages}</span>
+                <button
+                  onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage >= totalPages}
+                  className="rounded border border-gray-300 px-3 py-1 disabled:opacity-50"
+                >
+                  Suiv
+                </button>
+              </div>
+            </div>
           </div>
         )}
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          disabled={saving}
-          onClick={() => void saveAll()}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-60"
-        >
-          {saving ? 'Sauvegarde...' : 'Sauvegarder'}
-        </button>
       </div>
     </div>
   );

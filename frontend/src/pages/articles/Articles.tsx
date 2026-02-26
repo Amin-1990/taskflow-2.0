@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Page Liste des Articles
  * Affichage avec tableau, filtres et recherche
  */
@@ -76,20 +76,20 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
     console.log('ðŸ“¦ Module Articles - Liste');
   }, []);
 
-  const handleExportCSV = async () => {
+  const handleExportXLSX = async () => {
     try {
       setIsExporting(true);
-      const response = await articlesApi.exportCSV();
+      const response = await articlesApi.exportXLSX();
       const blob = response.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `articles_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `articles_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      showToast.success('Articles exportÃ©s avec succÃ¨s');
+      showToast.success('Articles exportés avec succès');
     } catch (error) {
       showToast.error('Erreur lors de l\'export');
       console.error('Export error:', error);
@@ -196,7 +196,7 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
               {isImporting ? 'Import...' : 'Importer'}
             </ActionButton>
           )}
-          <ActionButton onClick={handleExportCSV} loading={isExporting} icon={Download}>
+          <ActionButton onClick={handleExportXLSX} loading={isExporting} icon={Download}>
             {isExporting ? 'Export...' : 'Exporter'}
           </ActionButton>
           {canWrite('ARTICLES') && (
