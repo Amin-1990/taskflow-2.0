@@ -11,6 +11,7 @@ import {
   STATUT_OPTIONS,
   TYPE_CONTRAT_OPTIONS,
 } from '../../types/personnel.types';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
 import FilterPanel from '../../components/common/FilterPanel';
@@ -419,17 +420,17 @@ const PersonnelDashboard: FunctionalComponent = () => {
                 {formErrors.Date_embauche && <p className="mt-1 text-xs text-red-600">{formErrors.Date_embauche}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Poste</label>
-                <select
-                  name="Poste"
-                  value={formData.Poste || 'Operateur'}
-                  onChange={handleFormChange}
-                  className={baseInputClass}
-                >
-                  {POSTE_OPTIONS.map(poste => (
-                    <option key={poste} value={poste}>{poste}</option>
-                  ))}
-                </select>
+                <SelectSearch
+                  options={POSTE_OPTIONS.map((poste) => ({
+                    id: poste,
+                    label: poste,
+                  }))}
+                  selectedId={formData.Poste || 'Operateur'}
+                  onSelect={(opt) => setFormData((prev) => ({ ...prev, Poste: opt.label }))}
+                  label="Poste"
+                  placeholder="Rechercher poste..."
+                  maxResults={20}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Statut</label>

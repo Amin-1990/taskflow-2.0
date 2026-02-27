@@ -13,6 +13,7 @@ import type {
   CommandePriorite,
   Commande,
 } from '../../types/production.types';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import { showToast } from '../../utils/toast';
 
 export interface CommandeFormProps {
@@ -188,30 +189,22 @@ export const CommandeForm: FunctionComponent<CommandeFormProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Article */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Article *
-              </label>
-              <select
-                value={(formData as CreateCommandeDto).ID_Article || ''}
-                onChange={(e) => {
-                  const articleId = parseInt((e.target as HTMLSelectElement).value);
-                  const article = articles.find(a => a.id === articleId);
-                  updateField('ID_Article', articleId);
+              <SelectSearch
+                options={articles.map((a) => ({
+                  id: a.id,
+                  label: `${a.nom} (${a.code})`,
+                }))}
+                selectedId={(formData as CreateCommandeDto).ID_Article || null}
+                onSelect={(opt) => {
+                  const article = articles.find(a => a.id === opt.id);
+                  updateField('ID_Article', opt.id as number);
                   if (article) updateField('Code_article', article.code);
                 }}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                  errors.ID_Article
-                    ? 'border-red-300'
-                    : 'border-gray-300'
-                }`}
-              >
-                <option value="">Sélectionner un article</option>
-                {articles.map((article) => (
-                  <option key={article.id} value={article.id}>
-                    {article.nom} ({article.code})
-                  </option>
-                ))}
-              </select>
+                label="Article"
+                required
+                placeholder="Rechercher article..."
+                maxResults={20}
+              />
               {errors.ID_Article && (
                 <p className="text-red-600 text-sm mt-1 flex items-center">
                   <AlertCircle className="w-4 h-4 mr-1" /> {errors.ID_Article}

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Page Gestion des Semaines
  * Affichage, filtres, recherche et import/export de semaines
  */
@@ -19,6 +19,7 @@ import {
 import { useSemaines } from '../../hooks/useSemaines';
 import { showToast } from '../../utils/toast';
 import { semainesApi } from '../../api/semaines';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import ActionButton from '../../components/common/ActionButton';
 import { usePermissions } from '../../hooks/usePermissions';
 
@@ -211,48 +212,33 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
         {/* Filtres (masquÃ©s par dÃ©faut) */}
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-200">
-            {/* Filtre AnnÃ©e */}
+            {/* Filtre Année */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                AnnÃ©e
-              </label>
-              <select
-                value={filtres.annee || ''}
-                onChange={(e) => {
-                  const val = (e.target as HTMLSelectElement).value;
-                  if (val) setFiltres({ annee: parseInt(val) });
-                  else setFiltres({ annee: undefined });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Toutes les annÃ©es</option>
-                <option value="2026">2026</option>
-              </select>
+              <SelectSearch
+                options={[
+                  { id: 2026, label: '2026' },
+                ]}
+                selectedId={filtres.annee || null}
+                onSelect={(opt) => setFiltres({ annee: opt.id as number })}
+                placeholder="Sélectionner année..."
+                maxResults={10}
+              />
             </div>
 
             {/* Filtre Mois */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mois
-              </label>
-              <select
-                value={filtres.mois || ''}
-                onChange={(e) => {
-                  const val = (e.target as HTMLSelectElement).value;
-                  if (val) setFiltres({ mois: parseInt(val) });
-                  else setFiltres({ mois: undefined });
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Tous les mois</option>
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <option key={i + 1} value={i + 1}>
-                    {new Date(2026, i, 1).toLocaleDateString('fr-FR', {
-                      month: 'long',
-                    })}
-                  </option>
-                ))}
-              </select>
+              <SelectSearch
+                options={Array.from({ length: 12 }).map((_, i) => ({
+                  id: i + 1,
+                  label: new Date(2026, i, 1).toLocaleDateString('fr-FR', {
+                    month: 'long',
+                  }),
+                }))}
+                selectedId={filtres.mois || null}
+                onSelect={(opt) => setFiltres({ mois: opt.id as number })}
+                placeholder="Sélectionner mois..."
+                maxResults={12}
+              />
             </div>
 
             {/* Bouton RÃ©initialiser */}

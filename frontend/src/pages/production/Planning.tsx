@@ -15,6 +15,7 @@ import { ROUTES } from '../../constants';
 import { showToast } from '../../utils/toast';
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import { usePermissions } from '../../hooks/usePermissions';
 
 interface PlanningPageProps {
@@ -512,25 +513,22 @@ export const Planning: FunctionComponent<PlanningPageProps> = () => {
                 ))}
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Article</label>
-              <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-2 top-2.5" />
-                <input
-                  list="planning-articles-list"
-                  value={articleQuery}
-                  onChange={(e) => setArticleQuery((e.target as HTMLInputElement).value)}
-                  placeholder="Code article"
-                  className="pl-8 pr-3 py-2 border border-gray-300 rounded-lg text-sm min-w-48"
-                />
-                <datalist id="planning-articles-list">
-                  {articlesOptions.map((a) => (
-                    <option key={a.ID} value={a.Code_article}>
-                      {a.Code_article} {a.Client ? `- ${a.Client}` : ''}
-                    </option>
-                  ))}
-                </datalist>
-              </div>
+            <div className="min-w-64">
+              <SelectSearch
+                options={articlesOptions.map((a) => ({
+                  id: a.ID,
+                  label: `${a.Code_article} ${a.Client ? `- ${a.Client}` : ''}`,
+                }))}
+                selectedId={
+                  articlesOptions.find((a) => a.Code_article === articleQuery)?.ID || null
+                }
+                onSelect={(opt) => {
+                  const article = articlesOptions.find((a) => a.ID === opt.id);
+                  if (article) setArticleQuery(article.Code_article);
+                }}
+                placeholder="Rechercher article..."
+                maxResults={20}
+              />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">Priorite</label>

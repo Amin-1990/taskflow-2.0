@@ -5,6 +5,7 @@ import { Download } from 'lucide-preact';
 import { ROUTES } from '../../../constants';
 import analyseChargeService from '../../../services/planning/analyseCharge.service';
 import { planningApi } from '../../../api/planning';
+import SelectSearch, { type SelectSearchOption } from '../../../components/common/SelectSearch';
 import ActionButton from '../../../components/common/ActionButton';
 import type { DayKey, PlanningWeekOption } from '../../../services/planning/types';
 import { showToast } from '../../../utils/toast';
@@ -133,15 +134,42 @@ export const AnalyseCharge: FunctionComponent<AnalyseChargeProps> = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-end gap-3">
-        <select value={annee} onChange={(e) => setAnnee(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-          {annees.map((y) => <option key={y} value={y}>{y}</option>)}
-        </select>
-        <select value={semaine} onChange={(e) => setSemaine(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-60">
-          {weeks.map((w) => <option key={w.id} value={w.numero}>{w.label}</option>)}
-        </select>
-        <select value={unite} onChange={(e) => setUnite((e.target as HTMLSelectElement).value)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm">
-          {unites.map((u) => <option key={u} value={u}>{u}</option>)}
-        </select>
+        <div className="min-w-48">
+          <SelectSearch
+            options={annees.map((y) => ({
+              id: y,
+              label: String(y),
+            }))}
+            selectedId={annee}
+            onSelect={(opt) => setAnnee(opt.id as number)}
+            placeholder="Sélectionner année..."
+            maxResults={10}
+          />
+        </div>
+        <div className="min-w-60">
+          <SelectSearch
+            options={weeks.map((w) => ({
+              id: w.numero,
+              label: w.label,
+            }))}
+            selectedId={semaine}
+            onSelect={(opt) => setSemaine(opt.id as number)}
+            placeholder="Rechercher semaine..."
+            maxResults={20}
+          />
+        </div>
+        <div className="min-w-48">
+          <SelectSearch
+            options={unites.map((u) => ({
+              id: u,
+              label: u,
+            }))}
+            selectedId={unite}
+            onSelect={(opt) => setUnite(opt.label)}
+            placeholder="Sélectionner unité..."
+            maxResults={20}
+          />
+        </div>
         <label className="text-sm text-gray-700">
           Capacite / jour
           <input type="number" min={1} value={capacity} onInput={(e) => setCapacity(Math.max(1, parseInt((e.target as HTMLInputElement).value || '920', 10)))} className="ml-2 w-24 px-2 py-1 border border-gray-300 rounded" />

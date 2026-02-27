@@ -1,8 +1,9 @@
-﻿import { type FunctionComponent } from 'preact';
+import { type FunctionComponent } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
 import { Plus, Search, Edit2, Trash2, AlertCircle, Download, Upload } from 'lucide-preact';
 import { useInterventions } from '../../hooks/useInterventions';
 import * as maintenanceApi from '../../api/maintenance';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import type { Intervention } from '../../types/maintenance.types';
 import { showToast } from '../../utils/toast';
 import ActionButton from '../../components/common/ActionButton';
@@ -419,33 +420,31 @@ export const Interventions: FunctionComponent<InterventionsListProps> = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Type machine</label>
-                <select
-                  value={formData.idTypeMachine}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, idTypeMachine: (e.target as HTMLSelectElement).value, idMachine: '' }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selectionner</option>
-                  {machineTypes.map((type) => (
-                    <option key={type.ID} value={type.ID}>{type.Type_machine}</option>
-                  ))}
-                </select>
+                <SelectSearch
+                  options={machineTypes.map((type) => ({
+                    id: type.ID,
+                    label: type.Type_machine,
+                  }))}
+                  selectedId={formData.idTypeMachine || null}
+                  onSelect={(opt) => setFormData((prev) => ({ ...prev, idTypeMachine: opt.id as number, idMachine: '' }))}
+                  label="Type machine"
+                  placeholder="Rechercher type..."
+                  maxResults={20}
+                />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Machine</label>
-                <select
-                  value={formData.idMachine}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, idMachine: (e.target as HTMLSelectElement).value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Selectionner</option>
-                  {filteredMachines.map((machine: any) => (
-                    <option key={machine.ID || machine.id} value={machine.ID || machine.id}>
-                      {machine.Code_interne || machine.code} - {machine.Nom_machine || machine.nom}
-                    </option>
-                  ))}
-                </select>
+                <SelectSearch
+                  options={filteredMachines.map((machine: any) => ({
+                    id: machine.ID || machine.id,
+                    label: `${machine.Code_interne || machine.code} - ${machine.Nom_machine || machine.nom}`,
+                  }))}
+                  selectedId={formData.idMachine || null}
+                  onSelect={(opt) => setFormData((prev) => ({ ...prev, idMachine: opt.id as string }))}
+                  label="Machine"
+                  placeholder="Rechercher machine..."
+                  maxResults={20}
+                />
               </div>
 
               <div>

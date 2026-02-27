@@ -4,6 +4,7 @@ import { route } from 'preact-router';
 import { ChevronLeft, ChevronRight } from 'lucide-preact';
 import { ROUTES } from '../../../constants';
 import { showToast } from '../../../utils/toast';
+import SelectSearch, { type SelectSearchOption } from '../../../components/common/SelectSearch';
 import planningManuelService from '../../../services/planning/planningManuel.service';
 import type { DayKey, ManualPlanningRow, PlanningWeekOption } from '../../../services/planning/types';
 
@@ -190,22 +191,35 @@ export const SuiviRealisation: FunctionComponent<SuiviRealisationProps> = () => 
       </div>
 
       <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-end gap-3">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-72">
           <button onClick={() => goWeek(-1)} className="p-2 border border-gray-300 rounded hover:bg-gray-50">
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <select value={semainePlanification} onChange={(e) => setSemainePlanification(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-60">
-            {weeks.map((w) => <option key={w.id} value={w.numero}>{w.label}</option>)}
-          </select>
+          <SelectSearch
+            options={weeks.map((w) => ({
+              id: w.numero,
+              label: w.label,
+            }))}
+            selectedId={semainePlanification}
+            onSelect={(opt) => setSemainePlanification(opt.id as number)}
+            placeholder="Rechercher semaine..."
+            maxResults={20}
+          />
           <button onClick={() => goWeek(1)} className="p-2 border border-gray-300 rounded hover:bg-gray-50">
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-        <div>
-          <label className="block text-xs text-gray-600 mb-1">Semaine commande</label>
-          <select value={semaineCommande} onChange={(e) => setSemaineCommande(parseInt((e.target as HTMLSelectElement).value, 10))} className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-60">
-            {weeks.map((w) => <option key={`cmd-${w.id}`} value={w.numero}>{w.label}</option>)}
-          </select>
+        <div className="min-w-72">
+          <SelectSearch
+            options={weeks.map((w) => ({
+              id: w.numero,
+              label: w.label,
+            }))}
+            selectedId={semaineCommande}
+            onSelect={(opt) => setSemaineCommande(opt.id as number)}
+            placeholder="Rechercher semaine..."
+            maxResults={20}
+          />
         </div>
         <div>
           <label className="block text-xs text-gray-600 mb-1">Semaine a suivre</label>

@@ -6,6 +6,7 @@ import pointageApi from '../../api/pointage';
 import PersonnelActionButton from '../../components/personnel/PersonnelActionButton';
 import PersonnelPageHeader from '../../components/personnel/PersonnelPageHeader';
 import PersonnelFilterPanel from '../../components/personnel/PersonnelFilterPanel';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import type { Personnel } from '../../types/personnel.types';
 import type { PointageRow } from '../../types/pointage.types';
 import { showToast } from '../../utils/toast';
@@ -461,20 +462,17 @@ const Pointage: FunctionComponent<PointagePageProps> = () => {
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Poste</label>
-            <select
-              value={posteFilter}
-              onChange={(e) => {
-                setPosteFilter((e.target as HTMLSelectElement).value);
+          <div className="min-w-48">
+            <SelectSearch
+              options={posteOptions.map((p) => ({ id: p, label: p }))}
+              selectedId={posteFilter}
+              onSelect={(opt) => {
+                setPosteFilter(opt.label);
                 setPage(1);
               }}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm min-w-44"
-            >
-              {posteOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
+              placeholder="Rechercher poste..."
+              maxResults={20}
+            />
           </div>
           <div>
             <label className="block text-xs text-gray-600 mb-1">Presence</label>

@@ -19,7 +19,7 @@ class AppTheme {
       colorScheme: colorScheme,
       textTheme: GoogleFonts.interTextTheme(),
       appBarTheme: const AppBarTheme(centerTitle: false),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DesignRadii.md),
         ),
@@ -59,7 +59,7 @@ class AppTheme {
         backgroundColor: AppPalette.backgroundDark,
         foregroundColor: AppPalette.textPrimary,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppPalette.surfaceDark,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DesignRadii.md),

@@ -3,6 +3,7 @@ import { useRef, useState } from 'preact/hooks';
 import { Plus, Search, Edit2, Trash2, AlertCircle, Download, Upload } from 'lucide-preact';
 import { useMachines } from '../../hooks/useMachines';
 import * as maintenanceApi from '../../api/maintenance';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import type { Machine } from '../../types/maintenance.types';
 import { showToast } from '../../utils/toast';
 import ActionButton from '../../components/common/ActionButton';
@@ -421,23 +422,19 @@ export const Machines: FunctionComponent<MachinesListProps> = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Type de machine <span className="text-red-600">*</span>
-                </label>
-                <select
-                  value={formData.typeMachineId}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, typeMachineId: (e.target as HTMLSelectElement).value }))}
+                <SelectSearch
+                  options={machineTypes.map((type) => ({
+                    id: type.ID,
+                    label: type.Type_machine,
+                  }))}
+                  selectedId={formData.typeMachineId || null}
+                  onSelect={(opt) => setFormData((prev) => ({ ...prev, typeMachineId: opt.id as string }))}
+                  label="Type de machine"
+                  required
                   disabled={machineTypes.length === 0}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                >
-                  {machineTypes.length === 0 ? (
-                    <option value="">Aucun type disponible</option>
-                  ) : (
-                    machineTypes.map((type) => (
-                      <option key={type.ID} value={type.ID}>{type.Type_machine}</option>
-                    ))
-                  )}
-                </select>
+                  placeholder="Rechercher type..."
+                  maxResults={20}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
