@@ -1,7 +1,7 @@
 import { type FunctionComponent } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { route } from 'preact-router';
-import { ChevronLeft, ChevronRight } from 'lucide-preact';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-preact';
 import { ROUTES } from '../../../constants';
 import { showToast } from '../../../utils/toast';
 import planningManuelService from '../../../services/planning/planningManuel.service';
@@ -188,6 +188,10 @@ export const PlanningManuel: FunctionComponent<PlanningManuelProps> = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Planning</h1>
         <div className="flex gap-2">
+          <button onClick={() => void loadRows()} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+            <RefreshCw className="w-4 h-4" />
+            Actualiser
+          </button>
           <button onClick={() => route(ROUTES.PLANNING_REALISATION)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
             Suivi realisation
           </button>

@@ -21,31 +21,17 @@ class OperatorRepository {
 
   final OperatorService _service;
 
-  static const OperatorDashboardData _mockData = OperatorDashboardData(
-    activeTasks: 3,
-    tasksToFinish: 12,
-    packagingRate: 0.85,
-    processDefects: 1,
-    productivity: 0.92,
-    targetUnits: 150,
-    achievedUnits: 138,
-  );
-
   Future<OperatorDashboardData> getDashboardStats(String userId) async {
+    final dashboard = await _service.getDashboardStats();
     try {
-      final dashboard = await _service.getDashboardStats(userId);
-      try {
-        final production = await _service.getTodayProduction();
-        return dashboard.copyWith(
-          targetUnits: production.targetUnits,
-          achievedUnits: production.achievedUnits,
-          productivity: production.productivity,
-        );
-      } catch (_) {
-        return dashboard;
-      }
-    } on DioException {
-      return _mockData;
+      final production = await _service.getTodayProduction();
+      return dashboard.copyWith(
+        targetUnits: production.targetUnits,
+        achievedUnits: production.achievedUnits,
+        productivity: production.productivity,
+      );
+    } catch (_) {
+      return dashboard;
     }
   }
 

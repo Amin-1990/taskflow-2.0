@@ -725,10 +725,19 @@ exports.updateQuantiteEmballe = async (req, res) => {
         const commandeId = req.params.id;
 
         // Validation
-        if (!quantite || quantite <= 0) {
+        if (quantite === null || quantite === undefined || quantite === '') {
             return res.status(400).json({
                 success: false,
-                error: 'La quantité doit être un nombre positif'
+                error: 'La quantité est requise'
+            });
+        }
+        
+        // Permettre les valeurs négatives (corrections)
+        const quantiteNum = parseInt(quantite, 10);
+        if (isNaN(quantiteNum)) {
+            return res.status(400).json({
+                success: false,
+                error: 'La quantité doit être un nombre'
             });
         }
 
@@ -738,7 +747,7 @@ exports.updateQuantiteEmballe = async (req, res) => {
         // Utiliser le service
         const result = await commandeService.updateQuantiteEmballe(
             commandeId,
-            quantite,
+            quantiteNum,
             auditInfo,
             user
         );
@@ -771,6 +780,7 @@ exports.getEmballageStats = async (req, res) => {
             `SELECT 
         c.ID,
         c.Code_article,
+        c.Lot,
         c.Quantite,
         COALESCE(pf.objectif_total, 0) as Quantite_facturee,
         COALESCE(c.Quantite_emballe, 0) as Quantite_emballe,
@@ -779,8 +789,7 @@ exports.getEmballageStats = async (req, res) => {
           WHEN COALESCE(c.Quantite_emballe, 0) >= COALESCE(pf.objectif_total, 0) AND COALESCE(pf.objectif_total, 0) > 0 THEN 'Terminee'
           WHEN COALESCE(c.Quantite_emballe, 0) > 0 THEN 'En cours'
           ELSE 'En attente'
-        END as statut_emballage,
-        c.Statut
+        END as statut_emballage
        FROM commandes c
        LEFT JOIN (
          SELECT ID_Commande, SUM(Quantite_facturee_semaine) as objectif_total

@@ -7,6 +7,43 @@ const getAuditInfo = (req) => ({
   User_agent: req.get('User-Agent')
 });
 
+// GET /api/personnel/contexte/:id - Récupérer le contexte d'un personnel
+exports.getPersonnelContexte = async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT ID, Nom_prenom, Matricule, Email, Telephone, Poste, 
+             Site_affectation, Statut
+      FROM personnel 
+      WHERE ID = ?
+    `, [req.params.id]);
+    
+    if (rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Employé non trouvé' 
+      });
+    }
+
+    const personnel = rows[0];
+    res.json({
+      success: true,
+      data: {
+        firstName: personnel.Nom_prenom.split(' ')[0] || '',
+        lastName: personnel.Nom_prenom.split(' ').slice(1).join(' ') || '',
+        line: personnel.Site_affectation || '',
+        shift: 'Jour',
+        isOnline: personnel.Statut === 'actif'
+      }
+    });
+  } catch (error) {
+    console.error('Erreur getPersonnelContexte:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur lors de la récupération du contexte' 
+    });
+  }
+};
+
 // GET /api/personnel - Récupérer tout le personnel
 exports.getAllPersonnel = async (req, res) => {
   try {

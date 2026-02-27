@@ -9,9 +9,9 @@ class OperatorService {
 
   final Dio _dio;
 
-  Future<OperatorDashboardData> getDashboardStats(String operatorId) async {
+  Future<OperatorDashboardData> getDashboardStats() async {
     final response = await _dio.get<Map<String, dynamic>>(
-        '/api/affectations/operateur/$operatorId/stats');
+        '/api/affectations/operateur/stats');
     final body = response.data ?? <String, dynamic>{};
     final data = (body['data'] as Map<String, dynamic>?) ?? body;
     return OperatorDashboardData.fromJson(data);

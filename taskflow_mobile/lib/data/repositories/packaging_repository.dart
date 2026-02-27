@@ -27,6 +27,11 @@ class PackagingRepository {
   final PendingActionsDao _pendingDao;
 
   List<CommandeEmballage> _cache = const [];
+  
+  // 🔄 Tracker les commandes validées récemment pour éviter les doublons
+  // Format: Map<orderId, lastValidationTime>
+  // Si on réessaye dans les 30s, on ignore l'enqueue
+  final Map<String, int> _recentlyValidatedOrders = {};
 
   Future<List<CommandeEmballage>> loadOrders(String operatorId) async {
     try {
@@ -59,8 +64,27 @@ class PackagingRepository {
               ? o.copyWith(packedToday: updated.packedToday)
               : o)
           .toList();
+
+      // ✅ SUCCÈS: Marquer comme validée récemment
+      // Empêche les retries automatiques de relancer l'action
+      _recentlyValidatedOrders[order.id] = DateTime.now().millisecondsSinceEpoch;
+      
+      // Nettoyer les vieilles entrées (> 30s)
+      _cleanupOldValidations();
+
+      // 🔄 Supprimer toutes les actions en queue pour cette commande
+      await _removePendingActionsForOrder(order.id);
+
       return updated;
     } on DioException {
+      // ⚠️ Vérifier si cette commande vient d'être validée récemment
+      // (peut arriver si sync relance immédiatement après succès)
+      if (_wasRecentlyValidated(order.id)) {
+        // Retourner l'état local plutôt que d'enqueue
+        final optimistic = order.copyWith(packedToday: order.packedToday + quantity);
+        return optimistic;
+      }
+
       final actionId =
           'pack-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
       await _pendingDao.enqueue(
@@ -110,6 +134,59 @@ class PackagingRepository {
   Future<int> pendingCount() async {
     final all = await _pendingDao.getAll();
     return all.where((e) => e.type == 'PACKAGING_VALIDATE').length;
+  }
+
+  /// Vérifier si une commande a été validée dans les 30 dernières secondes
+  bool _wasRecentlyValidated(String orderId) {
+    final lastValidation = _recentlyValidatedOrders[orderId];
+    if (lastValidation == null) return false;
+
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final elapsed = now - lastValidation;
+    return elapsed < 30 * 1000; // 30 secondes
+  }
+
+  /// Nettoyer les validations anciennes du tracker
+  void _cleanupOldValidations() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+
+    _recentlyValidatedOrders.removeWhere((orderId, timestamp) =>
+        now - timestamp > 30 * 1000
+    );
+  }
+
+  /// Supprime toutes les actions en queue pour une commande spécifique
+  /// Utile pour éviter les doublons si la validation réussit
+  /// 
+  /// @param orderId L'ID de la commande
+  Future<void> _removePendingActionsForOrder(String orderId) async {
+    try {
+      final allActions = await _pendingDao.getAll();
+      final actionsToRemove = <String>[];
+
+      for (final action in allActions) {
+        // Vérifier type d'action
+        if (action.type != 'PACKAGING_VALIDATE') {
+          continue;
+        }
+
+        // Vérifier orderId - gérer plusieurs formats possibles
+        final actionOrderId = action.data['orderId'];
+        final matches = actionOrderId != null && 
+            (actionOrderId == orderId || actionOrderId.toString() == orderId);
+
+        if (matches) {
+          actionsToRemove.add(action.id);
+        }
+      }
+
+      // Supprimer toutes les actions trouvées
+      for (final actionId in actionsToRemove) {
+        await _pendingDao.remove(actionId);
+      }
+    } catch (e) {
+      // Ne pas bloquer - c'est non-critique
+    }
   }
 
   List<CommandeEmballage> get cached => _cache;

@@ -112,26 +112,7 @@ class HeaderWithProfile extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            const Icon(Icons.circle, size: 10, color: AppPalette.success),
-            const SizedBox(width: 8),
-            Text(
-              '${userContext.line} - ${userContext.shift} ${userContext.isOnline ? '| Live' : '| Hors-ligne'}',
-              style: TextStyle(
-                  color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500),
-            ),
-            const Spacer(),
-            SyncIndicator(
-              lastSync: userContext.lastSync,
-              isSyncing: isSyncing,
-              onSync: onSync,
-            ),
-          ],
-        ),
+
       ],
     );
   }

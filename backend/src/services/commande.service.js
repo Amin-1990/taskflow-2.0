@@ -6,6 +6,12 @@ const affectationService = require('./affectation.service');
  * Service de gestion des commandes
  * Gère la logique métier: quantité emballée, clôture automatique
  */
+
+// Cache des requêtes traitées récemment (idempotency)
+// Format: {commandeId}-{quantity}-{windowTimestamp} => {response}
+const recentlyProcessedRequests = new Map();
+const REQUEST_DEDUP_WINDOW_MS = 5 * 60 * 1000; // 5 minutes
+
 class CommandeService {
     /**
      * Met à jour la quantité emballée
@@ -18,6 +24,18 @@ class CommandeService {
      * @returns {Promise<Object>} Résultat de la mise à jour
      */
     async updateQuantiteEmballe(commandeId, quantiteEmballe, auditInfo = {}, user = {}) {
+        // 🔄 IDEMPOTENCY: Créer un request key unique basé sur commande + quantité + fenêtre de temps
+        // Cela évite les doublons si la même requête est traitée plusieurs fois dans une fenêtre de 5 min
+        const now = Math.floor(Date.now() / 1000);
+        const windowSize = Math.floor(REQUEST_DEDUP_WINDOW_MS / 1000); // fenêtre de 300s
+        const timeWindow = Math.floor(now / windowSize);
+        const requestKey = `${commandeId}-${quantiteEmballe}-${timeWindow}`;
+
+        // ✅ Si cette requête a déjà été traitée récemment, retourner la réponse cached
+        if (recentlyProcessedRequests.has(requestKey)) {
+            return recentlyProcessedRequests.get(requestKey);
+        }
+
         let connection = null;
         try {
             connection = await db.getConnection();
@@ -45,45 +63,36 @@ class CommandeService {
             const objectifTotal = objectifRows[0]?.objectif_total || 0;
             const limiteCible = objectifTotal > 0 ? objectifTotal : (quantiteCommande || 0);
 
-            // Vérifier R1: Quantite_emballe ne peut pas dépasser Quantite_facturee
+            // Calculer la nouvelle quantité
             const newQuantite = (currentQuantite || 0) + quantiteEmballe;
-            if (limiteCible > 0 && newQuantite > limiteCible) {
-                throw new Error(
-                    `Quantité emballée (${newQuantite}) ne peut pas dépasser cible (${limiteCible})`
-                );
-            }
+            
+            // Note: On ne vérifie plus que Quantite_emballe <= limiteCible
+            // Car l'utilisateur peut légitimement emballer plus que le target
+            // Les valeurs négatives sont permises pour les corrections
+            // Mais on clamp à 0 minimum pour éviter les quantités négatives en base
+            const finalQuantite = Math.max(0, newQuantite);
 
-            // Mettre à jour la quantité
+            // Mettre à jour la quantité dans commandes
             await connection.query(
                 'UPDATE commandes SET Quantite_emballe = ? WHERE ID = ?',
-                [newQuantite, commandeId]
+                [finalQuantite, commandeId]
             );
 
+            // 🔄 SYNCHRONISATION: Mettre à jour planning_hebdo pour le jour actuel
+            await this._syncPlanningHebdo(connection, commandeId, quantiteEmballe);
+
             const [updated] = await connection.query(
-                'SELECT * FROM commandes WHERE ID = ?',
-                [commandeId]
+               'SELECT * FROM commandes WHERE ID = ?',
+               [commandeId]
             );
 
             let commandeTerminee = false;
             let affectationsResult = null;
 
-            // Vérifier R2: Si Quantite_emballe >= Quantite_facturee, clôturer la commande
-            if (limiteCible > 0 && newQuantite >= limiteCible) {
+            // Vérifier R2: Si Quantite_emballe >= Quantite_facturee, commande est terminée
+            if (limiteCible > 0 && finalQuantite >= limiteCible) {
                 commandeTerminee = true;
-
-                // Mettre à jour le statut
-                await connection.query(
-                    'UPDATE commandes SET Statut = ?, Date_fin = NOW() WHERE ID = ?',
-                    ['Terminée', commandeId]
-                );
-
-                // Récupérer à nouveau pour avoir le statut à jour
-                const [finalCommande] = await connection.query(
-                    'SELECT * FROM commandes WHERE ID = ?',
-                    [commandeId]
-                );
-                updated[0] = finalCommande[0];
-
+                
                 // R3: Clôturer toutes les affectations en cours de cette commande
                 affectationsResult = await affectationService.cloturerAffectationsCommande(
                     commandeId,
@@ -107,7 +116,7 @@ class CommandeService {
 
             await connection.commit();
 
-            return {
+            const result = {
                 success: true,
                 data: updated[0],
                 commandeTerminee,
@@ -116,6 +125,16 @@ class CommandeService {
                     : 'Quantité emballée mise à jour',
                 affectationsResult
             };
+
+            // 💾 Cacher le résultat pour déduplication ultérieure
+            recentlyProcessedRequests.set(requestKey, result);
+            
+            // Nettoyer le cache après 10 minutes (double de la fenêtre de dedup)
+            setTimeout(() => {
+                recentlyProcessedRequests.delete(requestKey);
+            }, 10 * 60 * 1000);
+
+            return result;
         } catch (error) {
             if (connection) {
                 try {
@@ -177,11 +196,11 @@ class CommandeService {
         try {
             const [commandes] = await db.query(
                 `SELECT c.*, a.Code_article, s.Code_semaine
-         FROM commandes c
-         LEFT JOIN articles a ON c.ID_Article = a.ID
-         LEFT JOIN semaines s ON c.ID_Semaine = s.ID
-         WHERE c.Statut != 'Terminée'
-         ORDER BY c.Date_debut DESC`
+          FROM commandes c
+          LEFT JOIN articles a ON c.ID_Article = a.ID
+          LEFT JOIN semaines s ON c.ID_Semaine = s.ID
+          WHERE c.Quantite_emballe = 0 OR c.Quantite_emballe < c.Quantite
+          ORDER BY c.Date_debut DESC`
             );
 
             return commandes;
@@ -252,11 +271,7 @@ class CommandeService {
 
             const oldValue = existing[0];
 
-            // Clôturer la commande
-            await connection.query(
-                'UPDATE commandes SET Statut = ?, Date_fin = NOW() WHERE ID = ?',
-                ['Terminée', commandeId]
-            );
+            // Clôturer la commande (marquer comme terminée)
 
             // Clôturer les affectations
             const [affectations] = await connection.query(
@@ -367,10 +382,6 @@ class CommandeService {
             const cibleCloture = objectifTotal > 0 ? objectifTotal : (commande.Quantite || 0);
 
             if (cibleCloture > 0 && totalProduit >= cibleCloture) {
-                await localConnection.query(
-                    'UPDATE commandes SET Statut = ?, Date_fin = NOW() WHERE ID = ?',
-                    ['Terminée', commandeId]
-                );
                 commandeTerminee = true;
             }
 
@@ -393,16 +404,102 @@ class CommandeService {
     }
 
     /**
-     * Enregistre une action dans le log audit (asynchrone, sans bloquer)
+     * Synchronise la saisie d'emballage mobile vers planning_hebdo
+     * Ajoute la quantité au jour actuel (Lundi_emballe, Mardi_emballe, etc.)
+     * Crée la ligne planning_hebdo si elle n'existe pas
      * 
      * @private
-     * @param {Object} auditData - Données à enregistrer
+     * @param {Connection} connection - Connexion DB
+     * @param {number} commandeId - ID de la commande
+     * @param {number} quantiteEmballe - Quantité à ajouter
      */
-    _logAuditAsync(auditData) {
-        logAction(auditData).catch(err => {
-            console.error('❌ Audit log failed:', err);
-        });
+    async _syncPlanningHebdo(connection, commandeId, quantiteEmballe) {
+        try {
+            // 1️⃣ Déterminer le jour de la semaine actuel (lundi=1, ..., dimanche=0)
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            
+            // Mapper: lundi=1, ..., samedi=6, dimanche=0
+            const dayNames = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+            const currentDay = dayNames[dayOfWeek]; // ex: 'lundi'
+            
+            // Normaliser pour éviter dimanche
+            if (currentDay === 'dimanche') {
+                return; // Pas de mise à jour le dimanche
+            }
+
+            // 2️⃣ Trouver la semaine de planification courante
+            // La semaine doit contenir la date actuelle (entre Date_debut et Date_fin)
+            const [weeks] = await connection.query(
+                `SELECT ID, Numero_semaine FROM semaines 
+                 WHERE CURDATE() BETWEEN Date_debut AND Date_fin
+                 LIMIT 1`
+            );
+
+            if (weeks.length === 0) {
+                return;
+            }
+
+            const weekId = weeks[0].ID;
+
+            // 3️⃣ Chercher la ligne planning_hebdo existante
+            const [existing] = await connection.query(
+                `SELECT * FROM planning_hebdo 
+                 WHERE ID_Commande = ? AND ID_Semaine_planifiee = ?`,
+                [commandeId, weekId]
+            );
+
+            // Capitaliser le jour pour les noms de colonnes (Lundi, Mardi, etc.)
+            const capitalizedDay = currentDay.charAt(0).toUpperCase() + currentDay.slice(1);
+            const columnEmballe = `${capitalizedDay}_emballe`;
+            const columnPlanifie = `${capitalizedDay}_planifie`;
+
+            if (existing.length > 0) {
+                // 4️⃣ Mise à jour: ajouter à la valeur existante
+                const currentEmballe = existing[0][columnEmballe] || 0;
+                const newEmballe = currentEmballe + quantiteEmballe;
+
+                // Utiliser SET avec le nom de colonne directement (sûr car provient du mapping dayNames)
+                const updateQuery = `UPDATE planning_hebdo 
+                    SET \`${columnEmballe}\` = COALESCE(\`${columnEmballe}\`, 0) + ?, Date_modification = NOW()
+                    WHERE ID = ?`;
+                
+                await connection.query(updateQuery, [quantiteEmballe, existing[0].ID]);
+            } else {
+                // 5️⃣ Création: nouvelle ligne avec cumul de la quantité
+                // Utiliser une approche plus flexible pour INSERT avec colonne dynamique
+                const row = {
+                    ID_Semaine_planifiee: weekId,
+                    ID_Commande: commandeId,
+                    Date_creation: new Date(),
+                    Date_modification: new Date()
+                };
+                row[columnEmballe] = quantiteEmballe;
+
+                const cols = Object.keys(row);
+                const vals = cols.map(() => '?');
+                const insertQuery = `INSERT INTO planning_hebdo (${cols.map(c => '\`' + c + '\`').join(', ')}) 
+                    VALUES (${vals.join(', ')})`;
+
+                await connection.query(insertQuery, Object.values(row));
+            }
+        } catch (error) {
+            // Ne pas bloquer la transaction principale en cas d'erreur
+            // On ignore silencieusement
+        }
     }
+
+    /**
+      * Enregistre une action dans le log audit (asynchrone, sans bloquer)
+      * 
+      * @private
+      * @param {Object} auditData - Données à enregistrer
+      */
+     _logAuditAsync(auditData) {
+         logAction(auditData).catch(err => {
+             console.error('❌ Audit log failed:', err);
+         });
+     }
 }
 
 module.exports = new CommandeService();

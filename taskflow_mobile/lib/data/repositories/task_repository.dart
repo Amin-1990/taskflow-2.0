@@ -298,7 +298,14 @@ class TaskRepository {
         semaineId: semaineId,
         commandeId: commandeId,
       );
-    } on DioException {
+    } on DioException catch (e) {
+      // Si c'est une erreur métier (400, 401, etc.), relancer l'exception
+      if (e.response != null && e.response!.statusCode != null && e.response!.statusCode! >= 400) {
+        final errorMessage = e.response?.data['error'] ?? e.message ?? 'Erreur lors de la création de l\'affectation';
+        throw Exception(errorMessage);
+      }
+      
+      // Si c'est une erreur réseau (offline), mettre en queue
       final actionId =
           'create-${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(9999)}';
       await _pendingDao.enqueue(

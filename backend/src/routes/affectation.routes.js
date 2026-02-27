@@ -4,7 +4,9 @@ const affectationController = require('../controllers/affectation.controller');
 const authMiddleware = require('../middleware/auth.middleware');
 const { requirePermission } = require('../middleware/authorization.middleware');
 
-// GET - Routes de recherche
+// GET - Routes de recherche (routes spécifiques avant les paramétrées)
+router.get('/operateur/stats', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getOperateurDashboardStats);
+router.get('/operateurs/unité', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getOperateurs);
 router.get('/', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAllAffectations);
 router.get('/operateur/:id/en-cours', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAffectationsEnCoursByOperateur);
 router.get('/commande/:id', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAffectationsByCommande);

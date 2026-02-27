@@ -259,15 +259,59 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                 ? null
                 : () async {
                     final created = await notifier.submit();
-                    if (created == null || !context.mounted) {
+                    if (!context.mounted) {
                       return;
                     }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text(
-                              'Affectation enregistrée avec succès.')),
-                    );
-                    context.go('/operator/dashboard');
+                    
+                    final state = ref.read(newTaskProvider);
+                    final isOngoingTaskError = state.error?.contains('deja une affectation en cours') ?? false;
+                    
+                    if (created != null) {
+                      // Succès
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.check_circle, 
+                                color: Colors.green.shade400,
+                                size: 24),
+                              const SizedBox(width: 12),
+                              const Text('Affectation enregistrée avec succès'),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 2),
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(16),
+                          backgroundColor: Colors.grey.shade900,
+                        ),
+                      );
+                      notifier.clearOperateur();
+                    } else if (isOngoingTaskError) {
+                      // Erreur: opérateur a déjà une tâche en cours
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Row(
+                            children: [
+                              Icon(Icons.warning_rounded, 
+                                color: Colors.orange.shade400,
+                                size: 24),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  state.error ?? 'Cet opérateur a déjà une tâche en cours',
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          duration: const Duration(seconds: 3),
+                          behavior: SnackBarBehavior.floating,
+                          margin: const EdgeInsets.all(16),
+                          backgroundColor: Colors.grey.shade900,
+                        ),
+                      );
+                    }
                   },
             icon: state.isSubmitting
                 ? const SizedBox(

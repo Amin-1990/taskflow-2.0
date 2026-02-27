@@ -7,7 +7,6 @@ import '../../../core/constants/design_constants.dart';
 import '../controllers/operator_dashboard_provider.dart';
 import '../widgets/header_with_profile.dart';
 import '../widgets/intervention_card.dart';
-import '../widgets/productivity_card.dart';
 import '../widgets/stat_card.dart';
 
 class OperatorDashboardPage extends ConsumerWidget {
@@ -78,32 +77,11 @@ class OperatorDashboardPage extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                _StatGrid(
-                  activeTasks: state.stats!.activeTasks,
-                  tasksToFinish: state.stats!.tasksToFinish,
-                  packagingRate: state.stats!.packagingRate,
-                  processDefects: state.stats!.processDefects,
-                ),
+                const _StatGrid(),
                 const SizedBox(height: 14),
                 InterventionCard(
                     onTap: () =>
                         context.push('/operator/intervention/request')),
-                const SizedBox(height: 20),
-                Text(
-                  'PERFORMANCE AUJOURD\'HUI',
-                  style: TextStyle(
-                    color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
-                    fontSize: 18 / 1.4,
-                    letterSpacing: 1,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                ProductivityCard(
-                  productivity: state.stats!.productivity,
-                  targetUnits: state.stats!.targetUnits,
-                  achievedUnits: state.stats!.achievedUnits,
-                ),
               ],
             ],
           ),
@@ -116,17 +94,7 @@ class OperatorDashboardPage extends ConsumerWidget {
 }
 
 class _StatGrid extends StatelessWidget {
-  const _StatGrid({
-    required this.activeTasks,
-    required this.tasksToFinish,
-    required this.packagingRate,
-    required this.processDefects,
-  });
-
-  final int activeTasks;
-  final int tasksToFinish;
-  final double packagingRate;
-  final int processDefects;
+  const _StatGrid();
 
   @override
   Widget build(BuildContext context) {
@@ -140,28 +108,24 @@ class _StatGrid extends StatelessWidget {
       children: [
         StatCard(
           icon: Icons.assignment_rounded,
-          value: '$activeTasks',
           label: 'Affectations',
           color: const Color(0xFF2A7BFF),
           onTap: () => context.push('/operator/affectations'),
         ),
         StatCard(
           icon: Icons.check_circle_outline,
-          value: '$tasksToFinish',
           label: 'Finir tâche',
           color: const Color(0xFF33D39A),
           onTap: () => context.push('/operator/tasks'),
         ),
         StatCard(
           icon: Icons.inventory_2_outlined,
-          value: '${(packagingRate * 100).round()}%',
           label: 'Emballage',
           color: const Color(0xFFF7C744),
           onTap: () => context.push('/operator/packaging'),
         ),
         StatCard(
           icon: Icons.warning_amber_rounded,
-          value: '$processDefects',
           label: 'Défauts Process',
           color: const Color(0xFFFD6A77),
           onTap: () => context.push('/operator/defects'),
@@ -238,12 +202,7 @@ class _DashboardShimmerState extends State<_DashboardShimmer>
             ),
             const SizedBox(height: 14),
             Container(
-                height: 120,
-                decoration: BoxDecoration(
-                    color: color, borderRadius: BorderRadius.circular(24))),
-            const SizedBox(height: 18),
-            Container(
-                height: 160,
+                height: 100,
                 decoration: BoxDecoration(
                     color: color, borderRadius: BorderRadius.circular(24))),
           ],

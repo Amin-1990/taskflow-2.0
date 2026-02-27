@@ -17,6 +17,13 @@ const { requirePermission } = require('../middleware/authorization.middleware');
 
 // Routes de recherche spécifiques D'ABORD
 router.get(
+  '/contexte/:id',
+  authMiddleware,
+  requirePermission('PERSONNEL_READ'),
+  personnelController.getPersonnelContexte
+);
+
+router.get(
   '/recherche',
   authMiddleware,
   requirePermission('PERSONNEL_READ'),

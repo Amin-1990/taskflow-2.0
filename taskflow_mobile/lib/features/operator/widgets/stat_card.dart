@@ -6,14 +6,12 @@ class StatCard extends StatelessWidget {
   const StatCard({
     super.key,
     required this.icon,
-    required this.value,
     required this.label,
     required this.color,
     this.onTap,
   });
 
   final IconData icon;
-  final String value;
   final String label;
   final Color color;
   final VoidCallback? onTap;
@@ -37,28 +35,22 @@ class StatCard extends StatelessWidget {
                 width: 1.2),
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 58,
-                height: 58,
+                width: 100,
+                height: 100,
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Icon(icon, color: color, size: 30),
+                child: Icon(icon, color: color, size: 56),
               ),
-              const Spacer(),
-              Text(
-                value,
-                style: TextStyle(
-                    color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
-                    fontSize: 36,
-                    fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 label,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                     color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
                     fontSize: 16,

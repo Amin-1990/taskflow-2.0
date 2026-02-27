@@ -173,33 +173,23 @@ class PackagingNotifier extends StateNotifier<PackagingState> {
     final current = state.periodInputs[orderId] ?? 0;
     state = state.copyWith(periodInputs: {
       ...state.periodInputs,
-      orderId: current > 0 ? current - 1 : 0
+      orderId: current - 1
     });
   }
 
   void setQuantity(String orderId, int value) {
-    final order = state.orders.firstWhere((o) => o.id == orderId,
-        orElse: () => throw StateError('order not found'));
-    final normalized =
-        value < 0 ? 0 : (value > order.remaining ? order.remaining : value);
+    // Permettre les valeurs négatives maintenant
     state = state
-        .copyWith(periodInputs: {...state.periodInputs, orderId: normalized});
+        .copyWith(periodInputs: {...state.periodInputs, orderId: value});
   }
 
   Future<void> validatePeriod(String orderId) async {
     final quantity = state.periodInputs[orderId] ?? 0;
-    if (quantity <= 0) {
-      state = state.copyWith(
-          error: 'La quantite periode doit etre superieure a zero.');
-      return;
-    }
+    // Permettre les quantités négatives (corrections) et zéro
+    // Plus de validation sur la limite supérieure - l'utilisateur peut emballer plus que prévu
 
     final order = state.orders.firstWhere((o) => o.id == orderId,
         orElse: () => throw StateError('order not found'));
-    if (quantity > order.remaining) {
-      state = state.copyWith(error: 'La quantite depasse l\'objectif restant.');
-      return;
-    }
 
     state = state.copyWith(isSubmitting: true, clearError: true);
     try {

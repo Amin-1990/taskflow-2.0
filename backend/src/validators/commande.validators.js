@@ -157,6 +157,7 @@ exports.statistiquesSemaineValidator = [
 
 /**
  * Validateur pour mettre a jour la quantite emballee
+ * Permet les valeurs negatives pour les corrections
  */
 exports.updateQuantiteEmballe = [
     param('id')
@@ -165,7 +166,7 @@ exports.updateQuantiteEmballe = [
 
     body('quantite')
         .notEmpty().withMessage('Quantite requise')
-        .isInt({ min: 1 }).withMessage('Quantite doit etre un entier positif')
+        .isInt().withMessage('Quantite doit etre un entier')
         .toInt()
 ];
 

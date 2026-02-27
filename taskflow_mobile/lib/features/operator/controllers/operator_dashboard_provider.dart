@@ -49,18 +49,6 @@ class OperatorDashboardState {
   }
 }
 
-final mockDashboardProvider = Provider<OperatorDashboardData>((ref) {
-  return const OperatorDashboardData(
-    activeTasks: 3,
-    tasksToFinish: 12,
-    packagingRate: 0.85,
-    processDefects: 1,
-    productivity: 0.92,
-    targetUnits: 150,
-    achievedUnits: 138,
-  );
-});
-
 final operatorDashboardProvider =
     StateNotifierProvider<OperatorDashboardNotifier, OperatorDashboardState>(
         (ref) {

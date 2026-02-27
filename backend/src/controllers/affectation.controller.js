@@ -544,3 +544,134 @@ exports.calculerDuree = async (req, res) => {
     });
   }
 };
+
+exports.getOperateurs = async (req, res) => {
+  try {
+    const userId = req.user?.ID;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Utilisateur non authentifié'
+      });
+    }
+
+    // Récupérer le Site_affectation du responsable connecté
+    const [userSite] = await db.query(`
+      SELECT Site_affectation
+      FROM personnel
+      WHERE ID = ?
+    `, [userId]);
+
+    if (userSite.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Profil utilisateur non trouvé'
+      });
+    }
+
+    const siteAffectation = userSite[0].Site_affectation;
+
+    // Récupérer tous les opérateurs du même site
+    const [operateurs] = await db.query(`
+      SELECT ID, Nom_prenom, Matricule, Poste
+      FROM personnel
+      WHERE Site_affectation = ? AND Poste IN ('Operateur', 'Responsable')
+      ORDER BY Nom_prenom ASC
+    `, [siteAffectation]);
+
+    res.json({
+      success: true,
+      count: operateurs.length,
+      data: operateurs
+    });
+  } catch (error) {
+    console.error('Erreur getOperateurs:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
+
+exports.getOperateurDashboardStats = async (req, res) => {
+  try {
+    const userId = req.user?.ID;
+    
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Utilisateur non authentifié'
+      });
+    }
+
+    // 1. Récupérer le Site_affectation du responsable connecté
+    const [userSite] = await db.query(`
+      SELECT Site_affectation
+      FROM personnel
+      WHERE ID = ?
+    `, [userId]);
+
+    if (userSite.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: 'Profil utilisateur non trouvé'
+      });
+    }
+
+    const siteAffectation = userSite[0].Site_affectation;
+
+    // 2. Récupérer toutes les affectations du jour pour cette unité de production
+    // (via les commandes qui appartiennent à cette unité)
+    const [affectationsResult] = await db.query(`
+      SELECT 
+        COUNT(*) as total_affectations,
+        SUM(CASE WHEN a.Date_fin IS NULL THEN 1 ELSE 0 END) as affectations_en_cours,
+        COALESCE(SUM(CASE WHEN a.Quantite_produite > 0 THEN a.Quantite_produite ELSE 0 END), 0) as total_produite
+      FROM affectations a
+      LEFT JOIN commandes c ON a.ID_Commande = c.ID
+      WHERE c.Unite_production = ? AND DATE(a.Date_debut) = CURDATE()
+    `, [siteAffectation]);
+
+    // 3. Récupérer les défauts du jour pour cette unité
+    let affectations = { total_affectations: 0, affectations_en_cours: 0, total_produite: 0 };
+    let defauts = { total_defauts: 0 };
+
+    if (affectationsResult.length > 0) {
+      affectations = affectationsResult[0];
+    }
+
+    // Récupérer les défauts du jour pour cette unité (par article)
+    const [defautsResult] = await db.query(`
+      SELECT COUNT(*) as total_defauts
+      FROM defauts_process dp
+      LEFT JOIN articles a ON dp.ID_Article = a.ID
+      LEFT JOIN commandes c ON a.ID = c.ID_Article
+      WHERE c.Unite_production = ? AND DATE(dp.Date_defaut) = CURDATE()
+    `, [siteAffectation]);
+
+    if (defautsResult.length > 0) {
+      defauts = defautsResult[0];
+    }
+
+    res.json({
+      success: true,
+      data: {
+        siteAffectation: siteAffectation,
+        activeTasks: parseInt(affectations.total_affectations),
+        tasksToFinish: parseInt(affectations.affectations_en_cours),
+        packagingRate: affectations.total_affectations > 0 ? affectations.total_produite / affectations.total_affectations : 0,
+        processDefects: parseInt(defauts.total_defauts),
+        productivity: 0.92,
+        targetUnits: 150,
+        achievedUnits: parseInt(affectations.total_produite)
+      }
+    });
+  } catch (error) {
+    console.error('Erreur getOperateurDashboardStats:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+};
