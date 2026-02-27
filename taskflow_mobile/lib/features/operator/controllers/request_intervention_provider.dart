@@ -155,6 +155,9 @@ class RequestInterventionNotifier
     try {
       final lookups = await _repository.loadLookups();
       final pending = await _repository.pendingCount();
+      
+      if (!mounted) return;
+
       state = state.copyWith(
         isLoading: false,
         isOnline: true,
@@ -164,11 +167,13 @@ class RequestInterventionNotifier
         typePannes: lookups.typePannes,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        isOnline: false,
-        error: e.toString(),
-      );
+      if (mounted) {
+        state = state.copyWith(
+          isLoading: false,
+          isOnline: false,
+          error: e.toString(),
+        );
+      }
     }
   }
 
@@ -252,6 +257,9 @@ class RequestInterventionNotifier
         priority: state.priority,
       );
       final pending = await _repository.pendingCount();
+      
+      if (!mounted) return true;
+
       state = state.copyWith(
         isSubmitting: false,
         isOnline: true,
@@ -259,11 +267,13 @@ class RequestInterventionNotifier
       );
       return true;
     } catch (e) {
-      state = state.copyWith(
-        isSubmitting: false,
-        isOnline: false,
-        error: e.toString(),
-      );
+      if (mounted) {
+        state = state.copyWith(
+          isSubmitting: false,
+          isOnline: false,
+          error: e.toString(),
+        );
+      }
       return false;
     }
   }
@@ -272,9 +282,13 @@ class RequestInterventionNotifier
     try {
       await _repository.syncPending();
       final pending = await _repository.pendingCount();
-      state = state.copyWith(isOnline: true, pendingSyncCount: pending);
+      if (mounted) {
+        state = state.copyWith(isOnline: true, pendingSyncCount: pending);
+      }
     } catch (_) {
-      state = state.copyWith(isOnline: false);
+      if (mounted) {
+        state = state.copyWith(isOnline: false);
+      }
     }
   }
 

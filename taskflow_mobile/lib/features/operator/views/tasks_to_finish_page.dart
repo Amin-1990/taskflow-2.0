@@ -31,7 +31,7 @@ class _TasksToFinishPageState extends ConsumerState<TasksToFinishPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFFE8EEF8)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => context.go('/operator/dashboard'),
         ),
         title: const Text('Taches a finir'),

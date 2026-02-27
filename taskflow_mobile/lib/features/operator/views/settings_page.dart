@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/constants/design_constants.dart';
 import '../../../core/widgets/bottom_navigation.dart';
 import '../../settings/controllers/settings_provider.dart';
 import '../../settings/controllers/sync_provider.dart';
@@ -26,7 +28,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     final settings = ref.watch(settingsProvider);
     final sync = ref.watch(syncProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
-    final syncNotifier = ref.read(syncProvider.notifier);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final lastSync = sync.lastSyncTime;
     final lastSyncLabel = lastSync == null
@@ -34,20 +37,38 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         : DateFormat('dd/MM/yyyy HH:mm').format(lastSync);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07152F),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1A2C4B),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/operator/dashboard');
+            }
+          },
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          color: theme.appBarTheme.iconTheme?.color,
         ),
-        title: const Text('Settings',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('Parametres',
+            style: TextStyle(
+                color: theme.appBarTheme.titleTextStyle?.color,
+                fontWeight: FontWeight.w700)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).maybePop(),
-            child: const Text('Done',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/operator/dashboard');
+              }
+            },
+            child: const Text('OK',
+                style: TextStyle(
+                    fontSize: 18, 
+                    fontWeight: FontWeight.w700,
+                    color: AppPalette.primary)),
           ),
         ],
       ),
@@ -62,12 +83,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     child: Column(
                       children: [
                         SettingsTile(
-                          title: 'Server URL',
+                          title: 'URL Serveur',
                           subtitle: settings.serverUrl,
-                          leading: const Icon(Icons.dns_rounded,
-                              color: Color(0xFF8EA3C5)),
-                          trailing: const Icon(Icons.edit_rounded,
-                              color: Color(0xFF8EA3C5)),
+                          leading: Icon(Icons.dns_rounded,
+                              color: isDark ? const Color(0xFF8EA3C5) : AppPalette.primary),
+                          trailing: Icon(Icons.edit_rounded,
+                              color: isDark ? const Color(0xFF8EA3C5) : AppPalette.primary),
                           onTap: () =>
                               _editServerUrl(context, settings.serverUrl),
                         ),
@@ -80,21 +101,21 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 18),
                   SettingsSection(
-                    title: 'Synchronization',
+                    title: 'Synchronisation',
                     child: Column(
                       children: [
                         SettingsTile(
-                          title: 'Last Sync',
+                          title: 'Derniere Sync',
                           subtitle: lastSyncLabel,
                           leading: Container(
                             width: 46,
                             height: 46,
                             decoration: BoxDecoration(
-                              color: const Color(0xFF1E3A6A),
+                              color: isDark ? const Color(0xFF1E3A6A) : AppPalette.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.sync_rounded,
-                                color: Color(0xFF2A7BFF)),
+                            child: Icon(Icons.sync_rounded,
+                                color: AppPalette.primary),
                           ),
                           trailing: Container(
                             padding: const EdgeInsets.symmetric(
@@ -102,8 +123,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(10),
                               color: sync.pendingCount == 0
-                                  ? const Color(0xFF253A57)
-                                  : const Color(0xFF4B2630),
+                                  ? (isDark ? const Color(0xFF253A57) : AppPalette.success.withOpacity(0.1))
+                                  : (isDark ? const Color(0xFF4B2630) : AppPalette.error.withOpacity(0.1)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -112,18 +133,19 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   Icons.circle,
                                   size: 10,
                                   color: sync.pendingCount == 0
-                                      ? const Color(0xFF35D088)
-                                      : const Color(0xFFFF8D98),
+                                      ? AppPalette.success
+                                      : AppPalette.error,
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
                                   sync.pendingCount == 0
-                                      ? 'Up to date'
-                                      : 'Pending',
+                                      ? 'A jour'
+                                      : 'En attente',
                                   style: TextStyle(
                                     color: sync.pendingCount == 0
-                                        ? const Color(0xFFB6F6D6)
-                                        : const Color(0xFFFFC3CB),
+                                        ? AppPalette.success
+                                        : AppPalette.error,
+                                    fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ],
@@ -131,12 +153,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                         ),
                         SettingsTile(
-                          title: 'Pending Uploads',
+                          title: 'Actions en attente',
                           subtitle: null,
                           trailing: Text(
                             '${sync.pendingCount}',
-                            style: const TextStyle(
-                              color: Color(0xFF94A8C7),
+                            style: TextStyle(
+                              color: isDark ? const Color(0xFF94A8C7) : AppPalette.textSecondaryLight,
                               fontFamily: 'monospace',
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -144,7 +166,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           ),
                         ),
                         SettingsTile(
-                          title: 'Sync Now',
+                          title: 'Synchroniser maintenant',
                           bottomBorder: false,
                           leading: sync.isSyncing
                               ? const SizedBox(
@@ -153,14 +175,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : const Icon(Icons.sync,
-                                  color: Color(0xFF2A7BFF)),
-                          trailing: const Icon(Icons.chevron_right_rounded,
-                              color: Color(0xFF2A7BFF)),
+                              : Icon(Icons.sync,
+                                  color: AppPalette.primary),
+                          trailing: Icon(Icons.chevron_right_rounded,
+                              color: AppPalette.primary),
                           onTap: sync.isSyncing
                               ? null
                               : () async {
-                                  final result = await syncNotifier.syncNow();
+                                  final result = await ref.read(syncProvider.notifier).syncNow();
                                   if (!context.mounted) {
                                     return;
                                   }
@@ -180,7 +202,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     child: Column(
                       children: [
                         SettingsToggleTile(
-                          title: 'Dark Mode',
+                          title: 'Mode Sombre',
                           value: settings.darkMode,
                           icon: Icons.dark_mode_rounded,
                           onChanged: settingsNotifier.setDarkMode,
@@ -197,7 +219,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   ),
                   const SizedBox(height: 18),
                   SettingsSection(
-                    title: 'About',
+                    title: 'A propos',
                     child: Column(
                       children: [
                         SettingsTile(
@@ -205,7 +227,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           subtitle: settings.versionLabel,
                         ),
                         SettingsTile(
-                          title: 'Device ID',
+                          title: 'ID Appareil',
                           subtitle: settings.deviceId,
                           bottomBorder: false,
                         ),
@@ -215,9 +237,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                   const SizedBox(height: 18),
                   Container(
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A2C4B),
+                      color: isDark ? const Color(0xFF1A2C4B) : Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFF2A426B)),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight
+                      ),
+                      boxShadow: isDark ? null : [
+                        const BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+                      ],
                     ),
                     child: TextButton(
                       onPressed: () => _onLogoutPressed(context),
@@ -226,27 +253,29 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         child: Text(
                           'Deconnexion',
                           style: TextStyle(
-                              color: Color(0xFFFF4E5D),
-                              fontSize: 34 / 2,
+                              color: AppPalette.error,
+                              fontSize: 17,
                               fontWeight: FontWeight.w700),
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 12),
-                  const Row(
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Padding(
-                        padding: EdgeInsets.only(top: 2),
+                        padding: const EdgeInsets.only(top: 2),
                         child: Icon(Icons.warning_amber_rounded,
-                            color: Color(0xFFF2A33A), size: 18),
+                            color: AppPalette.warning, size: 18),
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Unsynced data will be lost permanently upon logout. Please ensure all tasks are synced.',
-                          style: TextStyle(color: Color(0xFF7F93B4)),
+                          'Les donnees non synchronisees seront perdues definitivement lors de la deconnexion.',
+                          style: TextStyle(
+                              color: isDark ? const Color(0xFF7F93B4) : AppPalette.textMutedLight
+                          ),
                         ),
                       ),
                     ],
@@ -256,7 +285,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       padding: const EdgeInsets.only(top: 8),
                       child: Text(
                         settings.error!,
-                        style: const TextStyle(color: Color(0xFFFF8D98)),
+                        style: TextStyle(color: AppPalette.error),
                       ),
                     ),
                 ],

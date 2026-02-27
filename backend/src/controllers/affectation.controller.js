@@ -93,7 +93,7 @@ exports.getAffectationsEnCoursByOperateur = async (req, res) => {
     console.log('🔍 [getAffectationsEnCoursByOperateur] ID_Operateur reçu:', id);
     const affectations = await affectationService.getAffectationsEnCours(id);
     console.log('🔍 [getAffectationsEnCoursByOperateur] Affectations trouvées:', affectations.length);
-    
+
     // Si une seule affectation, retourner l'objet directement
     if (affectations.length === 1) {
       res.json({
@@ -511,5 +511,36 @@ exports.deleteAffectation = async (req, res) => {
     });
   } finally {
     connection.release();
+  }
+};
+exports.calculerDuree = async (req, res) => {
+  try {
+    const { debut, fin } = req.query;
+
+    if (!debut || !fin) {
+      return res.status(400).json({
+        success: false,
+        error: 'Les dates de debut et de fin sont requises'
+      });
+    }
+
+    const dureeMinutes = await affectationService.calculateDurationWithHoraires(
+      db,
+      debut,
+      fin
+    );
+
+    res.json({
+      success: true,
+      data: {
+        duree: dureeMinutes
+      }
+    });
+  } catch (error) {
+    console.error('Erreur calculerDuree:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 };

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../constants/design_constants.dart';
 import 'scanner_button.dart';
 
 class SearchableDropdown<T> extends StatefulWidget {
@@ -79,6 +80,9 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Column(
       children: [
         Row(
@@ -92,15 +96,19 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                 },
                 decoration: InputDecoration(
                   hintText: widget.hint,
+                  hintStyle: TextStyle(
+                      color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight),
                   suffixIcon: _loading
                       ? const Padding(
                           padding: EdgeInsets.all(10),
                           child: SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2)),
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: AppPalette.primary)),
                         )
-                      : const Icon(Icons.search),
+                      : Icon(Icons.search,
+                          color: isDark ? AppPalette.primary : AppPalette.primary),
                 ),
               ),
             ),
@@ -121,9 +129,17 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
           Container(
             margin: const EdgeInsets.only(top: 6),
             decoration: BoxDecoration(
-              color: const Color(0xFF13284A),
+              color: isDark ? const Color(0xFF13284A) : Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFF2A426B)),
+              border: Border.all(
+                  color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               children: _items
@@ -132,7 +148,9 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
                     (item) => ListTile(
                       dense: true,
                       title: Text(widget.itemToText(item),
-                          style: const TextStyle(color: Color(0xFFE1E8F5))),
+                          style: TextStyle(
+                              color: isDark ? const Color(0xFFE1E8F5) : AppPalette.textPrimaryLight,
+                              fontWeight: FontWeight.w500)),
                       onTap: () {
                         _controller.text = widget.itemToText(item);
                         widget.onSelected(item);

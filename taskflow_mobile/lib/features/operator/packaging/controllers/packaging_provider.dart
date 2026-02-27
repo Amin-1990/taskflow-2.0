@@ -126,6 +126,9 @@ class PackagingNotifier extends StateNotifier<PackagingState> {
     try {
       final orders = await _repository.loadOrders(_operatorId);
       final pending = await _repository.pendingCount();
+      
+      if (!mounted) return;
+
       final inputs = <String, int>{
         for (final o in orders) o.id: state.periodInputs[o.id] ?? 0,
       };
@@ -137,8 +140,10 @@ class PackagingNotifier extends StateNotifier<PackagingState> {
         periodInputs: inputs,
       );
     } catch (e) {
-      state = state.copyWith(
-          isLoading: false, isOnline: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(
+            isLoading: false, isOnline: false, error: e.toString());
+      }
     }
   }
 
@@ -200,9 +205,12 @@ class PackagingNotifier extends StateNotifier<PackagingState> {
     try {
       final updated =
           await _repository.validatePeriod(order: order, quantity: quantity);
+      final pending = await _repository.pendingCount();
+
+      if (!mounted) return;
+
       final newOrders =
           state.orders.map((o) => o.id == updated.id ? updated : o).toList();
-      final pending = await _repository.pendingCount();
       state = state.copyWith(
         isSubmitting: false,
         isOnline: true,
@@ -211,8 +219,10 @@ class PackagingNotifier extends StateNotifier<PackagingState> {
         periodInputs: {...state.periodInputs, orderId: 0},
       );
     } catch (e) {
-      state = state.copyWith(
-          isSubmitting: false, isOnline: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(
+            isSubmitting: false, isOnline: false, error: e.toString());
+      }
     }
   }
 
@@ -220,15 +230,21 @@ class PackagingNotifier extends StateNotifier<PackagingState> {
     try {
       final count = await _repository.syncPendingValidations();
       final pending = await _repository.pendingCount();
+      
+      if (!mounted) return;
+
       if (count > 0) {
         final orders = await _repository.loadOrders(_operatorId);
+        if (!mounted) return;
         state = state.copyWith(
             orders: orders, pendingSyncCount: pending, isOnline: true);
       } else {
         state = state.copyWith(pendingSyncCount: pending, isOnline: true);
       }
     } catch (_) {
-      state = state.copyWith(isOnline: false);
+      if (mounted) {
+        state = state.copyWith(isOnline: false);
+      }
     }
   }
 

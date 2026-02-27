@@ -256,6 +256,27 @@ class TaskService {
         .toList();
   }
 
+  Future<List<Operateur>> searchOperators(String query) async {
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/api/personnel/recherche',
+        queryParameters: {'q': query},
+      );
+      final body = response.data ?? <String, dynamic>{};
+      final data = body['data'];
+      if (data is! List) {
+        return const [];
+      }
+
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(Operateur.fromJson)
+          .toList();
+    } on DioException {
+      return const [];
+    }
+  }
+
   Future<List<Semaine>> getSemainesAvecCommandes() async {
     final response = await _dio
         .get<Map<String, dynamic>>('/api/commandes/semaines-disponibles');

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/design_constants.dart';
 
 class SettingsTile extends StatelessWidget {
   const SettingsTile({
@@ -20,13 +21,18 @@ class SettingsTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return InkWell(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
           border: bottomBorder
-              ? const Border(bottom: BorderSide(color: Color(0xFF2A426B)))
+              ? Border(
+                  bottom: BorderSide(
+                      color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight))
               : null,
         ),
         child: Row(
@@ -41,8 +47,8 @@ class SettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Color(0xFFEAF0F9),
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
                       fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
@@ -51,8 +57,8 @@ class SettingsTile extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: const TextStyle(
-                        color: Color(0xFF94A8C7),
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF94A8C7) : AppPalette.textSecondaryLight,
                         fontSize: 16,
                       ),
                     ),

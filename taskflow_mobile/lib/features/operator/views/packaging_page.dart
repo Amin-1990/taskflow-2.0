@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/widgets/scanner_button.dart';
 import '../packaging/controllers/packaging_provider.dart';
 import '../packaging/widgets/packaging_order_card.dart';
+import '../../../core/constants/design_constants.dart';
 
 class PackagingPage extends ConsumerStatefulWidget {
   const PackagingPage({super.key});
@@ -32,6 +33,8 @@ class _PackagingPageState extends ConsumerState<PackagingPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(packagingProvider);
     final notifier = ref.read(packagingProvider.notifier);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (_searchController.text != state.searchQuery) {
       _searchController.text = state.searchQuery;
@@ -40,17 +43,24 @@ class _PackagingPageState extends ConsumerState<PackagingPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07152F),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF07152F),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         leading: IconButton(
           onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          color: theme.appBarTheme.iconTheme?.color,
         ),
-        title: const Text('Emballage',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('Emballage',
+            style: TextStyle(
+                color: theme.appBarTheme.titleTextStyle?.color,
+                fontWeight: FontWeight.w700)),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.print_outlined)),
+          IconButton(
+            onPressed: () {}, 
+            icon: const Icon(Icons.print_outlined),
+            color: theme.appBarTheme.iconTheme?.color,
+          ),
         ],
       ),
       body: SafeArea(
@@ -59,30 +69,40 @@ class _PackagingPageState extends ConsumerState<PackagingPage> {
             if (!state.isOnline)
               Container(
                 width: double.infinity,
-                color: const Color(0xFF4B2630),
+                color: AppPalette.error.withOpacity(0.18),
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text(
-                  'Mode hors-ligne • ${state.pendingSyncCount} validation(s) en attente',
-                  style: const TextStyle(color: Color(0xFFFFB6C0)),
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.cloud_off_rounded, color: AppPalette.error, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Mode hors-ligne • ${state.pendingSyncCount} action(s) en attente',
+                      style: TextStyle(color: AppPalette.error, fontWeight: FontWeight.w700),
+                    ),
+                  ],
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _searchController,
                       onChanged: notifier.setSearchQuery,
-                      style: const TextStyle(color: Color(0xFFEAF0F9)),
-                      decoration: const InputDecoration(
-                        hintText: 'Scanner lot ou commande...',
-                        prefixIcon: Icon(Icons.search),
+                      style: TextStyle(color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight),
+                      decoration: InputDecoration(
+                        hintText: 'Lot ou commande...',
+                        hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight),
+                        prefixIcon: const Icon(Icons.search),
+                        fillColor: isDark ? const Color(0xFF1A2C4B) : Colors.white,
+                        filled: true,
+                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   ScannerButton(
                     onScan: (value) {
                       notifier.focusByScan(value);
@@ -93,7 +113,7 @@ class _PackagingPageState extends ConsumerState<PackagingPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
                   _FilterChipWidget(
@@ -101,36 +121,45 @@ class _PackagingPageState extends ConsumerState<PackagingPage> {
                     selected: state.filter == PackagingFilter.all,
                     onTap: () => notifier.setFilter(PackagingFilter.all),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   _FilterChipWidget(
                     label: 'En cours',
                     selected: state.filter == PackagingFilter.inProgress,
                     onTap: () => notifier.setFilter(PackagingFilter.inProgress),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   _FilterChipWidget(
-                    label: 'Terminees',
+                    label: 'Terminées',
                     selected: state.filter == PackagingFilter.completed,
                     onTap: () => notifier.setFilter(PackagingFilter.completed),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: notifier.loadOrders,
                 child: state.isLoading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: AppPalette.primary))
                     : ListView(
-                        padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                         children: [
                           if (state.error != null)
                             Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Text(state.error!,
-                                  style: const TextStyle(
-                                      color: Color(0xFFFF8D98))),
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppPalette.error.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppPalette.error.withOpacity(0.3)),
+                                ),
+                                child: Text(state.error!,
+                                    style: TextStyle(
+                                        color: isDark ? const Color(0xFFFF7A83) : const Color(0xFFD32F2F), 
+                                        fontWeight: FontWeight.w500)),
+                              ),
                             ),
                           ...state.filteredOrders.map(
                             (order) => PackagingOrderCard(
@@ -145,17 +174,28 @@ class _PackagingPageState extends ConsumerState<PackagingPage> {
                                 }
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text('Periode enregistree.')),
+                                      content: Text('Période enregistrée avec succès.')),
                                 );
                               },
                             ),
                           ),
                           if (state.filteredOrders.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.only(top: 120),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 80),
                               child: Center(
-                                child: Text('Aucune commande pour ce filtre.',
-                                    style: TextStyle(color: Color(0xFFA2B4D0))),
+                                child: Column(
+                                  children: [
+                                    Icon(Icons.inventory_2_outlined, 
+                                        size: 64, 
+                                        color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight),
+                                    const SizedBox(height: 16),
+                                    Text('Aucune commande pour ce filtre.',
+                                        style: TextStyle(
+                                            color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500)),
+                                  ],
+                                ),
                               ),
                             ),
                         ],
@@ -179,22 +219,41 @@ class _FilterChipWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFF2A7BFF) : const Color(0xFF1A2E50),
-            borderRadius: BorderRadius.circular(999),
+            color: selected 
+                ? AppPalette.primary 
+                : (isDark ? const Color(0xFF1A2E50) : const Color(0xFFF1F5F9)),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected 
+                ? AppPalette.primary 
+                : (isDark ? const Color(0xFF2A426B) : AppPalette.borderLight),
+              width: 1.5,
+            ),
+            boxShadow: (!isDark && selected) ? [
+              BoxShadow(
+                color: AppPalette.primary.withOpacity(0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              )
+            ] : null,
           ),
           child: Text(
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: selected ? Colors.white : const Color(0xFFA7B9D4),
-              fontWeight: FontWeight.w600,
+              color: selected 
+                  ? Colors.white 
+                  : (isDark ? const Color(0xFFA7B9D4) : AppPalette.textSecondaryLight),
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
             ),
           ),
         ),

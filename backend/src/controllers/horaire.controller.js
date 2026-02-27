@@ -245,7 +245,7 @@ exports.updateHoraire = async (req, res) => {
     const values = [];
     
     const allowedFields = [
-      'Heure_debut', 'Heure_fin', 'Pause_debut', 'Pause_fin',
+      'Date', 'Jour_semaine', 'Heure_debut', 'Heure_fin', 'Pause_debut', 'Pause_fin',
       'Heure_supp_debut', 'Heure_supp_fin', 'Est_ouvert',
       'Est_jour_ferie', 'Type_chome', 'Description', 'Commentaire'
     ];

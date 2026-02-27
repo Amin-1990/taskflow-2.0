@@ -8,14 +8,15 @@ exports.validate = (req, res, next) => {
   const errors = validationResult(req);
   
   if (!errors.isEmpty()) {
+    const errorDetails = errors.array().map(err => ({
+      field: err.path,
+      message: err.msg,
+      value: err.value !== undefined ? err.value : null
+    }));
     return res.status(400).json({
       success: false,
       error: 'Erreurs de validation',
-      details: errors.array().map(err => ({
-        field: err.path,
-        message: err.msg,
-        value: err.value !== undefined ? err.value : null
-      }))
+      details: errorDetails
     });
   }
   

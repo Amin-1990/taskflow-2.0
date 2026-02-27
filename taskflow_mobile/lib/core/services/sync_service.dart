@@ -112,7 +112,7 @@ class SyncService {
       case 'FINISH_TASK':
         return PendingActionView(
           id: payload.id,
-          title: 'Fin de production',
+          title: 'Fin de tâche',
           description: 'Quantite ${(data['quantity'] ?? 0)} pcs',
           statusLabel: 'En attente',
           type: payload.type,

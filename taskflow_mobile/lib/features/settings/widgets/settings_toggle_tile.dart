@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/constants/design_constants.dart';
 
 import 'settings_tile.dart';
 
@@ -20,6 +21,7 @@ class SettingsToggleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SettingsTile(
       title: title,
       bottomBorder: bottomBorder,
@@ -29,14 +31,16 @@ class SettingsToggleTile extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: const Color(0xFF243B61),
+                color: isDark ? const Color(0xFF243B61) : AppPalette.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: const Color(0xFFA7B8D3)),
+              child: Icon(icon, 
+                  color: isDark ? const Color(0xFFA7B8D3) : AppPalette.primary),
             ),
       trailing: Switch(
         value: value,
         onChanged: onChanged,
+        activeColor: AppPalette.primary,
       ),
       onTap: () => onChanged(!value),
     );

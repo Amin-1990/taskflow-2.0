@@ -7,6 +7,7 @@ import '../../../core/widgets/scanner_button.dart';
 import '../../../core/widgets/searchable_dropdown.dart';
 import '../../../domain/models/article.dart';
 import '../defects/controllers/defects_process_provider.dart';
+import '../../../core/constants/design_constants.dart';
 
 class DefectsPage extends ConsumerWidget {
   const DefectsPage({super.key});
@@ -15,19 +16,24 @@ class DefectsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(defectsProcessProvider);
     final notifier = ref.read(defectsProcessProvider.notifier);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final dateLabel = DateFormat('dd/MM/yyyy HH:mm').format(state.now);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07152F),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF13284A),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFFE8EEF8)),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          color: theme.appBarTheme.iconTheme?.color,
           onPressed: () => context.go('/operator/dashboard'),
         ),
-        title: const Text('Defauts process',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('Défauts process',
+            style: TextStyle(
+                color: theme.appBarTheme.titleTextStyle?.color,
+                fontWeight: FontWeight.w700)),
         actions: [
           Container(
             margin: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
@@ -35,12 +41,12 @@ class DefectsPage extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               color: state.isOnline
-                  ? const Color(0xFF113024)
-                  : const Color(0xFF4B2630),
+                  ? AppPalette.success.withOpacity(0.18)
+                  : AppPalette.error.withOpacity(0.18),
               border: Border.all(
                   color: state.isOnline
-                      ? const Color(0xFF2C9A66)
-                      : const Color(0xFFAA5963)),
+                      ? AppPalette.success
+                      : AppPalette.error),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -51,16 +57,16 @@ class DefectsPage extends ConsumerWidget {
                       : Icons.cloud_off_rounded,
                   size: 16,
                   color: state.isOnline
-                      ? const Color(0xFF35D088)
-                      : const Color(0xFFFFA8B2),
+                      ? AppPalette.success
+                      : AppPalette.error,
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  state.isOnline ? 'SYNCED' : 'OFFLINE ${state.pendingCount}',
+                  state.isOnline ? 'SYNC' : 'OFFLINE ${state.pendingCount}',
                   style: TextStyle(
                       color: state.isOnline
-                          ? const Color(0xFFB6F6D6)
-                          : const Color(0xFFFFC3CB),
+                          ? AppPalette.success
+                          : AppPalette.error,
                       fontWeight: FontWeight.w700),
                 ),
               ],
@@ -69,7 +75,7 @@ class DefectsPage extends ConsumerWidget {
         ],
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppPalette.primary))
           : SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 130),
@@ -77,7 +83,7 @@ class DefectsPage extends ConsumerWidget {
                   const _SectionTitle(
                       icon: Icons.factory_outlined,
                       title: 'Contexte de Production'),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   _Panel(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,35 +93,39 @@ class DefectsPage extends ConsumerWidget {
                         DropdownButtonFormField(
                           value: state.selectedPoste,
                           onChanged: notifier.selectPoste,
-                          dropdownColor: const Color(0xFF13284A),
-                          decoration: const InputDecoration(
-                              hintText: 'Selectionner un poste'),
+                          dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
+                          decoration: InputDecoration(
+                              hintText: 'Sélectionner un poste',
+                              hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight)),
                           items: state.postes
                               .map((p) => DropdownMenuItem(
                                   value: p,
                                   child: Text(p.name,
-                                      style: const TextStyle(
-                                          color: Color(0xFFEAF0F9)))))
+                                      style: TextStyle(
+                                          color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16))))
                               .toList(),
                         ),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 18),
                         const _Label('Semaine'),
                         const SizedBox(height: 8),
                         DropdownButtonFormField(
                           value: state.selectedSemaine,
                           onChanged: notifier.selectSemaine,
-                          dropdownColor: const Color(0xFF13284A),
-                          decoration: const InputDecoration(),
+                          dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
                           items: state.semaines
                               .map((s) => DropdownMenuItem(
                                   value: s,
                                   child: Text(s.label,
-                                      style: const TextStyle(
-                                          color: Color(0xFFEAF0F9)))))
+                                      style: TextStyle(
+                                          color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16))))
                               .toList(),
                         ),
-                        const SizedBox(height: 14),
-                        const _Label('Article / Reference'),
+                        const SizedBox(height: 18),
+                        const _Label('Article / Référence'),
                         const SizedBox(height: 8),
                         SearchableDropdown<Article>(
                           hint: 'Ex: REF-99201',
@@ -128,33 +138,36 @@ class DefectsPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
                   const _SectionTitle(
-                      icon: Icons.error_outline, title: 'Details du Defaut'),
-                  const SizedBox(height: 10),
+                      icon: Icons.error_outline, title: 'Détails du Défaut'),
+                  const SizedBox(height: 12),
                   _Panel(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('Operateur'),
+                        const _Label('Opérateur'),
                         const SizedBox(height: 8),
                         DropdownButtonFormField(
                           value: state.selectedOperateur,
                           onChanged: notifier.selectOperateur,
-                          dropdownColor: const Color(0xFF13284A),
-                          decoration: const InputDecoration(
-                              hintText: 'Selectionner un operateur'),
+                          dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
+                          decoration: InputDecoration(
+                              hintText: 'Sélectionner un opérateur',
+                              hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight)),
                           items: state.operateurs
                               .map((o) => DropdownMenuItem(
                                   value: o,
                                   child: Text(
                                       '${o.firstName} ${o.lastName} (${o.matricule})',
-                                      style: const TextStyle(
-                                          color: Color(0xFFEAF0F9)))))
+                                      style: TextStyle(
+                                          color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16))))
                               .toList(),
                         ),
-                        const SizedBox(height: 14),
-                        const _Label('Type de defaut'),
+                        const SizedBox(height: 18),
+                        const _Label('Type de défaut'),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -162,15 +175,18 @@ class DefectsPage extends ConsumerWidget {
                               child: DropdownButtonFormField(
                                 value: state.selectedTypeDefaut,
                                 onChanged: notifier.selectTypeDefaut,
-                                dropdownColor: const Color(0xFF13284A),
-                                decoration: const InputDecoration(
-                                    hintText: 'CODE - Description'),
+                                dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
+                                decoration: InputDecoration(
+                                    hintText: 'CODE - Description',
+                                    hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight)),
                                 items: state.typesDefaut
                                     .map((t) => DropdownMenuItem(
                                         value: t,
                                         child: Text(t.codeAndDescription,
-                                            style: const TextStyle(
-                                                color: Color(0xFFEAF0F9)))))
+                                            style: TextStyle(
+                                                color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 16))))
                                     .toList(),
                               ),
                             ),
@@ -179,33 +195,34 @@ class DefectsPage extends ConsumerWidget {
                                 onScan: notifier.scanTypeDefaut, size: 52),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        const _Label('Quantite'),
+                        const SizedBox(height: 18),
+                        const _Label('Quantité'),
                         const SizedBox(height: 8),
                         Row(
                           children: [
                             _QtyButton(
                                 icon: Icons.remove,
                                 onTap: notifier.decrementQuantite),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Container(
                                 height: 58,
                                 alignment: Alignment.center,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF0D1F3F),
-                                  borderRadius: BorderRadius.circular(12),
+                                  color: isDark ? const Color(0xFF0D1F3F) : const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                      color: const Color(0xFF2A426B)),
+                                      color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight,
+                                      width: 1.5),
                                 ),
                                 child: Text('${state.quantite}',
-                                    style: const TextStyle(
-                                        color: Color(0xFFEAF0F9),
-                                        fontSize: 30,
-                                        fontWeight: FontWeight.w700)),
+                                    style: TextStyle(
+                                        color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.w800)),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 12),
                             _QtyButton(
                                 icon: Icons.add,
                                 onTap: notifier.incrementQuantite),
@@ -214,33 +231,49 @@ class DefectsPage extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                        color: const Color(0xFF112341),
-                        borderRadius: BorderRadius.circular(12)),
+                        color: isDark ? const Color(0xFF112341) : AppPalette.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: isDark ? Colors.transparent : AppPalette.primary.withOpacity(0.1))),
                     child: Row(
                       children: [
-                        const Icon(Icons.schedule, color: Color(0xFF89A3C9)),
-                        const SizedBox(width: 8),
+                        Icon(Icons.schedule, color: isDark ? const Color(0xFF89A3C9) : AppPalette.primary, size: 20),
+                        const SizedBox(width: 10),
                         Text('Date/heure enregistrement: $dateLabel',
-                            style: const TextStyle(color: Color(0xFF9CB1D3))),
+                            style: TextStyle(
+                                color: isDark ? const Color(0xFF9CB1D3) : AppPalette.textSecondaryLight,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500)),
                       ],
                     ),
                   ),
                   if (state.error != null)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(state.error!,
-                          style: const TextStyle(color: Color(0xFFFF8D98))),
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppPalette.error.withOpacity(0.1),
+                          border: Border.all(color: AppPalette.error),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(state.error!,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: isDark ? const Color(0xFFFF7A83) : const Color(0xFFD32F2F), fontWeight: FontWeight.w500)),
+                      ),
                     ),
                 ],
               ),
             ),
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 18),
-        color: const Color(0xFF13284A),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        decoration: BoxDecoration(
+           color: theme.scaffoldBackgroundColor,
+           border: Border(top: BorderSide(color: isDark ? AppPalette.borderDark : AppPalette.borderLight, width: 1)),
+        ),
         child: SizedBox(
           height: 58,
           child: FilledButton.icon(
@@ -252,18 +285,22 @@ class DefectsPage extends ConsumerWidget {
                       return;
                     }
                     ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Defaut enregistre.')));
+                        const SnackBar(content: Text('Défaut enregistré avec succès.')));
                     context.go('/operator/dashboard');
                   },
             icon: state.isSubmitting
                 ? const SizedBox(
-                    width: 16,
-                    height: 16,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.save_alt_rounded),
-            label: const Text('Enregistrer le defaut',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700)),
+                        strokeWidth: 2.5, color: Colors.white))
+                : const Icon(Icons.save_rounded, size: 24),
+            label: const Text('ENREGISTRER LE DEFAUT',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppPalette.primary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
           ),
         ),
       ),
@@ -279,14 +316,15 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF2A7BFF)),
+        Icon(icon, color: AppPalette.primary, size: 22),
         const SizedBox(width: 8),
         Text(title,
-            style: const TextStyle(
-                color: Color(0xFFEAF0F9),
-                fontSize: 26,
+            style: TextStyle(
+                color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
+                fontSize: 18,
                 fontWeight: FontWeight.w700)),
       ],
     );
@@ -300,12 +338,20 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2C4B),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF264773)),
+        color: isDark ? const Color(0xFF1A2C4B) : AppPalette.surfaceLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? const Color(0xFF264773) : AppPalette.borderLight),
+        boxShadow: isDark ? null : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: child,
     );
@@ -319,11 +365,12 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Text(label,
-        style: const TextStyle(
-            color: Color(0xFF98ABC9),
-            fontSize: 17,
-            fontWeight: FontWeight.w600));
+        style: TextStyle(
+            color: isDark ? const Color(0xFF98ABC9) : AppPalette.textSecondaryLight,
+            fontSize: 14,
+            fontWeight: FontWeight.w700));
   }
 }
 
@@ -335,16 +382,17 @@ class _QtyButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       width: 58,
       height: 58,
       child: Material(
-        color: const Color(0xFF0D1F3F),
-        borderRadius: BorderRadius.circular(12),
+        color: isDark ? const Color(0xFF0D1F3F) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          child: Icon(icon, color: const Color(0xFFEAF0F9), size: 30),
+          child: Icon(icon, color: AppPalette.primary, size: 28),
         ),
       ),
     );

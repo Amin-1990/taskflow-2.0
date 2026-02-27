@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/services/timezone_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/app_router.dart';
 import 'data/repositories/app_providers.dart';
@@ -8,7 +9,9 @@ import 'data/repositories/intervention_repository.dart';
 import 'features/auth/controllers/auth_provider.dart';
 import 'features/settings/controllers/settings_provider.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await TimezoneService.initialize();
   runApp(const ProviderScope(child: TaskflowApp()));
 }
 

@@ -95,6 +95,9 @@ class OperatorDashboardNotifier extends StateNotifier<OperatorDashboardState> {
       final context =
           await _repository.getUserContext(_userId, fallbackUser: fallbackUser);
       final stats = await _repository.getDashboardStats(_userId);
+      
+      if (!mounted) return;
+
       state = state.copyWith(
         isLoading: false,
         isRefreshing: false,
@@ -103,8 +106,10 @@ class OperatorDashboardNotifier extends StateNotifier<OperatorDashboardState> {
         clearError: true,
       );
     } catch (e) {
-      state = state.copyWith(
-          isLoading: false, isRefreshing: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(
+            isLoading: false, isRefreshing: false, error: e.toString());
+      }
     }
   }
 

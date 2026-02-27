@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/design_constants.dart';
 
 class SelectionField<T> extends StatelessWidget {
   const SelectionField({
@@ -22,27 +23,18 @@ class SelectionField<T> extends StatelessWidget {
   final String? error;
   final VoidCallback? onClear;
 
-  static const double borderRadius = 12.0;
-  static const double borderWidth = 2.0;
-  static const Color borderColor = Color(0xFF2A7BFF);
-  static const Color focusedBorderColor = Color(0xFF2A7BFF);
-  static const Color errorBorderColor = Color(0xFFD32F2F);
-  static const List<BoxShadow> boxShadow = [
-    BoxShadow(
-      color: Color(0x1A000000),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-    ),
-  ];
-  static const Color backgroundColor = Color(0xFF1A2C4B);
-  static const Color textColor = Color(0xFFE8EEF8);
-  static const Color labelColor = Color(0xFF8EA2C3);
-  static const Color iconColor = Color(0xFF2A7BFF);
-  static const double fieldHeight = 56.0;
-  static const double paddingHorizontal = 12.0;
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final backgroundColor = isDark ? const Color(0xFF1A2C4B) : Colors.white;
+    final borderColor = isDark ? AppPalette.primary : AppPalette.primary.withOpacity(0.5);
+    final errorBorderColor = isDark ? AppPalette.error : const Color(0xFFD32F2F);
+    final labelColor = isDark ? const Color(0xFF8EA2C3) : AppPalette.textSecondaryLight;
+    final textColor = isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight;
+    final iconColor = AppPalette.primary;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -51,36 +43,43 @@ class SelectionField<T> extends StatelessWidget {
           padding: const EdgeInsets.only(bottom: 8.0),
           child: Text(
             label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: labelColor,
-                  fontWeight: FontWeight.w600,
-                ),
+            style: theme.textTheme.labelLarge?.copyWith(
+              color: labelColor,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
         // Field
         GestureDetector(
           onTap: onTap,
           child: Container(
-            height: fieldHeight,
+            height: 56.0,
             decoration: BoxDecoration(
               color: backgroundColor,
               border: Border.all(
                 color: error != null ? errorBorderColor : borderColor,
-                width: borderWidth,
+                width: 1.5,
               ),
-              borderRadius: BorderRadius.circular(borderRadius),
-              boxShadow: boxShadow,
+              borderRadius: BorderRadius.circular(12.0),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
             ),
             child: Row(
               children: [
                 // QR Scan Button
                 if (enableQrScan)
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: paddingHorizontal),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: GestureDetector(
                       onTap: onScanQr,
-                      child: const Icon(
+                      child: Icon(
                         Icons.qr_code_2,
                         color: iconColor,
                         size: 24,
@@ -90,13 +89,13 @@ class SelectionField<T> extends StatelessWidget {
                 // Text Display
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: paddingHorizontal),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: Text(
                       value != null ? displayText(value as T) : 'Sélectionner',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: value != null ? textColor : labelColor,
-                          ),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: value != null ? textColor : labelColor,
+                        fontWeight: value != null ? FontWeight.w600 : FontWeight.normal,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
@@ -104,11 +103,10 @@ class SelectionField<T> extends StatelessWidget {
                 // Clear Button (shown when value is selected)
                 if (value != null && onClear != null)
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: paddingHorizontal),
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: GestureDetector(
                       onTap: onClear,
-                      child: const Icon(
+                      child: Icon(
                         Icons.close,
                         color: iconColor,
                         size: 24,
@@ -117,9 +115,8 @@ class SelectionField<T> extends StatelessWidget {
                   ),
                 // Dropdown Arrow
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: paddingHorizontal),
-                  child: const Icon(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Icon(
                     Icons.expand_more,
                     color: iconColor,
                     size: 24,
@@ -135,9 +132,9 @@ class SelectionField<T> extends StatelessWidget {
             padding: const EdgeInsets.only(top: 4.0),
             child: Text(
               error!,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: errorBorderColor,
-                  ),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: errorBorderColor,
+              ),
             ),
           ),
       ],

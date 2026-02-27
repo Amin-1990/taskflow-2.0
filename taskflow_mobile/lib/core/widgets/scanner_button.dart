@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:qr_code_scanner/qr_code_scanner.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 class ScannerButton extends StatelessWidget {
   const ScannerButton({
@@ -51,28 +51,13 @@ class _QrScannerPage extends StatefulWidget {
 }
 
 class _QrScannerPageState extends State<_QrScannerPage> {
-  final qrKey = GlobalKey(debugLabel: 'taskflow-qr');
-  QRViewController? _controller;
+  final MobileScannerController _controller = MobileScannerController();
   bool _sent = false;
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
-  }
-
-  void _onViewCreated(QRViewController controller) {
-    _controller = controller;
-    controller.scannedDataStream.listen((scanData) {
-      if (_sent) {
-        return;
-      }
-      final code = scanData.code;
-      if (code != null && code.isNotEmpty) {
-        _sent = true;
-        Navigator.of(context).pop(code);
-      }
-    });
   }
 
   Future<void> _manualEntry() async {
@@ -114,9 +99,17 @@ class _QrScannerPageState extends State<_QrScannerPage> {
               icon: const Icon(Icons.keyboard_outlined)),
         ],
       ),
-      body: QRView(
-        key: qrKey,
-        onQRViewCreated: _onViewCreated,
+      body: MobileScanner(
+        controller: _controller,
+        onDetect: (barcodes) {
+          if (_sent) return;
+          final barcode = barcodes.barcodes.firstOrNull;
+          final code = barcode?.rawValue;
+          if (code != null && code.isNotEmpty) {
+            _sent = true;
+            Navigator.of(context).pop(code);
+          }
+        },
       ),
     );
   }

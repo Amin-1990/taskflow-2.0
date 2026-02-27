@@ -215,14 +215,14 @@ export const Horaires: FunctionComponent<HorairesPageProps> = () => {
     };
 
     try {
-      setIsSaving(true);
-      if (editingId) {
-        await horairesApi.update(editingId, payload);
-        showToast.success('Horaire modifie');
-      } else {
-        await horairesApi.create(payload);
-        showToast.success('Horaire cree');
-      }
+       setIsSaving(true);
+       if (editingId) {
+         await horairesApi.update(editingId, payload);
+         showToast.success('Horaire modifie');
+       } else {
+         await horairesApi.create(payload);
+         showToast.success('Horaire cree');
+       }
       setIsModalOpen(false);
       resetForm();
       await loadData();

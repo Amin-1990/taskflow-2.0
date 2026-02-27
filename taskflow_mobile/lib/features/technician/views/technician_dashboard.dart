@@ -13,6 +13,8 @@ class TechnicianDashboardPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final user = authState.user;
     final techId = user?.id ?? '';
     final state = ref.watch(technicianInterventionsProvider);
@@ -23,11 +25,11 @@ class TechnicianDashboardPage extends ConsumerWidget {
     final visible = state.tab == TechnicianTab.ongoing ? ongoing : completed;
 
     return Scaffold(
-      backgroundColor: AppPalette.backgroundDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       floatingActionButton: state.tab == TechnicianTab.ongoing
           ? FloatingActionButton(
-              backgroundColor: const Color(0xFF2A7BFF),
-              elevation: 10,
+              backgroundColor: AppPalette.primary,
+              elevation: 4,
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -35,7 +37,7 @@ class TechnicianDashboardPage extends ConsumerWidget {
                           Text('Creation intervention technicien: a venir.')),
                 );
               },
-              child: const Icon(Icons.add_rounded),
+              child: const Icon(Icons.add_rounded, color: Colors.white),
             )
           : null,
       body: SafeArea(
@@ -48,11 +50,12 @@ class TechnicianDashboardPage extends ConsumerWidget {
                 children: [
                   CircleAvatar(
                     radius: 25,
-                    backgroundColor: const Color(0xFF1D467A),
+                    backgroundColor: AppPalette.primary.withOpacity(0.2),
                     child: Text(
                       _initials(user?.fullName ?? ''),
-                      style: const TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                          color: isDark ? Colors.white : AppPalette.primary, 
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -60,13 +63,14 @@ class TechnicianDashboardPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Bonjour,',
+                        Text('Bonjour,',
                             style: TextStyle(
-                                color: Color(0xFF9CB0CE), fontSize: 18)),
+                                color: isDark ? const Color(0xFF9CB0CE) : AppPalette.textSecondaryLight, 
+                                fontSize: 18)),
                         Text(
                           user?.fullName ?? 'Technicien',
-                          style: const TextStyle(
-                              color: Color(0xFFEAF0F9),
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurface,
                               fontSize: 36 / 1.4,
                               fontWeight: FontWeight.w700),
                         ),
@@ -79,10 +83,10 @@ class TechnicianDashboardPage extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 18),
-              const Text(
+              Text(
                 'Mes interventions',
                 style: TextStyle(
-                    color: Color(0xFFEAF0F9),
+                    color: theme.colorScheme.onSurface,
                     fontSize: 46 / 1.4,
                     fontWeight: FontWeight.w700),
               ),
@@ -97,7 +101,7 @@ class TechnicianDashboardPage extends ConsumerWidget {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: Text(state.error!,
-                      style: const TextStyle(color: Color(0xFFFF8D98))),
+                      style: const TextStyle(color: AppPalette.error)),
                 ),
               if (state.isLoading)
                 const Padding(
@@ -105,11 +109,12 @@ class TechnicianDashboardPage extends ConsumerWidget {
                   child: Center(child: CircularProgressIndicator()),
                 )
               else if (visible.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.only(top: 140),
+                Padding(
+                  padding: const EdgeInsets.only(top: 140),
                   child: Center(
                     child: Text('Aucune intervention pour cet onglet.',
-                        style: TextStyle(color: Color(0xFF9FB2D0))),
+                        style: TextStyle(
+                            color: isDark ? const Color(0xFF9FB2D0) : AppPalette.textMutedLight)),
                   ),
                 )
               else
@@ -151,9 +156,11 @@ class TechnicianDashboardPage extends ConsumerWidget {
       ),
       bottomNavigationBar: Container(
         height: 74,
-        decoration: const BoxDecoration(
-          color: Color(0xFF0E1E3A),
-          border: Border(top: BorderSide(color: Color(0xFF213A5E))),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF0E1E3A) : Colors.white,
+          border: Border(top: BorderSide(
+              color: isDark ? const Color(0xFF213A5E) : AppPalette.borderLight
+          )),
         ),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -201,11 +208,14 @@ class _Tabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0F2446),
+        color: isDark ? const Color(0xFF0F2446) : const Color(0xFFEDF2F9),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFF2A426B)),
+        border: Border.all(
+            color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight
+        ),
       ),
       child: Row(
         children: [
@@ -245,6 +255,7 @@ class _TabButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -253,7 +264,7 @@ class _TabButton extends StatelessWidget {
         margin: const EdgeInsets.all(6),
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2A7BFF) : Colors.transparent,
+          color: selected ? AppPalette.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -262,7 +273,9 @@ class _TabButton extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                color: selected ? Colors.white : const Color(0xFF9FB2D0),
+                color: selected 
+                    ? Colors.white 
+                    : (isDark ? const Color(0xFF9FB2D0) : AppPalette.textSecondaryLight),
                 fontSize: 31 / 1.6,
                 fontWeight: FontWeight.w700,
               ),
@@ -272,12 +285,12 @@ class _TabButton extends StatelessWidget {
               CircleAvatar(
                 radius: 13,
                 backgroundColor: selected
-                    ? const Color(0xFF4F97FF)
-                    : const Color(0xFF263E63),
+                    ? Colors.white.withOpacity(0.2)
+                    : (isDark ? const Color(0xFF263E63) : AppPalette.borderLight),
                 child: Text(
                   '$trailingCount',
-                  style: const TextStyle(
-                      color: Colors.white,
+                  style: TextStyle(
+                      color: selected ? Colors.white : (isDark ? Colors.white : AppPalette.primary),
                       fontSize: 12,
                       fontWeight: FontWeight.w700),
                 ),
@@ -303,15 +316,22 @@ class _InterventionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final dateText = DateFormat('HH:mm').format(item.dateDemande);
     final color = _priorityColor(item.priority);
     final label = _statusAction(item.status);
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2C4B),
+        color: isDark ? const Color(0xFF1A2C4B) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF2A426B)),
+        border: Border.all(
+            color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight
+        ),
+        boxShadow: isDark ? null : [
+          const BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 3))
+        ]
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,8 +357,8 @@ class _InterventionCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           item.machine.name.toUpperCase(),
-                          style: const TextStyle(
-                              color: Color(0xFF9DB0CC),
+                          style: TextStyle(
+                              color: isDark ? const Color(0xFF9DB0CC) : AppPalette.textSecondaryLight,
                               fontWeight: FontWeight.w700,
                               letterSpacing: 1),
                         ),
@@ -349,8 +369,8 @@ class _InterventionCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     item.typePanne,
-                    style: const TextStyle(
-                        color: Color(0xFFEAF0F9),
+                    style: TextStyle(
+                        color: theme.colorScheme.onSurface,
                         fontSize: 20 / 1.1,
                         fontWeight: FontWeight.w700),
                   ),
@@ -358,33 +378,40 @@ class _InterventionCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       item.description,
-                      style: const TextStyle(
-                          color: Color(0xFFA4B7D4), height: 1.35),
+                      style: TextStyle(
+                          color: isDark ? const Color(0xFFA4B7D4) : AppPalette.textMutedLight, 
+                          height: 1.35),
                     ),
                   ],
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined,
-                          color: Color(0xFF91A5C7), size: 19),
+                      Icon(Icons.location_on_outlined,
+                          color: isDark ? const Color(0xFF91A5C7) : AppPalette.textMutedLight, 
+                          size: 19),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           item.machine.location,
-                          style: const TextStyle(
-                              color: Color(0xFFB2C2DB), fontSize: 18),
+                          style: TextStyle(
+                              color: isDark ? const Color(0xFFB2C2DB) : AppPalette.textSecondaryLight, 
+                              fontSize: 18),
                         ),
                       ),
                       Text(
                         dateText,
-                        style: const TextStyle(
-                            color: Color(0xFF90A4C4), fontSize: 18),
+                        style: TextStyle(
+                            color: isDark ? const Color(0xFF90A4C4) : AppPalette.textMutedLight, 
+                            fontSize: 18),
                       ),
                     ],
                   ),
                   if (label != null) ...[
                     const SizedBox(height: 12),
-                    const Divider(color: Color(0xFF2A426B), height: 1),
+                    Divider(
+                      color: isDark ? const Color(0xFF2A426B) : AppPalette.borderLight, 
+                      height: 1
+                    ),
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
@@ -428,11 +455,11 @@ class _InterventionCard extends StatelessWidget {
   Color _priorityColor(InterventionPriority priority) {
     switch (priority) {
       case InterventionPriority.haute:
-        return const Color(0xFFE84C4C);
+        return AppPalette.error;
       case InterventionPriority.basse:
-        return const Color(0xFF3AA860);
+        return AppPalette.success;
       case InterventionPriority.moyenne:
-        return const Color(0xFFF2B01A);
+        return AppPalette.warning;
     }
   }
 }
@@ -445,9 +472,9 @@ class _PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (priority) {
-      InterventionPriority.haute => const Color(0xFFE84C4C),
-      InterventionPriority.moyenne => const Color(0xFFF2B01A),
-      InterventionPriority.basse => const Color(0xFF3AA860),
+      InterventionPriority.haute => AppPalette.error,
+      InterventionPriority.moyenne => AppPalette.warning,
+      InterventionPriority.basse => AppPalette.success,
     };
     final label = switch (priority) {
       InterventionPriority.haute => 'HAUTE',
@@ -478,29 +505,30 @@ class _SyncBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-            color:
-                isOnline ? const Color(0xFF2C9A66) : const Color(0xFFAA5963)),
-        color: isOnline ? const Color(0xFF103126) : const Color(0xFF4B2630),
+            color: isOnline ? AppPalette.success : AppPalette.error),
+        color: isOnline 
+            ? AppPalette.success.withOpacity(0.1) 
+            : AppPalette.error.withOpacity(0.1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             isOnline ? Icons.sync_rounded : Icons.cloud_off_rounded,
-            color: isOnline ? const Color(0xFF35D088) : const Color(0xFFFFA8B2),
+            color: isOnline ? AppPalette.success : AppPalette.error,
             size: 18,
           ),
           const SizedBox(width: 6),
           Text(
             isOnline ? 'Synchronise' : '$pendingCount en attente',
             style: TextStyle(
-              color:
-                  isOnline ? const Color(0xFFB6F6D6) : const Color(0xFFFFC3CB),
+              color: isOnline ? AppPalette.success : AppPalette.error,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -520,7 +548,11 @@ class _BottomNavIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFF2A7BFF) : const Color(0xFF8EA3C5);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final color = active 
+        ? AppPalette.primary 
+        : (isDark ? const Color(0xFF8EA3C5) : AppPalette.textSecondaryLight);
+    
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [

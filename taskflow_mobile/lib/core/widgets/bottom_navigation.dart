@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../constants/design_constants.dart';
 
 class TaskflowBottomNavigation extends StatelessWidget {
   const TaskflowBottomNavigation({
@@ -13,11 +14,26 @@ class TaskflowBottomNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(8, 6, 8, 10),
-      decoration: const BoxDecoration(
-        color: Color(0xFF13284A),
-        border: Border(top: BorderSide(color: Color(0xFF233E67), width: 1.2)),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF13284A) : Colors.white,
+        border: Border(
+            top: BorderSide(
+                color: isDark ? const Color(0xFF233E67) : AppPalette.borderLight,
+                width: 1.2)),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, -5),
+                ),
+              ],
       ),
       child: Row(
         children: [
@@ -63,6 +79,10 @@ class _Item extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final activeColor = AppPalette.primary;
+    final inactiveColor = isDark ? const Color(0xFF8CA2C5) : AppPalette.textSecondaryLight;
+
     return Expanded(
       child: InkWell(
         onTap: onTap,
@@ -76,9 +96,7 @@ class _Item extends StatelessWidget {
                 clipBehavior: Clip.none,
                 children: [
                   Icon(icon,
-                      color: active
-                          ? const Color(0xFF2A7BFF)
-                          : const Color(0xFF8CA2C5),
+                      color: active ? activeColor : inactiveColor,
                       size: 31),
                   if (badge > 0)
                     Positioned(
@@ -106,10 +124,9 @@ class _Item extends StatelessWidget {
               Text(
                 label,
                 style: TextStyle(
-                    color: active
-                        ? const Color(0xFF2A7BFF)
-                        : const Color(0xFF8CA2C5),
-                    fontSize: 14),
+                    color: active ? activeColor : inactiveColor,
+                    fontSize: 14,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.normal),
               ),
             ],
           ),

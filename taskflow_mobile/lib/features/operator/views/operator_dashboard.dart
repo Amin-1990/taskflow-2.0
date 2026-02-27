@@ -17,14 +17,16 @@ class OperatorDashboardPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(operatorDashboardProvider);
     final notifier = ref.read(operatorDashboardProvider.notifier);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: AppPalette.backgroundDark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: notifier.refresh,
-          color: const Color(0xFF2A7BFF),
-          backgroundColor: const Color(0xFF112341),
+          color: AppPalette.primary,
+          backgroundColor: isDark ? const Color(0xFF112341) : Colors.white,
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
             children: [
@@ -42,15 +44,18 @@ class OperatorDashboardPage extends ConsumerWidget {
                   onSync: notifier.refresh,
                 ),
                 const SizedBox(height: 14),
-                Container(height: 1, color: AppPalette.borderDark),
+                Container(
+                  height: 1, 
+                  color: isDark ? AppPalette.borderDark : AppPalette.borderLight
+                ),
                 const SizedBox(height: 18),
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Tableau de bord',
                         style: TextStyle(
-                            color: AppPalette.textPrimary,
+                            color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
                             fontWeight: FontWeight.w700,
                             fontSize: 38 / 1.4),
                       ),
@@ -62,7 +67,7 @@ class OperatorDashboardPage extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                             color: AppPalette.primary.withOpacity(0.5)),
-                        color: const Color(0xFF12274A),
+                        color: isDark ? const Color(0xFF12274A) : AppPalette.primary.withOpacity(0.08),
                       ),
                       child: const Text('v2.4.0',
                           style: TextStyle(
@@ -84,10 +89,10 @@ class OperatorDashboardPage extends ConsumerWidget {
                     onTap: () =>
                         context.push('/operator/intervention/request')),
                 const SizedBox(height: 20),
-                const Text(
+                Text(
                   'PERFORMANCE AUJOURD\'HUI',
                   style: TextStyle(
-                    color: AppPalette.textSecondary,
+                    color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
                     fontSize: 18 / 1.4,
                     letterSpacing: 1,
                     fontWeight: FontWeight.w600,
@@ -143,7 +148,7 @@ class _StatGrid extends StatelessWidget {
         StatCard(
           icon: Icons.check_circle_outline,
           value: '$tasksToFinish',
-          label: 'Finir tache',
+          label: 'Finir tâche',
           color: const Color(0xFF33D39A),
           onTap: () => context.push('/operator/tasks'),
         ),
@@ -157,7 +162,7 @@ class _StatGrid extends StatelessWidget {
         StatCard(
           icon: Icons.warning_amber_rounded,
           value: '$processDefects',
-          label: 'Defauts Process',
+          label: 'Défauts Process',
           color: const Color(0xFFFD6A77),
           onTap: () => context.push('/operator/defects'),
         ),
@@ -193,11 +198,17 @@ class _DashboardShimmerState extends State<_DashboardShimmer>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final pulse = 0.22 + (_controller.value * 0.24);
-        final color = Color.fromRGBO(36, 64, 102, pulse);
+        final pulse = isDark 
+            ? 0.22 + (_controller.value * 0.24)
+            : 0.12 + (_controller.value * 0.10);
+        final color = isDark 
+            ? Color.fromRGBO(36, 64, 102, pulse)
+            : Color.fromRGBO(203, 213, 225, pulse);
+            
         return Column(
           children: [
             Container(
@@ -250,19 +261,22 @@ class _ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final mutedColor = isDark ? const Color(0xFF9DB2D4) : AppPalette.textMutedLight;
+    
     return Padding(
       padding: const EdgeInsets.only(top: 120),
       child: Column(
         children: [
-          const Icon(Icons.cloud_off, color: Color(0xFF9DB2D4), size: 44),
+          Icon(Icons.cloud_off, color: mutedColor, size: 44),
           const SizedBox(height: 10),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFF9DB2D4), fontSize: 16),
+            style: TextStyle(color: mutedColor, fontSize: 16),
           ),
           const SizedBox(height: 14),
-          FilledButton(onPressed: onRetry, child: const Text('Reessayer')),
+          FilledButton(onPressed: onRetry, child: const Text('Réessayer')),
         ],
       ),
     );

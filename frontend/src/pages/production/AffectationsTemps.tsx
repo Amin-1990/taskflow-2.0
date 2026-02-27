@@ -36,10 +36,15 @@ const getDefaultRange = () => {
   };
 };
 
-const formatDuration = (seconds: number): string => {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}h ${m.toString().padStart(2, '0')}m`;
+const formatDuration = (seconds?: number | null): string => {
+  if (!seconds || seconds <= 0) return '-';
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours > 0 && mins > 0) return `${hours}h ${mins}min`;
+  if (hours > 0) return `${hours}h`;
+  return `${mins}min`;
 };
 
 const shiftDate = (date: string, days: number): string => {
@@ -348,33 +353,30 @@ export const AffectationsTemps: FunctionComponent<AffectationsTempsProps> = ({
       <div className="flex gap-2">
         <button
           onClick={() => setView('operateurs')}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-            view === 'operateurs'
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${view === 'operateurs'
               ? 'bg-blue-600 text-white'
               : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
+            }`}
         >
           <Users className="w-4 h-4" />
           Vue opérateurs
         </button>
         <button
           onClick={() => setView('chrono')}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-            view === 'chrono'
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${view === 'chrono'
               ? 'bg-blue-600 text-white'
               : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
+            }`}
         >
           <Clock3 className="w-4 h-4" />
           Vue chronologique
         </button>
         <button
           onClick={() => setView('hebdo')}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-            view === 'hebdo'
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${view === 'hebdo'
               ? 'bg-blue-600 text-white'
               : 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-          }`}
+            }`}
         >
           <Calendar className="w-4 h-4" />
           Vue hebdo
@@ -423,9 +425,8 @@ export const AffectationsTemps: FunctionComponent<AffectationsTempsProps> = ({
                       {resumesOperateurs.map((row) => (
                         <tr
                           key={row.operateurId}
-                          className={`border-t border-gray-100 cursor-pointer ${
-                            selectedOperateurId === row.operateurId ? 'bg-blue-50' : 'hover:bg-gray-50'
-                          }`}
+                          className={`border-t border-gray-100 cursor-pointer ${selectedOperateurId === row.operateurId ? 'bg-blue-50' : 'hover:bg-gray-50'
+                            }`}
                           onClick={() => setSelectedOperateurId(row.operateurId)}
                         >
                           <td className="px-4 py-3 font-medium text-gray-800">{row.operateurNom}</td>
@@ -457,9 +458,8 @@ export const AffectationsTemps: FunctionComponent<AffectationsTempsProps> = ({
                           Cmd #{item.ID_Commande} - {item.Code_article || 'N/A'}
                         </p>
                         <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            item.Date_fin ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'
-                          }`}
+                          className={`text-xs px-2 py-1 rounded-full ${item.Date_fin ? 'bg-gray-100 text-gray-700' : 'bg-green-100 text-green-700'
+                            }`}
                         >
                           {item.Date_fin ? 'Terminée' : 'En cours'}
                         </span>

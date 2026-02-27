@@ -57,14 +57,18 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: RadialGradient(
-            center: Alignment(0, -0.7),
+            center: const Alignment(0, -0.7),
             radius: 1.2,
-            colors: [Color(0xFF0F234B), AppPalette.backgroundDark],
+            colors: isDark
+                ? [const Color(0xFF0F234B), AppPalette.backgroundDark]
+                : [const Color(0xFFE2E8F0), AppPalette.backgroundLight],
           ),
         ),
         child: SafeArea(
@@ -77,8 +81,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   children: [
                     IconButton(
                       onPressed: () => context.push('/server-config'),
-                      icon: const Icon(Icons.settings,
-                          color: AppPalette.textSecondary),
+                      icon: Icon(Icons.settings,
+                          color: isDark
+                              ? AppPalette.textSecondary
+                              : AppPalette.textSecondaryLight),
                       tooltip: 'Parametres serveur',
                     ),
                   ],
@@ -97,20 +103,28 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   onSubmit: _submit,
                 ),
                 const SizedBox(height: 72),
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.help_outline, color: AppPalette.textMuted),
-                    SizedBox(width: 8),
+                    Icon(Icons.help_outline,
+                        color: isDark
+                            ? AppPalette.textMuted
+                            : AppPalette.textMutedLight),
+                    const SizedBox(width: 8),
                     Text('Besoin d\'aide ?',
                         style: TextStyle(
-                            color: AppPalette.textMuted, fontSize: 16)),
+                            color: isDark
+                                ? AppPalette.textMuted
+                                : AppPalette.textMutedLight,
+                            fontSize: 16)),
                   ],
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   AppConfig.appVersionLabel,
-                  style: TextStyle(color: Color(0xFF5F739A), fontSize: 15),
+                  style: TextStyle(
+                      color: isDark ? const Color(0xFF5F739A) : Colors.grey,
+                      fontSize: 15),
                 ),
               ],
             ),
@@ -126,17 +140,18 @@ class _BrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _HexagonLogo(size: 36),
-            SizedBox(width: 12),
+            const _HexagonLogo(size: 36),
+            const SizedBox(width: 12),
             Text(
               'Taskflow',
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? Colors.white : AppPalette.textPrimaryLight,
                 fontSize: 52 / 1.4,
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.6,
@@ -144,11 +159,11 @@ class _BrandHeader extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         Text(
           'MOBILE PRODUCTION SUITE',
           style: TextStyle(
-            color: AppPalette.textSecondary,
+            color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
             fontSize: 20 / 1.4,
             letterSpacing: 1.1,
             fontWeight: FontWeight.w600,
@@ -195,15 +210,22 @@ class _LoginCardState extends State<_LoginCard> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: const Color(0xFF17253C),
+        color: isDark ? const Color(0xFF17253C) : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppPalette.borderDark, width: 1.3),
-        boxShadow: const [
+        border: Border.all(
+            color: isDark ? AppPalette.borderDark : AppPalette.borderLight,
+            width: 1.3),
+        boxShadow: [
           BoxShadow(
-              color: Color(0x44000000), blurRadius: 22, offset: Offset(0, 10)),
+              color: isDark ? const Color(0x44000000) : Colors.black12,
+              blurRadius: 22,
+              offset: const Offset(0, 10)),
         ],
       ),
       child: Form(
@@ -211,22 +233,24 @@ class _LoginCardState extends State<_LoginCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(
+            Center(
               child: Text('Bienvenue',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: isDark ? Colors.white : AppPalette.textPrimaryLight,
                       fontSize: 38 / 1.4,
                       fontWeight: FontWeight.w700)),
             ),
             const SizedBox(height: 6),
-            const Center(
+            Center(
               child: Text(
                 'Veuillez vous authentifier pour continuer',
-                style: TextStyle(color: AppPalette.textSecondary, fontSize: 16),
+                style: TextStyle(
+                    color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
+                    fontSize: 16),
               ),
             ),
             const SizedBox(height: 22),
-            const Text('Identifiant', style: _labelStyle),
+            Text('Identifiant', style: _labelStyle(context)),
             const SizedBox(height: 8),
             _FocusField(
               controller: widget.emailController,
@@ -246,7 +270,7 @@ class _LoginCardState extends State<_LoginCard> {
               },
             ),
             const SizedBox(height: 18),
-            const Text('Mot de passe', style: _labelStyle),
+            Text('Mot de passe', style: _labelStyle(context)),
             const SizedBox(height: 8),
             _FocusField(
               controller: widget.passwordController,
@@ -260,7 +284,7 @@ class _LoginCardState extends State<_LoginCard> {
                   widget.obscurePassword
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: AppPalette.textSecondary,
+                  color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
                 ),
               ),
               validator: (value) => (value ?? '').isEmpty
@@ -303,7 +327,8 @@ class _LoginCardState extends State<_LoginCard> {
                             Text('Se connecter',
                                 style: TextStyle(
                                     fontSize: 20 / 1.4,
-                                    fontWeight: FontWeight.w700)),
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
                             SizedBox(width: 10),
                             _ArrowPulse(),
                           ],
@@ -317,11 +342,14 @@ class _LoginCardState extends State<_LoginCard> {
     );
   }
 
-  static const _labelStyle = TextStyle(
-    color: Color(0xFFD7E4FB),
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-  );
+  TextStyle _labelStyle(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return TextStyle(
+      color: isDark ? const Color(0xFFD7E4FB) : AppPalette.textSecondaryLight,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+    );
+  }
 }
 
 class _FocusField extends StatefulWidget {
@@ -379,30 +407,41 @@ class _FocusFieldState extends State<_FocusField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final focused = widget.focusNode.hasFocus;
-    final iconColor = focused ? AppPalette.primary : const Color(0xFF6D85AB);
+    final iconColor = focused ? AppPalette.primary : (isDark ? const Color(0xFF6D85AB) : const Color(0xFF94A3B8));
+    
     return TextFormField(
       controller: widget.controller,
       focusNode: widget.focusNode,
       keyboardType: widget.keyboardType,
       obscureText: widget.obscureText,
-      style: const TextStyle(color: AppPalette.textPrimary, fontSize: 16),
+      style: TextStyle(
+          color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight, 
+          fontSize: 16),
       decoration: InputDecoration(
         hintText: widget.hint,
-        hintStyle: const TextStyle(color: Color(0xFF607A9E), fontSize: 16),
+        hintStyle: TextStyle(
+            color: isDark ? const Color(0xFF607A9E) : const Color(0xFF94BAE0), 
+            fontSize: 16),
         prefixIcon: Icon(widget.icon, color: iconColor),
         suffixIcon: widget.suffix,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         filled: true,
-        fillColor: const Color(0xFF1A2D4B),
+        fillColor: isDark ? const Color(0xFF1A2D4B) : const Color(0xFFF1F5F9),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2E4B78), width: 1.3),
+          borderSide: BorderSide(
+              color: isDark ? const Color(0xFF2E4B78) : const Color(0xFFCBD5E1), 
+              width: 1.3),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: const BorderSide(color: Color(0xFF2E4B78), width: 1.3),
+          borderSide: BorderSide(
+              color: isDark ? const Color(0xFF2E4B78) : const Color(0xFFCBD5E1), 
+              width: 1.3),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

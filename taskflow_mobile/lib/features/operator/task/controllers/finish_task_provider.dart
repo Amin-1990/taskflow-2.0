@@ -10,6 +10,7 @@ class FinishTaskState {
     required this.isLoading,
     required this.currentTask,
     required this.operatorInput,
+    required this.selectedOperatorId,
     required this.quantity,
     required this.notes,
     required this.isSubmitting,
@@ -20,6 +21,7 @@ class FinishTaskState {
   final bool isLoading;
   final Task? currentTask;
   final String operatorInput;
+  final String? selectedOperatorId;
   final int quantity;
   final String notes;
   final bool isSubmitting;
@@ -31,6 +33,7 @@ class FinishTaskState {
       isLoading: true,
       currentTask: null,
       operatorInput: '',
+      selectedOperatorId: null,
       quantity: 0,
       notes: '',
       isSubmitting: false,
@@ -44,6 +47,8 @@ class FinishTaskState {
     Task? currentTask,
     bool clearCurrentTask = false,
     String? operatorInput,
+    String? selectedOperatorId,
+    bool clearSelectedOperator = false,
     int? quantity,
     String? notes,
     bool? isSubmitting,
@@ -55,6 +60,9 @@ class FinishTaskState {
       isLoading: isLoading ?? this.isLoading,
       currentTask: clearCurrentTask ? null : (currentTask ?? this.currentTask),
       operatorInput: operatorInput ?? this.operatorInput,
+      selectedOperatorId: clearSelectedOperator
+          ? null
+          : (selectedOperatorId ?? this.selectedOperatorId),
       quantity: quantity ?? this.quantity,
       notes: notes ?? this.notes,
       isSubmitting: isSubmitting ?? this.isSubmitting,
@@ -72,7 +80,7 @@ final currentTaskIdProvider = Provider<String?>((ref) {
   return TaskRepository.mockCurrentTask.id;
 });
 
-final finishTaskProvider = StateNotifierProvider.autoDispose
+final finishTaskProvider = StateNotifierProvider
     .family<FinishTaskNotifier, FinishTaskState, String?>((ref, taskId) {
   final repository = ref.read(taskRepositoryProvider);
   final user = ref.read(authProvider).user;
@@ -88,8 +96,7 @@ final finishTaskProvider = StateNotifierProvider.autoDispose
     userId: userId,
     operatorMatricule: operatorMatricule,
   );
-  notifier.setOperatorInput(operatorMatricule ?? userId);
-  notifier.loadCurrentTask();
+  // Don't load automatically - wait for user selection
   return notifier;
 });
 
@@ -110,26 +117,54 @@ class FinishTaskNotifier extends StateNotifier<FinishTaskState> {
     state = state.copyWith(operatorInput: value.trim(), clearError: true);
   }
 
+  void setSelectedOperator(String operatorId) {
+    debugPrint('🔍 [FinishTaskNotifier] setSelectedOperator called with ID: $operatorId');
+    state = state.copyWith(selectedOperatorId: operatorId, clearError: true);
+    // Charger la tâche automatiquement après sélection
+    debugPrint('🔍 [FinishTaskNotifier] About to call loadCurrentTask()');
+    loadCurrentTask();
+  }
+
+  void clearOperator() {
+    state = state.copyWith(
+      clearSelectedOperator: true,
+      clearCurrentTask: true,
+      quantity: 0,
+      clearError: true,
+    );
+  }
+
   Future<void> loadCurrentTask() async {
+    debugPrint('⏳ [FinishTaskNotifier] loadCurrentTask() STARTED');
+    debugPrint('⏳ [FinishTaskNotifier] mounted=$mounted, selectedOperatorId=${state.selectedOperatorId}');
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final input = state.operatorInput.trim();
+      final selectedOp = state.selectedOperatorId;
       final fallbackMatricule = operatorMatricule?.trim() ?? '';
 
-      final bool userTypedInput =
-          input.isNotEmpty && input != userId && input != fallbackMatricule;
-
-      final task = userTypedInput
+      debugPrint('⏳ [FinishTaskNotifier] Calling API with selectedOp=$selectedOp');
+      final task = selectedOp != null
           ? await _repository.getCurrentTaskForIdentity(
-              userId: input,
-              matricule: input,
+              userId: selectedOp,
+              matricule: selectedOp,
             )
           : await _repository.getCurrentTaskForIdentity(
               userId: userId,
               matricule: fallbackMatricule.isEmpty ? null : fallbackMatricule,
             );
 
+      debugPrint('⏳ [FinishTaskNotifier] API Response received, task=$task');
+      debugPrint('⏳ [FinishTaskNotifier] Before mounted check: mounted=$mounted');
+      
+      if (!mounted) {
+        debugPrint('❌ [FinishTaskNotifier] NOT MOUNTED - skipping state update. Task: $task');
+        return;
+      }
+
+      debugPrint('✅ [FinishTaskNotifier] Still mounted, proceeding with state update');
+
       if (task == null) {
+        debugPrint('⚠️ [FinishTaskNotifier] Task is null');
         state = state.copyWith(
           isLoading: false,
           clearCurrentTask: true,
@@ -139,6 +174,7 @@ class FinishTaskNotifier extends StateNotifier<FinishTaskState> {
         return;
       }
 
+      debugPrint('✅ [FinishTaskNotifier] Task loaded successfully: ID=${task.id}, producedQty=${task.producedQuantity}');
       state = state.copyWith(
         isLoading: false,
         currentTask: task,
@@ -146,7 +182,12 @@ class FinishTaskNotifier extends StateNotifier<FinishTaskState> {
         clearError: true,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false, error: e.toString());
+      debugPrint('❌ [FinishTaskNotifier] Exception caught: $e');
+      if (mounted) {
+        state = state.copyWith(isLoading: false, error: e.toString());
+      } else {
+        debugPrint('❌ [FinishTaskNotifier] NOT MOUNTED after exception - skipping error state update');
+      }
     }
   }
 
@@ -175,10 +216,15 @@ class FinishTaskNotifier extends StateNotifier<FinishTaskState> {
         quantity: state.quantity,
         notes: state.notes.isEmpty ? null : state.notes,
       );
+      
+      if (!mounted) return result;
+
       state = state.copyWith(isSubmitting: false, finishedTask: result);
       return result;
     } catch (e) {
-      state = state.copyWith(isSubmitting: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(isSubmitting: false, error: e.toString());
+      }
       return null;
     }
   }

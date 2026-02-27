@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../core/constants/design_constants.dart';
 import '../../../../core/widgets/selection_field.dart';
 import '../../../../core/widgets/selection_modal.dart';
 import '../../../../domain/models/article_lot.dart';
@@ -23,23 +24,33 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
   Widget build(BuildContext context) {
     final state = ref.watch(newTaskProvider);
     final notifier = ref.read(newTaskProvider.notifier);
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF07152F),
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF07152F),
+        backgroundColor: theme.appBarTheme.backgroundColor,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFFE8EEF8)),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, 
+                color: theme.appBarTheme.iconTheme?.color),
           onPressed: () => context.go('/operator/dashboard'),
         ),
-        title: const Text('NOUVELLE AFFECTATION',
-            style: TextStyle(fontWeight: FontWeight.w700)),
+        title: Text('NOUVELLE AFFECTATION',
+            style: TextStyle(
+              color: theme.appBarTheme.titleTextStyle?.color,
+              fontWeight: FontWeight.w700,
+              fontSize: 18,
+            )),
         actions: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.help_outline)),
+          IconButton(
+            onPressed: () {}, 
+            icon: Icon(Icons.help_outline, color: theme.appBarTheme.iconTheme?.color)
+          ),
         ],
       ),
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppPalette.primary))
           : SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
@@ -215,15 +226,16 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFD32F2F).withOpacity(0.1),
-                          border: Border.all(color: const Color(0xFFD32F2F)),
-                          borderRadius: BorderRadius.circular(8),
+                          color: AppPalette.error.withOpacity(0.1),
+                          border: Border.all(color: AppPalette.error),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           state.error!,
-                          style: const TextStyle(
-                            color: Color(0xFFFF7A83),
+                          style: TextStyle(
+                            color: isDark ? const Color(0xFFFF7A83) : const Color(0xFFD32F2F),
                             fontSize: 14,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
@@ -231,10 +243,17 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                 ],
               ),
             ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          border: Border(top: BorderSide(
+            color: isDark ? AppPalette.borderDark : AppPalette.borderLight,
+            width: 1,
+          )),
+        ),
         child: SizedBox(
-          height: 58,
+          height: 60,
           child: FilledButton.icon(
             onPressed: !state.isValid || state.isSubmitting
                 ? null
@@ -246,21 +265,22 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                           content: Text(
-                              'Affectation enregistree avec succes.')),
+                              'Affectation enregistrée avec succès.')),
                     );
                     context.go('/operator/dashboard');
                   },
             icon: state.isSubmitting
                 ? const SizedBox(
-                    width: 18,
-                    height: 18,
+                    width: 20,
+                    height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.check_circle_outline),
+                        strokeWidth: 2.5, color: Colors.white))
+                : const Icon(Icons.check_circle_outline, size: 24),
             label: const Text('CONFIRMER L\'AFFECTATION',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 0.5)),
             style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1F63E8)),
+                backgroundColor: AppPalette.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
           ),
         ),
       ),
@@ -278,14 +298,14 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, color: const Color(0xFF2A7BFF)),
+        Icon(icon, color: AppPalette.primary, size: 22),
         const SizedBox(width: 8),
         Text(label,
             style: const TextStyle(
-                color: Color(0xFF2A7BFF),
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5)),
+                color: AppPalette.primary,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2)),
       ],
     );
   }
@@ -298,11 +318,23 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2C4B),
-        borderRadius: BorderRadius.circular(18),
+        color: isDark ? const Color(0xFF1A2C4B) : AppPalette.surfaceLight,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? AppPalette.borderDark : AppPalette.borderLight,
+          width: 1,
+        ),
+        boxShadow: isDark ? null : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: child,
     );

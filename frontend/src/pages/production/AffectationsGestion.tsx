@@ -24,15 +24,38 @@ interface ArticleOpt { id: number; code: string }
 interface WeekCmd { commandeId: number; articleId: number; code: string }
 
 const toDateInput = (d: Date) => d.toISOString().slice(0, 10);
-const toInputDateTime = (v?: string | null) => (v ? new Date(v).toISOString().slice(0, 16) : '');
-const fromInputDateTime = (v: string) => (v ? new Date(v).toISOString() : null);
+const toInputDateTime = (v?: string | null) => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+const fromInputDateTime = (v: string) => {
+    if (!v) return null;
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return null;
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+};
 const toNumOrNull = (v: string) => (!v.trim() ? null : (Number.isFinite(Number(v)) ? Number(v) : null));
 const csvEscape = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v);
     return (s.includes(',') || s.includes('"') || s.includes('\n')) ? `"${s.replace(/"/g, '""')}"` : s;
 };
-const formatDuration = (minutes?: number | null) => {
-    if (!minutes || minutes <= 0) return '-';
+const formatDuration = (seconds?: number | null) => {
+    if (!seconds || seconds <= 0) return '-';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hours > 0 && mins > 0) return `${hours}h ${mins}min`;
@@ -195,7 +218,35 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
     const paged = useMemo(() => visible.slice((currentPage - 1) * pageSize, currentPage * pageSize), [visible, currentPage, pageSize]);
     const allPageSel = paged.length > 0 && paged.every((r) => selected.has(r.ID));
 
-    const patchRow = (id: number, patch: Partial<EditableAffectation>) => setRows((prev) => prev.map((r) => (r.ID === id ? { ...r, ...patch, _dirty: true } : r)));
+    const patchRow = (id: number, patch: Partial<EditableAffectation>) => {
+        setRows((prev) => prev.map((r) => {
+            if (r.ID !== id) return r;
+            const updated = { ...r, ...patch, _dirty: true };
+
+            // Recalculer la durée si l'une des deux dates a changé
+            if ('Date_debut' in patch || 'Date_fin' in patch) {
+                if (updated.Date_debut && updated.Date_fin) {
+                    // Appel API pour le calcul professionnel
+                    void (async () => {
+                        try {
+                            const res = await affectationsApi.calculerDuree(updated.Date_debut, updated.Date_fin);
+                            if (res.data.success) {
+                                setRows(rowsPrev => rowsPrev.map(row =>
+                                    row.ID === id ? { ...row, Duree: res.data.data.duree } : row
+                                ));
+                            }
+                        } catch (err) {
+                            console.error('Erreur calcul duree:', err);
+                        }
+                    })();
+                } else if (!updated.Date_fin) {
+                    updated.Duree = null;
+                }
+            }
+
+            return updated;
+        }));
+    };
 
     const openAddModal = () => {
         setNewAffectation(newRow(filters.commandeId || rows[0]?.ID_Commande || 0));
@@ -349,85 +400,142 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
             <input ref={fileInputRef} type="file" accept=".xlsx" className="hidden" onChange={importXlsx} />
 
             <Modal
-              isOpen={isModalOpen}
-              title="Nouvelle Affectation"
-              onClose={() => setIsModalOpen(false)}
-              size="xl"
+                isOpen={isModalOpen}
+                title="Nouvelle Affectation"
+                onClose={() => setIsModalOpen(false)}
+                size="xl"
             >
                 {newAffectation && (
-                  <div className="space-y-4">
-                    {/* Operateur */}
-                    <SelectSearch
-                      options={operateurs}
-                      selectedId={newAffectation.ID_Operateur}
-                      onSelect={(opt) => setNewAffectation((prev) => prev ? { ...prev, ID_Operateur: opt.id as number } : null)}
-                      label="Operateur"
-                      required
-                      maxResults={20}
-                    />
+                    <div className="space-y-4">
+                        {/* Operateur */}
+                        <SelectSearch
+                            options={operateurs}
+                            selectedId={newAffectation.ID_Operateur}
+                            onSelect={(opt) => setNewAffectation((prev) => prev ? { ...prev, ID_Operateur: opt.id as number } : null)}
+                            label="Operateur"
+                            required
+                            maxResults={20}
+                        />
 
-                    {/* Semaine */}
-                    <SelectSearch
-                      options={weeks}
-                      selectedId={newAffectation.ID_Semaine}
-                      onSelect={(opt) => {
-                        const weekId = opt.id as number;
-                        void loadArticlesForWeek(weekId);
-                        setNewAffectation((prev) => prev ? { ...prev, ID_Semaine: weekId, ID_Article: null } : null);
-                      }}
-                      label="Semaine"
-                      required
-                      maxResults={20}
-                    />
+                        {/* Semaine */}
+                        <SelectSearch
+                            options={weeks}
+                            selectedId={newAffectation.ID_Semaine}
+                            onSelect={(opt) => {
+                                const weekId = opt.id as number;
+                                void loadArticlesForWeek(weekId);
+                                setNewAffectation((prev) => prev ? { ...prev, ID_Semaine: weekId, ID_Article: null } : null);
+                            }}
+                            label="Semaine"
+                            required
+                            maxResults={20}
+                        />
 
-                    {/* Article (depends on semaine) */}
-                    <SelectSearch
-                      options={articlesForRow(newAffectation).map((a) => ({ id: a.id, label: a.code }))}
-                      selectedId={newAffectation.ID_Article}
-                      onSelect={(opt) => setNewAffectation((prev) => prev ? { ...prev, ID_Article: opt.id as number } : null)}
-                      label="Article"
-                      required
-                      disabled={!newAffectation.ID_Semaine}
-                      maxResults={20}
-                    />
+                        {/* Article (depends on semaine) */}
+                        <SelectSearch
+                            options={articlesForRow(newAffectation).map((a) => ({ id: a.id, label: a.code }))}
+                            selectedId={newAffectation.ID_Article}
+                            onSelect={(opt) => setNewAffectation((prev) => prev ? { ...prev, ID_Article: opt.id as number } : null)}
+                            label="Article"
+                            required
+                            disabled={!newAffectation.ID_Semaine}
+                            maxResults={20}
+                        />
 
-                    {/* Poste */}
-                    <SelectSearch
-                      options={postes}
-                      selectedId={newAffectation.ID_Poste}
-                      onSelect={(opt) => setNewAffectation((prev) => prev ? { ...prev, ID_Poste: opt.id as number } : null)}
-                      label="Poste"
-                      required
-                      maxResults={20}
-                    />
+                        {/* Poste */}
+                        <SelectSearch
+                            options={postes}
+                            selectedId={newAffectation.ID_Poste}
+                            onSelect={(opt) => setNewAffectation((prev) => prev ? { ...prev, ID_Poste: opt.id as number } : null)}
+                            label="Poste"
+                            required
+                            maxResults={20}
+                        />
 
-                    {/* Date debut */}
-                    <div>
-                      <label className="mb-1 block text-sm font-medium text-gray-700">Date de debut *</label>
-                      <input
-                        type="datetime-local"
-                        value={toInputDateTime(newAffectation.Date_debut)}
-                        onChange={(e) => setNewAffectation((prev) => prev ? { ...prev, Date_debut: fromInputDateTime((e.target as HTMLInputElement).value) || prev.Date_debut } : null)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2"
-                      />
+                        {/* Date debut */}
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Date de debut *</label>
+                            <input
+                                type="datetime-local"
+                                value={toInputDateTime(newAffectation.Date_debut)}
+                                onChange={(e) => {
+                                    const val = fromInputDateTime((e.target as HTMLInputElement).value);
+                                    setNewAffectation((prev) => {
+                                        if (!prev || !val) return prev;
+                                        const next = { ...prev, Date_debut: val };
+                                        if (next.Date_fin) {
+                                            void (async () => {
+                                                try {
+                                                    const res = await affectationsApi.calculerDuree(next.Date_debut, next.Date_fin);
+                                                    if (res.data.success) {
+                                                        setNewAffectation(curr => curr ? { ...curr, Duree: res.data.data.duree } : null);
+                                                    }
+                                                } catch { }
+                                            })();
+                                        }
+                                        return next;
+                                    });
+                                }}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                            />
+                        </div>
+
+                        {/* Date fin (optionnel lors de la création manuelle, mais utile pour calculer la durée) */}
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Date de fin (optionnel)</label>
+                            <input
+                                type="datetime-local"
+                                value={toInputDateTime(newAffectation.Date_fin)}
+                                onChange={(e) => {
+                                    const val = fromInputDateTime((e.target as HTMLInputElement).value);
+                                    setNewAffectation((prev) => {
+                                        if (!prev) return prev;
+                                        const next = { ...prev, Date_fin: val };
+                                        if (next.Date_debut && next.Date_fin) {
+                                            void (async () => {
+                                                try {
+                                                    const res = await affectationsApi.calculerDuree(next.Date_debut, next.Date_fin);
+                                                    if (res.data.success) {
+                                                        setNewAffectation(curr => curr ? { ...curr, Duree: res.data.data.duree } : null);
+                                                    }
+                                                } catch { }
+                                            })();
+                                        } else if (!next.Date_fin) {
+                                            next.Duree = null;
+                                        }
+                                        return next;
+                                    });
+                                }}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2"
+                            />
+                        </div>
+
+                        {/* Affichage de la durée calculée */}
+                        {newAffectation.Duree !== null && (
+                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+                                <p className="text-sm text-blue-800 font-medium">
+                                    Durée calculée : <span className="font-bold">{formatDuration(newAffectation.Duree)}</span>
+                                    <span className="text-xs ml-2 text-blue-600 block">(Prend en compte horaires, pauses et jours fériés)</span>
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Boutons */}
+                        <div className="flex justify-end gap-3 pt-4">
+                            <button
+                                onClick={() => setIsModalOpen(false)}
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+                            >
+                                Annuler
+                            </button>
+                            <button
+                                onClick={handleSaveNew}
+                                className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                            >
+                                Enregistrer
+                            </button>
+                        </div>
                     </div>
-
-                    {/* Boutons */}
-                    <div className="flex justify-end gap-3 pt-4">
-                      <button
-                        onClick={() => setIsModalOpen(false)}
-                        className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
-                      >
-                        Annuler
-                      </button>
-                      <button
-                        onClick={handleSaveNew}
-                        className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                      >
-                        Enregistrer
-                      </button>
-                    </div>
-                  </div>
                 )}
             </Modal>
 
@@ -471,6 +579,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                                                     onSelect={(opt) => patchRow(row.ID, { ID_Operateur: opt.id as number })}
                                                     placeholder="Operateur"
                                                     maxResults={20}
+                                                    disabled={!canWrite('AFFECTATIONS')}
                                                 />
                                             </td>
                                             <td className="px-2 py-2">
@@ -484,6 +593,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                                                     }}
                                                     placeholder="Semaine"
                                                     maxResults={20}
+                                                    disabled={!canWrite('AFFECTATIONS')}
                                                 />
                                             </td>
                                             <td className="px-2 py-2">
@@ -492,7 +602,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                                                     selectedId={row.ID_Article}
                                                     onSelect={(opt) => patchRow(row.ID, { ID_Article: opt.id as number })}
                                                     placeholder={row.ID_Semaine ? 'Article' : 'Semaine d\'abord'}
-                                                    disabled={!row.ID_Semaine}
+                                                    disabled={!row.ID_Semaine || !canWrite('AFFECTATIONS')}
                                                     maxResults={20}
                                                 />
                                             </td>
@@ -503,12 +613,13 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
                                                     onSelect={(opt) => patchRow(row.ID, { ID_Poste: opt.id as number })}
                                                     placeholder="Poste"
                                                     maxResults={20}
+                                                    disabled={!canWrite('AFFECTATIONS')}
                                                 />
                                             </td>
-                                            <td className="px-2 py-2"><input type="datetime-local" value={toInputDateTime(row.Date_debut)} onChange={(e) => patchRow(row.ID, { Date_debut: fromInputDateTime((e.target as HTMLInputElement).value) || row.Date_debut })} className="w-42 rounded border border-gray-300 px-2 py-1" /></td>
-                                            <td className="px-2 py-2"><input type="datetime-local" value={toInputDateTime(row.Date_fin)} onChange={(e) => patchRow(row.ID, { Date_fin: fromInputDateTime((e.target as HTMLInputElement).value) })} className="w-42 rounded border border-gray-300 px-2 py-1" /></td>
-                                            <td className="px-2 py-2 text-gray-700 min-w-24">{formatDuration(row.Duree)}</td>
-                                            <td className="px-2 py-2"><input type="number" step="0.5" value={row.Heure_supp ?? ''} onChange={(e) => patchRow(row.ID, { Heure_supp: toNumOrNull((e.target as HTMLInputElement).value) })} className="w-16 rounded border border-gray-300 px-2 py-1" /></td>
+                                            <td className="px-2 py-2"><input type="datetime-local" disabled={!canWrite('AFFECTATIONS')} value={toInputDateTime(row.Date_debut)} onChange={(e) => patchRow(row.ID, { Date_debut: fromInputDateTime((e.target as HTMLInputElement).value) || row.Date_debut })} className="w-42 rounded border border-gray-300 px-2 py-1" /></td>
+                                            <td className="px-2 py-2"><input type="datetime-local" disabled={!canWrite('AFFECTATIONS')} value={toInputDateTime(row.Date_fin)} onChange={(e) => patchRow(row.ID, { Date_fin: fromInputDateTime((e.target as HTMLInputElement).value) })} className="w-42 rounded border border-gray-300 px-2 py-1" /></td>
+                                            <td className="px-2 py-2 text-gray-700 min-w-24">{formatDuration((row.Duree || 0) + (row.Heure_supp || 0) * 60)}</td>
+                                            <td className="px-2 py-2"><input type="number" step="0.5" disabled={!canWrite('AFFECTATIONS')} value={row.Heure_supp ?? ''} onChange={(e) => patchRow(row.ID, { Heure_supp: toNumOrNull((e.target as HTMLInputElement).value) })} className="w-16 rounded border border-gray-300 px-2 py-1" /></td>
                                         </tr>
                                     );
                                 })}

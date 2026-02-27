@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/enums/task_status.dart';
@@ -53,9 +54,13 @@ class TaskRepository {
   );
 
   Future<Task?> getCurrentTask(String operatorId) async {
+    debugPrint('📦 [TaskRepository] getCurrentTask called with operatorId=$operatorId');
     try {
-      return await _service.getCurrentTask(operatorId);
-    } on DioException {
+      final task = await _service.getCurrentTask(operatorId);
+      debugPrint('📦 [TaskRepository] Service returned: $task');
+      return task;
+    } on DioException catch (e) {
+      debugPrint('📦 [TaskRepository] DioException caught, returning mockCurrentTask. Error: $e');
       return mockCurrentTask;
     }
   }
@@ -64,9 +69,12 @@ class TaskRepository {
     required String userId,
     String? matricule,
   }) async {
+    debugPrint('📦 [TaskRepository] getCurrentTaskForIdentity called with userId=$userId, matricule=$matricule');
     final primaryId = userId.trim();
     if (primaryId.isNotEmpty) {
+      debugPrint('📦 [TaskRepository] Trying primaryId: $primaryId');
       final task = await getCurrentTask(primaryId);
+      debugPrint('📦 [TaskRepository] Task from primaryId: $task');
       if (task != null) {
         return task;
       }
@@ -74,16 +82,21 @@ class TaskRepository {
 
     final matriculeValue = matricule?.trim() ?? '';
     if (matriculeValue.isEmpty) {
+      debugPrint('📦 [TaskRepository] Matricule is empty, returning null');
       return null;
     }
 
+    debugPrint('📦 [TaskRepository] Resolving operatorId from matricule: $matriculeValue');
     final resolvedId =
         await _service.resolveOperatorIdFromMatricule(matriculeValue);
+    debugPrint('📦 [TaskRepository] Resolved operatorId: $resolvedId');
     if (resolvedId == null || resolvedId.isEmpty) {
       return null;
     }
 
-    return getCurrentTask(resolvedId);
+    final task = await getCurrentTask(resolvedId);
+    debugPrint('📦 [TaskRepository] Final task result: $task');
+    return task;
   }
 
   Future<List<Article>> searchArticles(String query) async {
@@ -246,6 +259,27 @@ class TaskRepository {
           isActive: true,
         ),
       ];
+    }
+  }
+
+  Future<List<Operateur>> searchOperators(String query) async {
+    if (query.trim().isEmpty) {
+      return getOperators();
+    }
+    try {
+      return await _service.searchOperators(query);
+    } on DioException {
+      // Fallback: filter cached operators
+      if (_cachedOperators.isNotEmpty) {
+        final queryLower = query.toLowerCase();
+        return _cachedOperators
+            .where((op) =>
+                op.firstName.toLowerCase().contains(queryLower) ||
+                op.lastName.toLowerCase().contains(queryLower) ||
+                op.matricule.toLowerCase().contains(queryLower))
+            .toList();
+      }
+      return const [];
     }
   }
 

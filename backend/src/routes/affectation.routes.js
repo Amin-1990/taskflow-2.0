@@ -8,7 +8,9 @@ const { requirePermission } = require('../middleware/authorization.middleware');
 router.get('/', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAllAffectations);
 router.get('/operateur/:id/en-cours', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAffectationsEnCoursByOperateur);
 router.get('/commande/:id', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAffectationsByCommande);
+router.get('/calculer-duree', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.calculerDuree);
 router.get('/:id', authMiddleware, requirePermission('AFFECTATIONS_READ'), affectationController.getAffectationById);
+
 
 // POST - Creer une affectation
 router.post('/', authMiddleware, requirePermission('AFFECTATIONS_WRITE'), affectationController.createAffectation);

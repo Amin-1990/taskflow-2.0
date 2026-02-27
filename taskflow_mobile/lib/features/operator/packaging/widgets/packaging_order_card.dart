@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/constants/design_constants.dart';
 import '../../../../domain/models/commande_emballage.dart';
 
 class PackagingOrderCard extends StatelessWidget {
@@ -20,16 +21,26 @@ class PackagingOrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    
     final statusColor =
-        order.isCompleted ? const Color(0xFF42D48C) : const Color(0xFF2A7BFF);
+        order.isCompleted ? const Color(0xFF42D48C) : AppPalette.primary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF13284A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF24456F)),
+        color: isDark ? const Color(0xFF13284A) : AppPalette.surfaceLight,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isDark ? const Color(0xFF24456F) : AppPalette.borderLight),
+        boxShadow: isDark ? null : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,85 +57,128 @@ class PackagingOrderCard extends StatelessWidget {
                 child: Text(
                   order.isCompleted ? 'TERMINEE' : 'EN COURS',
                   style: TextStyle(
-                      color: statusColor, fontWeight: FontWeight.w700),
+                      color: statusColor, fontWeight: FontWeight.w800, fontSize: 13),
                 ),
               ),
               const SizedBox(width: 10),
               Text('LOT ${order.lotNumber}',
                   style:
-                      const TextStyle(color: Color(0xFF94A8CA), fontSize: 18)),
+                      TextStyle(color: isDark ? const Color(0xFF94A8CA) : AppPalette.textSecondaryLight, fontSize: 16, fontWeight: FontWeight.w600)),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(order.articleName,
-              style: const TextStyle(
-                  color: Color(0xFFEAF0F9),
+              style: TextStyle(
+                  color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
                   fontSize: 20,
-                  fontWeight: FontWeight.w700)),
-          const SizedBox(height: 2),
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
           Text('${order.productionLine} • ${order.periodLabel}',
-              style: const TextStyle(color: Color(0xFF8CA3C6), fontSize: 17)),
-          const SizedBox(height: 10),
-          Text('Objectif jour: ${order.dailyTarget}',
-              style: const TextStyle(color: Color(0xFFB7C7DE))),
-          Text('Deja emballe: ${order.packedToday}',
-              style: const TextStyle(color: Color(0xFFB7C7DE))),
-          const SizedBox(height: 10),
+              style: TextStyle(color: isDark ? const Color(0xFF8CA3C6) : AppPalette.textSecondaryLight, fontSize: 16)),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Objectif jour: ${order.dailyTarget}',
+                      style: TextStyle(color: isDark ? const Color(0xFFB7C7DE) : AppPalette.textSecondaryLight, fontSize: 15)),
+                  Text('Déjà emballé: ${order.packedToday}',
+                      style: TextStyle(color: isDark ? const Color(0xFFB7C7DE) : AppPalette.textSecondaryLight, fontSize: 15)),
+                ],
+              ),
+              ClipOval(
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  color: statusColor.withOpacity(0.1),
+                  child: Center(
+                    child: Text('${(order.progress * 100).round()}%',
+                        style: TextStyle(color: statusColor, fontWeight: FontWeight.w800, fontSize: 13)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF0D1F3F),
-              borderRadius: BorderRadius.circular(14),
+              color: isDark ? const Color(0xFF0D1F3F) : const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               children: [
-                IconButton(
-                    onPressed: onDecrement,
-                    icon: const Icon(Icons.remove, size: 26)),
+                _StepperButton(icon: Icons.remove, onPressed: onDecrement, color: statusColor),
                 Expanded(
                   child: Column(
                     children: [
-                      const Text('Qte periode',
-                          style: TextStyle(color: Color(0xFF93A8CB))),
+                      Text('Qté période',
+                          style: TextStyle(color: isDark ? const Color(0xFF93A8CB) : AppPalette.textSecondaryLight, fontSize: 13)),
                       Text('$periodQuantity',
-                          style: const TextStyle(
-                              color: Color(0xFFEAF0F9),
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700)),
+                          style: TextStyle(
+                              color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800)),
                     ],
                   ),
                 ),
-                IconButton(
-                    onPressed: onIncrement,
-                    icon: const Icon(Icons.add, size: 26)),
+                _StepperButton(icon: Icons.add, onPressed: onIncrement, color: statusColor),
               ],
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           SizedBox(
             width: double.infinity,
+            height: 50,
             child: FilledButton(
               onPressed: periodQuantity <= 0 ? null : onValidate,
-              child: const Text('Valider periode'),
+              style: FilledButton.styleFrom(
+                backgroundColor: statusColor,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Valider période', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
             child: LinearProgressIndicator(
-              minHeight: 12,
+              minHeight: 8,
               value: order.progress,
-              backgroundColor: const Color(0xFF1E3559),
+              backgroundColor: isDark ? const Color(0xFF1E3559) : const Color(0xFFE2E8F0),
               valueColor: AlwaysStoppedAnimation<Color>(statusColor),
             ),
           ),
-          const SizedBox(height: 4),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Text('${(order.progress * 100).round()}%',
-                style: const TextStyle(color: Color(0xFFB9C9DF))),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  const _StepperButton({required this.icon, required this.onPressed, required this.color});
+  final IconData icon;
+  final VoidCallback onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            border: Border.all(color: isDark ? const Color(0xFF24456F) : AppPalette.borderLight),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 22, color: color),
+        ),
       ),
     );
   }

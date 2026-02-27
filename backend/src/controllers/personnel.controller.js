@@ -83,6 +83,55 @@ exports.getPersonnelByMatricule = async (req, res) => {
   }
 };
 
+// GET /api/personnel/recherche?q=... - Recherche par nom, prénom ou matricule
+exports.searchPersonnel = async (req, res) => {
+  try {
+    const query = (req.query.q || '').trim();
+    
+    if (query.length === 0) {
+      const [rows] = await db.query(`
+        SELECT ID, Nom_prenom, Matricule, Statut, Poste
+        FROM personnel
+        WHERE Statut = 'actif'
+        ORDER BY Nom_prenom
+        LIMIT 50
+      `);
+      return res.json({
+        success: true,
+        data: rows
+      });
+    }
+
+    const searchPattern = `%${query}%`;
+    const [rows] = await db.query(`
+      SELECT ID, Nom_prenom, Matricule, Statut, Poste
+      FROM personnel
+      WHERE (Nom_prenom LIKE ? OR Matricule LIKE ?)
+        AND Statut = 'actif'
+      ORDER BY 
+        CASE 
+          WHEN Nom_prenom LIKE ? THEN 0
+          WHEN Matricule LIKE ? THEN 1
+          ELSE 2
+        END,
+        Nom_prenom
+      LIMIT 50
+    `, [searchPattern, searchPattern, `${query}%`, `${query}%`]);
+    
+    res.json({
+      success: true,
+      count: rows.length,
+      data: rows
+    });
+  } catch (error) {
+    console.error('Erreur searchPersonnel:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Erreur lors de la recherche du personnel' 
+    });
+  }
+};
+
 // POST /api/personnel - Créer un nouvel employé
 exports.createPersonnel = async (req, res) => {
   try {

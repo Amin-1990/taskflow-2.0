@@ -166,6 +166,8 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
       final lookups = await _repository.loadLookups();
       final pending = await _repository.pendingCount();
 
+      if (!mounted) return;
+
       final now = TimezoneService.now();
       final week = _findCurrentWeek(lookups.semaines, now) ??
           (lookups.semaines.isNotEmpty ? lookups.semaines.first : null);
@@ -181,8 +183,10 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
         selectedSemaine: week,
       );
     } catch (e) {
-      state = state.copyWith(
-          isLoading: false, isOnline: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(
+            isLoading: false, isOnline: false, error: e.toString());
+      }
     }
   }
 
@@ -215,6 +219,7 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
     final completer = Completer<List<Article>>();
     _articleDebounce = Timer(const Duration(milliseconds: 300), () async {
       final result = await _repository.searchArticles(query);
+      if (!mounted) return;
       if (!completer.isCompleted) {
         completer.complete(result);
       }
@@ -233,6 +238,7 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
 
   void scanArticle(String scanValue) async {
     final result = await _repository.searchArticles(scanValue);
+    if (!mounted) return;
     if (result.isNotEmpty) {
       selectArticle(result.first);
     } else {
@@ -281,12 +287,16 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
     try {
       await _repository.submitDefaut(defaut);
       final pending = await _repository.pendingCount();
-      state = state.copyWith(
-          isSubmitting: false, pendingCount: pending, isOnline: true);
+      if (mounted) {
+        state = state.copyWith(
+            isSubmitting: false, pendingCount: pending, isOnline: true);
+      }
       return true;
     } catch (e) {
-      state = state.copyWith(
-          isSubmitting: false, isOnline: false, error: e.toString());
+      if (mounted) {
+        state = state.copyWith(
+            isSubmitting: false, isOnline: false, error: e.toString());
+      }
       return false;
     }
   }
@@ -295,9 +305,13 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
     try {
       await _repository.syncPending();
       final pending = await _repository.pendingCount();
-      state = state.copyWith(pendingCount: pending, isOnline: true);
+      if (mounted) {
+        state = state.copyWith(pendingCount: pending, isOnline: true);
+      }
     } catch (_) {
-      state = state.copyWith(isOnline: false);
+      if (mounted) {
+        state = state.copyWith(isOnline: false);
+      }
     }
   }
 

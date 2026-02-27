@@ -66,6 +66,10 @@ export const affectationsApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+  calculerDuree: (debut: string, fin: string) =>
+    api.get<ApiResponse<{ duree: number }>>('/affectations/calculer-duree', {
+      params: { debut, fin },
+    }),
 };
 
 export const { getList, create, update, delete: deleteAffectation, terminerAffectation, ajouterHeuresSupp } = affectationsApi;

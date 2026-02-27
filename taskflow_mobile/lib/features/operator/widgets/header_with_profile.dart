@@ -18,6 +18,8 @@ class HeaderWithProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final initials =
         '${userContext.firstName.isNotEmpty ? userContext.firstName[0] : ''}${userContext.lastName.isNotEmpty ? userContext.lastName[0] : ''}'
             .toUpperCase();
@@ -45,8 +47,8 @@ class HeaderWithProfile extends StatelessWidget {
                       initials,
                       style: const TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 24),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 22),
                     ),
                   ),
                 ),
@@ -54,15 +56,16 @@ class HeaderWithProfile extends StatelessWidget {
                   right: -1,
                   bottom: -1,
                   child: Container(
-                    width: 16,
-                    height: 16,
+                    width: 18,
+                    height: 18,
                     decoration: BoxDecoration(
                       color: userContext.isOnline
                           ? AppPalette.success
                           : const Color(0xFF6E7990),
                       shape: BoxShape.circle,
                       border: Border.all(
-                          color: AppPalette.backgroundDark, width: 2),
+                          color: isDark ? AppPalette.backgroundDark : AppPalette.backgroundLight, 
+                          width: 2.5),
                     ),
                   ),
                 ),
@@ -73,26 +76,36 @@ class HeaderWithProfile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Bonjour,',
+                  Text('Bonjour,',
                       style: TextStyle(
-                          color: AppPalette.textSecondary, fontSize: 18)),
+                          color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500)),
                   Text(
                     userContext.fullName,
-                    style: const TextStyle(
-                        color: AppPalette.textPrimary,
-                        fontWeight: FontWeight.w700,
+                    style: TextStyle(
+                        color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
+                        fontWeight: FontWeight.w800,
                         fontSize: 22),
                   ),
                 ],
               ),
             ),
             Container(
-              width: 52,
-              height: 52,
+              width: 54,
+              height: 54,
               decoration: BoxDecoration(
-                color: AppPalette.surfaceDark,
-                borderRadius: BorderRadius.circular(26),
-                border: Border.all(color: AppPalette.borderDark),
+                color: isDark ? AppPalette.surfaceDark : Colors.white,
+                borderRadius: BorderRadius.circular(27),
+                border: Border.all(
+                    color: isDark ? AppPalette.borderDark : AppPalette.borderLight),
+                boxShadow: isDark ? null : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  )
+                ],
               ),
               child: const Icon(Icons.cloud_done_outlined,
                   color: AppPalette.primary, size: 28),
@@ -106,8 +119,10 @@ class HeaderWithProfile extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${userContext.line} - ${userContext.shift} ${userContext.isOnline ? '| Live' : '| Hors-ligne'}',
-              style: const TextStyle(
-                  color: AppPalette.textSecondary, fontSize: 17),
+              style: TextStyle(
+                  color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500),
             ),
             const Spacer(),
             SyncIndicator(

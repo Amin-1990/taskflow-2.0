@@ -14,20 +14,36 @@ exports.createHoraireValidator = [
     .withMessage('Jour semaine invalide'),
   
   body('Heure_debut')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure début invalide (format: HH:MM)'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure début invalide (format: HH:MM ou HH:MM:SS)'),
   
   body('Heure_fin')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure fin invalide (format: HH:MM)'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure fin invalide (format: HH:MM ou HH:MM:SS)'),
   
   body('Heure_debut_pause')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure début pause invalide'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure début pause invalide'),
   
   body('Heure_fin_pause')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure fin pause invalide'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure fin pause invalide'),
+  
+  body('Pause_debut')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Pause début invalide'),
+  
+  body('Pause_fin')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Pause fin invalide'),
+  
+  body('Heure_supp_debut')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure supp début invalide'),
+  
+  body('Heure_supp_fin')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure supp fin invalide'),
   
   body('Duree_travail_min')
     .optional()
@@ -48,6 +64,26 @@ exports.createHoraireValidator = [
     .optional()
     .isInt({ min: 1 }).withMessage('Nombre équipes doit être un entier positif')
     .toInt(),
+  
+  body('Est_ouvert')
+    .optional()
+    .isInt({ min: 0, max: 1 }).withMessage('Est_ouvert doit être 0 ou 1')
+    .toInt(),
+  
+  body('Est_jour_ferie')
+    .optional()
+    .isInt({ min: 0, max: 1 }).withMessage('Est_jour_ferie doit être 0 ou 1')
+    .toInt(),
+  
+  body('Type_chome')
+    .optional()
+    .isIn(['non_chomé', 'chomé_payé', 'chomé_non_payé'])
+    .withMessage('Type_chome invalide'),
+  
+  body('Description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 }).withMessage('Description max 500 caractères'),
   
   body('Commentaire')
     .optional()
@@ -73,20 +109,36 @@ exports.updateHoraireValidator = [
     .withMessage('Jour semaine invalide'),
   
   body('Heure_debut')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure début invalide'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure début invalide'),
   
   body('Heure_fin')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure fin invalide'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure fin invalide'),
   
   body('Heure_debut_pause')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure début pause invalide'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure début pause invalide'),
   
   body('Heure_fin_pause')
-    .optional()
-    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])$/).withMessage('Heure fin pause invalide'),
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure fin pause invalide'),
+  
+  body('Pause_debut')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Pause début invalide'),
+  
+  body('Pause_fin')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Pause fin invalide'),
+  
+  body('Heure_supp_debut')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure supp début invalide'),
+  
+  body('Heure_supp_fin')
+    .optional({ checkFalsy: true })
+    .matches(/^([0-1][0-9]|2[0-3]):([0-5][0-9])(:[0-5][0-9])?$/).withMessage('Heure supp fin invalide'),
   
   body('Duree_travail_min')
     .optional()
@@ -107,6 +159,26 @@ exports.updateHoraireValidator = [
     .optional()
     .isInt({ min: 1 }).withMessage('Nombre équipes invalide')
     .toInt(),
+  
+  body('Est_ouvert')
+    .optional()
+    .isInt({ min: 0, max: 1 }).withMessage('Est_ouvert doit être 0 ou 1')
+    .toInt(),
+  
+  body('Est_jour_ferie')
+    .optional()
+    .isInt({ min: 0, max: 1 }).withMessage('Est_jour_ferie doit être 0 ou 1')
+    .toInt(),
+  
+  body('Type_chome')
+    .optional()
+    .isIn(['non_chomé', 'chomé_payé', 'chomé_non_payé'])
+    .withMessage('Type_chome invalide'),
+  
+  body('Description')
+    .optional()
+    .trim()
+    .isLength({ max: 500 }).withMessage('Description max 500 caractères'),
   
   body('Commentaire')
     .optional()

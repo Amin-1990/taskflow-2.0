@@ -9,28 +9,64 @@ class AppTheme {
   static const Color primaryColor = AppPalette.primary;
 
   static ThemeData get lightTheme {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: primaryColor,
-      brightness: Brightness.light,
+    const colorScheme = ColorScheme.light(
+      primary: AppPalette.primary,
+      surface: AppPalette.surfaceLight,
+      error: AppPalette.error,
+      onPrimary: Colors.white,
+      onSurface: AppPalette.textPrimaryLight,
     );
 
     return ThemeData(
       useMaterial3: true,
+      scaffoldBackgroundColor: AppPalette.backgroundLight,
       colorScheme: colorScheme,
       textTheme: GoogleFonts.interTextTheme(),
-      appBarTheme: const AppBarTheme(centerTitle: false),
+      appBarTheme: const AppBarTheme(
+        centerTitle: false,
+        backgroundColor: AppPalette.backgroundLight,
+        foregroundColor: AppPalette.textPrimaryLight,
+      ),
       cardTheme: CardThemeData(
+        color: AppPalette.surfaceLight,
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(DesignRadii.md),
+          side: const BorderSide(color: AppPalette.borderLight),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppPalette.surfaceLight,
+        hintStyle: const TextStyle(color: AppPalette.textMutedLight),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(DesignRadii.sm),
+          borderSide: const BorderSide(color: AppPalette.borderLight),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(DesignRadii.sm),
+          borderSide: const BorderSide(color: AppPalette.borderLight),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(DesignRadii.sm),
+          borderSide: const BorderSide(color: AppPalette.primary, width: 1.4),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          backgroundColor: AppPalette.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(DesignRadii.sm),
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(48),
+          backgroundColor: AppPalette.primary,
+          foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(DesignRadii.sm),
           ),

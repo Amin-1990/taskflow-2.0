@@ -15,22 +15,26 @@ class ProductivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppPalette.surfaceDark,
+        color: isDark ? AppPalette.surfaceDark : AppPalette.surfaceLight,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppPalette.borderDark),
+        border: Border.all(
+            color: isDark ? AppPalette.borderDark : AppPalette.borderLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text('Productivite',
+              Text('Productivite',
                   style: TextStyle(
-                      color: AppPalette.textPrimary,
+                      color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
                       fontSize: 18,
                       fontWeight: FontWeight.w600)),
               const Spacer(),
@@ -49,7 +53,7 @@ class ProductivityCard extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 18,
               value: productivity.clamp(0, 1),
-              backgroundColor: const Color(0xFF24334E),
+              backgroundColor: isDark ? const Color(0xFF24334E) : const Color(0xFFE2E8F0),
               valueColor:
                   const AlwaysStoppedAnimation<Color>(AppPalette.primary),
             ),
@@ -58,12 +62,14 @@ class ProductivityCard extends StatelessWidget {
           Row(
             children: [
               Text('Objectif: $targetUnits unites',
-                  style: const TextStyle(
-                      color: AppPalette.textSecondary, fontSize: 16)),
+                  style: TextStyle(
+                      color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
+                      fontSize: 16)),
               const Spacer(),
               Text('Realise: $achievedUnits unites',
-                  style: const TextStyle(
-                      color: AppPalette.textSecondary, fontSize: 16)),
+                  style: TextStyle(
+                      color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
+                      fontSize: 16)),
             ],
           ),
         ],

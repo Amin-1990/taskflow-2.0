@@ -19,7 +19,10 @@ class StatCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
+    Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Material(
       color: Colors.transparent,
       child: TapScale(
@@ -28,8 +31,10 @@ class StatCard extends StatelessWidget {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
-            color: AppPalette.surfaceDark,
-            border: Border.all(color: AppPalette.borderDark, width: 1.2),
+            color: isDark ? AppPalette.surfaceDark : AppPalette.surfaceLight,
+            border: Border.all(
+                color: isDark ? AppPalette.borderDark : AppPalette.borderLight, 
+                width: 1.2),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,16 +51,16 @@ class StatCard extends StatelessWidget {
               const Spacer(),
               Text(
                 value,
-                style: const TextStyle(
-                    color: AppPalette.textPrimary,
+                style: TextStyle(
+                    color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
                     fontSize: 36,
                     fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
                 label,
-                style: const TextStyle(
-                    color: AppPalette.textSecondary,
+                style: TextStyle(
+                    color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
                     fontSize: 16,
                     fontWeight: FontWeight.w600),
               ),

@@ -124,9 +124,19 @@ class AffectationService {
     try {
       console.log('🔍 [getAffectationsEnCours] Requête SQL avec ID_Operateur =', operateurId);
       const [affectations] = await db.query(
-        `SELECT * FROM affectations
-         WHERE ID_Operateur = ? AND Date_fin IS NULL
-         ORDER BY Date_debut DESC`,
+        `SELECT a.*,
+                c.Code_article as Article_ref, 
+                c.Lot as Numero_OF,
+                art.Code_article as Article_nom,
+                p.Nom_prenom as Operateur_nom,
+                po.Description as Poste_nom
+         FROM affectations a
+         LEFT JOIN commandes c ON a.ID_Commande = c.ID
+         LEFT JOIN articles art ON a.ID_Article = art.ID
+         LEFT JOIN personnel p ON a.ID_Operateur = p.ID
+         LEFT JOIN postes po ON a.ID_Poste = po.ID
+         WHERE a.ID_Operateur = ? AND a.Date_fin IS NULL
+         ORDER BY a.Date_debut DESC`,
         [operateurId]
       );
       console.log('🔍 [getAffectationsEnCours] Résultat SQL: ', affectations.length, 'affectations trouvées');
@@ -239,13 +249,13 @@ class AffectationService {
       };
     } catch (error) {
       if (connection) {
-        try { await connection.rollback(); } catch {}
+        try { await connection.rollback(); } catch { }
       }
       console.error('Erreur cloturerAffectationsCommande:', error);
       throw error;
     } finally {
       if (connection) {
-        try { await connection.release(); } catch {}
+        try { await connection.release(); } catch { }
       }
     }
   }
@@ -268,16 +278,17 @@ class AffectationService {
    * @returns {Promise<number>} Durée en minutes
    */
   async calculateDurationWithHoraires(connection, dateDebut, dateFin) {
+    let debut, fin;
     try {
-      const debut = new Date(dateDebut);
-      const fin = new Date(dateFin);
+      debut = new Date(dateDebut);
+      fin = new Date(dateFin);
 
       // 1. Récupérer tous les horaires entre ces deux dates
       const debutStr = this._formatDateMySQL(debut);
       const finStr = this._formatDateMySQL(fin);
 
       const [horaires] = await connection.query(
-        `SELECT Date, Heure_debut, Heure_fin, Est_ouvert, Est_jour_ferie
+        `SELECT Date, Heure_debut, Heure_fin, Pause_debut, Pause_fin, Heure_supp_debut, Heure_supp_fin, Est_ouvert, Est_jour_ferie
          FROM horaires
          WHERE Date >= ? AND Date <= ?
          ORDER BY Date ASC`,
@@ -285,12 +296,12 @@ class AffectationService {
       );
 
       if (horaires.length === 0) {
-        // Fallback: calcul simple en minutes
+        // Fallback: calcul simple en secondes
         const diffMs = Math.max(0, fin.getTime() - debut.getTime());
-        return Math.floor(diffMs / (1000 * 60));
+        return Math.floor(diffMs / 1000);
       }
 
-      let totalMinutes = 0;
+      let totalSeconds = 0;
 
       // 2. Parcourir chaque jour de l'intervalle
       for (const horaire of horaires) {
@@ -299,61 +310,66 @@ class AffectationService {
           continue;
         }
 
-        const dayDate = new Date(horaire.Date);
-        const horaireDebut = new Date(`${horaire.Date} ${horaire.Heure_debut}`);
-        const horaireFin = new Date(`${horaire.Date} ${horaire.Heure_fin}`);
-
-        // Déterminer l'heure réelle de début/fin pour ce jour
-        let dayStart = horaireDebut;
-        let dayEnd = horaireFin;
-
-        // Si c'est le premier jour, utiliser l'heure de début de l'affectation
-        if (this._isSameDay(debut, dayDate)) {
-          dayStart = new Date(Math.max(debut.getTime(), horaireDebut.getTime()));
-        }
-
-        // Si c'est le dernier jour, utiliser l'heure de fin de l'affectation
-        if (this._isSameDay(fin, dayDate)) {
-          dayEnd = new Date(Math.min(fin.getTime(), horaireFin.getTime()));
-        }
-
-        if (dayEnd <= dayStart) continue;
-
-        // 3. Récupérer les pauses pour ce jour
         const dayDateStr = horaire.Date;
-        const [pauses] = await connection.query(
-          `SELECT Heure_debut, Heure_fin FROM pauses
-           WHERE Date = ?`,
-          [dayDateStr]
-        );
 
-        // Calculer la durée brute du jour
-        let dayDurationMs = dayEnd.getTime() - dayStart.getTime();
+        // Plages de travail du jour
+        const segments = [];
 
-        // 4. Soustraire les pauses qui chevauchent
-        for (const pause of pauses) {
-          const pauseDebut = new Date(`${dayDateStr} ${pause.Heure_debut}`);
-          const pauseFin = new Date(`${dayDateStr} ${pause.Heure_fin}`);
-
-          // Calculer le chevauchement entre [dayStart, dayEnd] et [pauseDebut, pauseFin]
-          const overlapStart = Math.max(dayStart.getTime(), pauseDebut.getTime());
-          const overlapEnd = Math.min(dayEnd.getTime(), pauseFin.getTime());
-
-          if (overlapEnd > overlapStart) {
-            dayDurationMs -= (overlapEnd - overlapStart);
-          }
+        // 1. Heures normales
+        if (horaire.Heure_debut && horaire.Heure_fin) {
+          segments.push({
+            start: new Date(`${dayDateStr} ${horaire.Heure_debut}`),
+            end: new Date(`${dayDateStr} ${horaire.Heure_fin}`),
+            type: 'work'
+          });
         }
 
-        totalMinutes += Math.max(0, Math.floor(dayDurationMs / (1000 * 60)));
+        // 2. Heures supplémentaires
+        if (horaire.Heure_supp_debut && horaire.Heure_supp_fin) {
+          segments.push({
+            start: new Date(`${dayDateStr} ${horaire.Heure_supp_debut}`),
+            end: new Date(`${dayDateStr} ${horaire.Heure_supp_fin}`),
+            type: 'work'
+          });
+        }
+
+        // 3. Pause (à soustraire)
+        const pauses = [];
+        if (horaire.Pause_debut && horaire.Pause_fin) {
+          pauses.push({
+            start: new Date(`${dayDateStr} ${horaire.Pause_debut}`),
+            end: new Date(`${dayDateStr} ${horaire.Pause_fin}`)
+          });
+        }
+
+        let dayDurationMs = 0;
+
+        // Calculer l'intersection avec chaque segment de travail
+        for (const segment of segments) {
+          const overlap = this._getOverlapMs(debut, fin, segment.start, segment.end);
+          dayDurationMs += overlap;
+        }
+
+        // Soustraire les intersections avec les pauses (uniquement si dans [debut, fin])
+        for (const pause of pauses) {
+          const overlap = this._getOverlapMs(debut, fin, pause.start, pause.end);
+          dayDurationMs -= overlap;
+        }
+
+        totalSeconds += Math.max(0, Math.floor(dayDurationMs / 1000));
       }
 
-      return totalMinutes;
+      return totalSeconds;
 
     } catch (error) {
       console.error('❌ Erreur dans calculateDurationWithHoraires:', error);
       // Fallback: calcul simple
+      if (!debut || !fin || isNaN(debut.getTime()) || isNaN(fin.getTime())) {
+        console.error('❌ Dates invalides - debut:', debut, 'fin:', fin);
+        return 0;
+      }
       const diffMs = Math.max(0, fin.getTime() - debut.getTime());
-      return Math.floor(diffMs / (1000 * 60));
+      return Math.floor(diffMs / 1000);
     }
   }
 
@@ -416,6 +432,21 @@ class AffectationService {
       [affectationId]
     );
     return updated[0];
+  }
+
+  /**
+   * Calcule le chevauchement en millisecondes entre deux périodes
+   */
+  _getOverlapMs(start1, end1, start2, end2) {
+    const s1 = start1.getTime();
+    const e1 = end1.getTime();
+    const s2 = start2.getTime();
+    const e2 = end2.getTime();
+
+    const overlapStart = Math.max(s1, s2);
+    const overlapEnd = Math.min(e1, e2);
+
+    return Math.max(0, overlapEnd - overlapStart);
   }
 }
 
