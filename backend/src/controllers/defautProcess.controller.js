@@ -15,11 +15,13 @@ exports.getAllDefauts = async (req, res) => {
       SELECT d.*, 
              a.Code_article, a.Client,
              p.Description as Poste_description,
+             per.Nom_prenom as Operateur_nom,
              lp.Description as Defaut_description,
              lp.Cout_min
       FROM defauts_process d
       LEFT JOIN articles a ON d.ID_Article = a.ID
       LEFT JOIN postes p ON d.ID_Poste = p.ID
+      LEFT JOIN personnel per ON d.ID_Operateur = per.ID
       LEFT JOIN liste_defauts_produit lp ON d.Code_defaut = lp.Code_defaut
       ORDER BY d.Date_defaut DESC
     `);
@@ -45,11 +47,13 @@ exports.getDefautById = async (req, res) => {
       SELECT d.*, 
              a.Code_article, a.Client,
              p.Description as Poste_description,
+             per.Nom_prenom as Operateur_nom,
              lp.Description as Defaut_description,
              lp.Cout_min
       FROM defauts_process d
       LEFT JOIN articles a ON d.ID_Article = a.ID
       LEFT JOIN postes p ON d.ID_Poste = p.ID
+      LEFT JOIN personnel per ON d.ID_Operateur = per.ID
       LEFT JOIN liste_defauts_produit lp ON d.Code_defaut = lp.Code_defaut
       WHERE d.ID = ?
     `, [req.params.id]);
@@ -223,7 +227,7 @@ exports.createDefaut = async (req, res) => {
   try {
     const {
       ID_Article, Code_article, Code_defaut, Description_defaut,
-      ID_Poste, Gravite, Quantite_concernee, Impact_production,
+      ID_Poste, ID_Operateur, Gravite, Quantite_concernee, Impact_production,
       Commentaire
     } = req.body;
     
@@ -247,22 +251,24 @@ exports.createDefaut = async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO defauts_process (
         Date_defaut, ID_Article, Code_article, Code_defaut,
-        Description_defaut, ID_Poste, Gravite,
+        Description_defaut, ID_Poste, ID_Operateur, Gravite,
         Quantite_concernee, Impact_production, Commentaire,
         Date_creation
-      ) VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+      ) VALUES (NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [
         ID_Article, Code_article, Code_defaut,
-        Description_defaut, ID_Poste || null, Gravite || 'Mineure',
+        Description_defaut, ID_Poste || null, ID_Operateur || null, Gravite || 'Mineure',
         Quantite_concernee || 1, Impact_production || null,
         Commentaire || null
       ]
     );
     
     const [newDefaut] = await db.query(`
-      SELECT d.*, a.Code_article, a.Client
+      SELECT d.*, a.Code_article, a.Client,
+             p.Nom_prenom as Operateur_nom
       FROM defauts_process d
       LEFT JOIN articles a ON d.ID_Article = a.ID
+      LEFT JOIN personnel p ON d.ID_Operateur = p.ID
       WHERE d.ID = ?
     `, [result.insertId]);
     
@@ -315,7 +321,7 @@ exports.updateDefaut = async (req, res) => {
     const values = [];
     
     const allowedFields = [
-      'Code_defaut', 'Description_defaut', 'ID_Poste',
+      'Code_defaut', 'Description_defaut', 'ID_Poste', 'ID_Operateur',
       'Gravite', 'Quantite_concernee', 'Impact_production',
       'Commentaire'
     ];
@@ -337,15 +343,17 @@ exports.updateDefaut = async (req, res) => {
     values.push(defautId);
     
     await db.query(
-      `UPDATE defauts_process SET ${fields.join(', ')}, Date_modification = NOW() WHERE ID = ?`,
+      `UPDATE defauts_process SET ${fields.join(', ')} WHERE ID = ?`,
       values
     );
     
     const [updated] = await db.query(`
-      SELECT d.*, a.Code_article, a.Client, p.Description as Poste_description
+      SELECT d.*, a.Code_article, a.Client, p.Description as Poste_description,
+             per.Nom_prenom as Operateur_nom
       FROM defauts_process d
       LEFT JOIN articles a ON d.ID_Article = a.ID
       LEFT JOIN postes p ON d.ID_Poste = p.ID
+      LEFT JOIN personnel per ON d.ID_Operateur = per.ID
       WHERE d.ID = ?
     `, [defautId]);
     

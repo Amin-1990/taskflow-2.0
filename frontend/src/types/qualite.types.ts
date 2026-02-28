@@ -18,6 +18,8 @@ export interface DefautProcess {
   Code_defaut: string;
   Description_defaut: string;
   ID_Poste: number | null;
+  ID_Operateur?: number | null;
+  Operateur_nom?: string;
   Gravite: GraviteDefaut;
   Quantite_concernee: number;
   Impact_production: number | null;

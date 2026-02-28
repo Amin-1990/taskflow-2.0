@@ -253,28 +253,28 @@ export const ArticleGestion: FunctionComponent<ArticleGestionProps> = ({ id }) =
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Temps théorique (heures)
+                Temps théorique (minutes)
               </label>
               <input
                 type="number"
                 name="Temps_theorique"
                 value={formData.Temps_theorique || ''}
                 onChange={handleChange}
-                step="0.5"
+                step="1"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Temps réel (heures)
+                Temps réel (minutes)
               </label>
               <input
                 type="number"
                 name="Temps_reel"
                 value={formData.Temps_reel || ''}
                 onChange={handleChange}
-                step="0.5"
+                step="1"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>

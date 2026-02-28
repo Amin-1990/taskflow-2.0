@@ -60,8 +60,7 @@ const menuItems: MenuItem[] = [
     icon: Box,
     label: 'Articles',
     subItems: [
-      { icon: Package, label: 'Liste articles', path: '/articles' },
-      { icon: Settings, label: 'Gestion des articles', path: '/articles/gestion' }
+      { icon: Package, label: 'Liste articles', path: '/articles' }
     ]
   },
   {

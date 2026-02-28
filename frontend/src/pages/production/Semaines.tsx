@@ -6,6 +6,7 @@
 import { type FunctionComponent } from 'preact';
 import { useEffect, useState, useRef } from 'preact/hooks';
 import {
+  Plus,
   Search,
   Filter,
   ChevronLeft,
@@ -21,6 +22,7 @@ import { showToast } from '../../utils/toast';
 import { semainesApi } from '../../api/semaines';
 import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
 import ActionButton from '../../components/common/ActionButton';
+import PageHeader from '../../components/common/PageHeader';
 import { usePermissions } from '../../hooks/usePermissions';
 
 interface SemainesProps {
@@ -53,9 +55,19 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
 
   const [showFilters, setShowFilters] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  const [isAddingSemaine, setIsAddingSemaine] = useState(false);
+  const [formData, setFormData] = useState({
+    Code_semaine: '',
+    Numero_semaine: 1,
+    Annee: 2026,
+    Mois: 1,
+    Date_debut: '',
+    Date_fin: ''
+  });
 
   useEffect(() => {
     console.log('ðŸ“… Module Production - Semaines');
@@ -130,6 +142,36 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
     await exportSemaines();
   };
 
+  const handleAddSemaine = async () => {
+    if (!formData.Code_semaine.trim() || !formData.Numero_semaine || !formData.Date_debut || !formData.Date_fin) {
+      showToast.error('Tous les champs sont requis');
+      return;
+    }
+
+    try {
+      setIsAddingSemaine(true);
+      const response = await semainesApi.create(formData);
+      if (response.data.success) {
+        showToast.success('Semaine ajoutée avec succès');
+        setShowAddModal(false);
+        setFormData({
+          Code_semaine: '',
+          Numero_semaine: 1,
+          Annee: 2026,
+          Mois: 1,
+          Date_debut: '',
+          Date_fin: ''
+        });
+        // Recharger les données
+        setTimeout(() => window.location.reload(), 500);
+      }
+    } catch (error: any) {
+      showToast.error(error?.response?.data?.error || 'Erreur lors de l\'ajout de la semaine');
+    } finally {
+      setIsAddingSemaine(false);
+    }
+  };
+
   if (loading && (!semaines || semaines.length === 0)) {
     return (
       <div className="flex items-center justify-center h-96">
@@ -143,33 +185,32 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tÃªte */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center space-x-2">
-            <Calendar className="w-6 h-6" />
-            <span>Gestion des semaines</span>
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Total: {total} semaine{total > 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {canWrite('SEMAINES') && (
-            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-              {isDownloadingTemplate ? 'Template...' : 'Template'}
+      <PageHeader
+        title="Gestion des semaines"
+        subtitle={`Total: ${total} semaine${total > 1 ? 's' : ''}`}
+        actions={
+          <>
+            {canWrite('SEMAINES') && (
+              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
+                {isDownloadingTemplate ? 'Template...' : 'Template'}
+              </ActionButton>
+            )}
+            {canWrite('SEMAINES') && (
+              <ActionButton onClick={() => setShowImportModal(true)} loading={loadingImport} icon={Upload}>
+                {loadingImport ? 'Import...' : 'Importer'}
+              </ActionButton>
+            )}
+            <ActionButton onClick={handleExport} disabled={loading || semaines.length === 0} icon={Download}>
+              Exporter
             </ActionButton>
-          )}
-          {canWrite('SEMAINES') && (
-            <ActionButton onClick={() => setShowImportModal(true)} loading={loadingImport} icon={Upload}>
-              {loadingImport ? 'Import...' : 'Importer'}
-            </ActionButton>
-          )}
-          <ActionButton onClick={handleExport} disabled={loading || semaines.length === 0} icon={Download}>
-            Exporter
-          </ActionButton>
-        </div>
-      </div>
+            {canWrite('SEMAINES') && (
+              <ActionButton onClick={() => setShowAddModal(true)} icon={Plus} variant="accent">
+                Ajouter
+              </ActionButton>
+            )}
+          </>
+        }
+      />
 
       {error && (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
@@ -241,13 +282,13 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
               />
             </div>
 
-            {/* Bouton RÃ©initialiser */}
+            {/* Bouton Réinitialiser */}
             <div className="flex items-end">
               <button
                 onClick={clearFiltres}
                 className="w-full px-3 py-2 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
               >
-                RÃ©initialiser
+                Réinitialiser
               </button>
             </div>
           </div>
@@ -270,13 +311,13 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
                     Code
                   </th>
                   <th className="px-6 py-3 text-center font-semibold text-gray-700">
-                    NumÃ©ro
+                    Numéro
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-gray-700">
                     Mois
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-gray-700">
-                    DÃ©but
+                    Début
                   </th>
                   <th className="px-6 py-3 text-left font-semibold text-gray-700">
                     Fin
@@ -442,6 +483,115 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
         </div>
       )}
 
+      {/* Modal Ajouter Semaine */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md mx-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Ajouter une semaine
+            </h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Code semaine
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: S01"
+                  value={formData.Code_semaine}
+                  onChange={(e) => setFormData({ ...formData, Code_semaine: (e.target as HTMLInputElement).value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Numéro semaine
+                </label>
+                <input
+                  type="number"
+                  placeholder="Ex: 1"
+                  min={1}
+                  max={52}
+                  value={formData.Numero_semaine}
+                  onChange={(e) => setFormData({ ...formData, Numero_semaine: (e.target as HTMLInputElement).value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Année
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.Annee}
+                    onChange={(e) => setFormData({ ...formData, Annee: parseInt((e.target as HTMLInputElement).value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mois
+                  </label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={formData.Mois}
+                    onChange={(e) => setFormData({ ...formData, Mois: parseInt((e.target as HTMLInputElement).value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date début
+                </label>
+                <input
+                  type="date"
+                  value={formData.Date_debut}
+                  onChange={(e) => setFormData({ ...formData, Date_debut: (e.target as HTMLInputElement).value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Date fin
+                </label>
+                <input
+                  type="date"
+                  value={formData.Date_fin}
+                  onChange={(e) => setFormData({ ...formData, Date_fin: (e.target as HTMLInputElement).value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={isAddingSemaine}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleAddSemaine}
+                disabled={isAddingSemaine}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isAddingSemaine ? 'Ajout...' : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dialog de confirmation de suppression */}
       {deleteId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -450,7 +600,7 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
               Confirmer la suppression
             </h3>
             <p className="text-gray-600 mb-6">
-              ÃŠtes-vous sÃ»r de vouloir supprimer cette semaine ? Cette action est irrÃ©versible.
+              Êtes-vous sûr de vouloir supprimer cette semaine ? Cette action est irréversible.
             </p>
             <div className="flex justify-end space-x-3">
               <button

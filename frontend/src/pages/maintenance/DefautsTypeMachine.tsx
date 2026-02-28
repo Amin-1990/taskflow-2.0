@@ -269,6 +269,7 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
+              <option value="">Tous les types</option>
               {machineTypes.length === 0 && <option value="">Aucun type disponible</option>}
               {machineTypes.map((type) => (
                 <option key={type.ID} value={type.ID}>
@@ -304,7 +305,7 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">ID_Type_machine</th>
+                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Type machine</th>
                   <th className="px-6 py-3 text-left font-semibold text-gray-700">Code_defaut</th>
                   <th className="px-6 py-3 text-left font-semibold text-gray-700">Nom_defaut</th>
                   <th className="px-6 py-3 text-left font-semibold text-gray-700">Description_defaut</th>
@@ -314,7 +315,7 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
               <tbody className="divide-y divide-gray-200">
                 {defauts.map((item) => (
                   <tr key={item.ID} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-medium text-blue-600">{item.ID_Type_machine}</td>
+                    <td className="px-6 py-4 font-medium text-blue-600">{item.Type_machine || '-'}</td>
                     <td className="px-6 py-4 text-gray-700">{item.Code_defaut}</td>
                     <td className="px-6 py-4 text-gray-700">{item.Nom_defaut}</td>
                     <td className="px-6 py-4 text-gray-700">{item.Description_defaut || '-'}</td>

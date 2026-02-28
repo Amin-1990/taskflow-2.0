@@ -83,10 +83,6 @@ export const useDefautsTypeMachine = (): UseDefautsTypeMachineReturn => {
 
       setAllDefauts(nextDefauts);
       setMachineTypes(nextTypes);
-
-      if (!selectedTypeMachineId && nextTypes.length > 0) {
-        setSelectedTypeMachineId(nextTypes[0].ID);
-      }
     } catch (err: any) {
       const message = err?.error || err?.response?.data?.error || 'Erreur lors du chargement des defauts type machine';
       setError(message);

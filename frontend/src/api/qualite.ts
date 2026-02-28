@@ -20,6 +20,7 @@ export interface CreateDefautProcessDto {
   Code_defaut: string;
   Description_defaut: string;
   ID_Poste?: number | null;
+  ID_Operateur?: number | null;
   Gravite?: 'Mineure' | 'Majeure' | 'Critique' | 'Bloquante';
   Quantite_concernee?: number;
   Impact_production?: number | null;

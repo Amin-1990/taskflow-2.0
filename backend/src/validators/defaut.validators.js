@@ -10,8 +10,13 @@ exports.createDefautValidator = [
     .toInt(),
   
   body('ID_Poste')
-    .notEmpty().withMessage('ID poste requis')
+    .optional()
     .isInt({ min: 1 }).withMessage('ID poste doit être un entier positif')
+    .toInt(),
+  
+  body('ID_Operateur')
+    .optional()
+    .isInt({ min: 1 }).withMessage('ID opérateur doit être un entier positif')
     .toInt(),
   
   body('Code_defaut')
@@ -20,7 +25,7 @@ exports.createDefautValidator = [
     .isLength({ min: 1, max: 20 }).withMessage('Code défaut doit faire 1-20 caractères'),
   
   body('Date_defaut')
-    .notEmpty().withMessage('Date défaut requise')
+    .optional()
     .isISO8601().withMessage('Date invalide (format: YYYY-MM-DD)'),
   
   body('Heure_defaut')
@@ -79,6 +84,11 @@ exports.updateDefautValidator = [
   body('ID_Poste')
     .optional()
     .isInt({ min: 1 }).withMessage('ID poste invalide')
+    .toInt(),
+  
+  body('ID_Operateur')
+    .optional()
+    .isInt({ min: 1 }).withMessage('ID opérateur invalide')
     .toInt(),
   
   body('Code_defaut')

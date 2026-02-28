@@ -7,6 +7,11 @@ import { showToast } from '../../utils/toast';
 import ActionButton from '../../components/common/ActionButton';
 import PageHeader from '../../components/common/PageHeader';
 import FilterPanel from '../../components/common/FilterPanel';
+import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
+import { useAllArticles } from '../../hooks/useAllArticles';
+import { usePersonnel } from '../../hooks/usePersonnel';
+import { useDefauts } from '../../hooks/useDefauts';
+import { usePostes } from '../../hooks/usePostes';
 
 interface NonConformitesProductionProps {
   path?: string;
@@ -14,12 +19,23 @@ interface NonConformitesProductionProps {
 
 const gravites: GraviteDefaut[] = ['Mineure', 'Majeure', 'Critique', 'Bloquante'];
 
-const initialForm: CreateDefautProcessDto = {
+interface FormState extends CreateDefautProcessDto {
+  Operateur_ID?: number | null;
+  Operateur_nom?: string;
+  Defaut_ID?: number | null;
+  Poste_Description?: string;
+}
+
+const initialForm: FormState = {
   ID_Article: 0,
   Code_article: '',
   Code_defaut: '',
   Description_defaut: '',
   ID_Poste: null,
+  Operateur_ID: null,
+  Operateur_nom: '',
+  Defaut_ID: null,
+  Poste_Description: '',
   Gravite: 'Mineure',
   Quantite_concernee: 1,
   Impact_production: null,
@@ -27,6 +43,11 @@ const initialForm: CreateDefautProcessDto = {
 };
 
 export const NonConformitesProduction: FunctionComponent<NonConformitesProductionProps> = () => {
+  const { articles, loading: articlesLoading } = useAllArticles();
+  const { personnels, loading: personnelsLoading } = usePersonnel();
+  const { defauts, loading: defautsLoading } = useDefauts();
+  const { postes, loading: postesLoading } = usePostes();
+
   const [items, setItems] = useState<DefautProcess[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +62,7 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
   const [editingItem, setEditingItem] = useState<DefautProcess | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
-  const [form, setForm] = useState<CreateDefautProcessDto>(initialForm);
+  const [form, setForm] = useState<FormState>(initialForm);
   const [isSaving, setIsSaving] = useState(false);
 
   const [isExporting, setIsExporting] = useState(false);
@@ -100,6 +121,12 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
   };
 
   const openEditModal = (item: DefautProcess) => {
+    // Trouver le défaut correspondant
+    const defautMatch = defauts.find((d) => d.Code_defaut === item.Code_defaut && d.Description === item.Description_defaut);
+    
+    // Trouver le poste correspondant
+    const posteMatch = postes.find((p) => p.ID === item.ID_Poste);
+    
     setEditingItem(item);
     setForm({
       ID_Article: item.ID_Article,
@@ -107,6 +134,10 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
       Code_defaut: item.Code_defaut,
       Description_defaut: item.Description_defaut,
       ID_Poste: item.ID_Poste,
+      Operateur_ID: item.ID_Operateur || null,
+      Operateur_nom: item.Operateur_nom || '',
+      Defaut_ID: defautMatch?.ID || null,
+      Poste_Description: posteMatch?.Description || '',
       Gravite: item.Gravite,
       Quantite_concernee: item.Quantite_concernee,
       Impact_production: item.Impact_production,
@@ -116,19 +147,20 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
   };
 
   const handleSave = async () => {
-    if (!form.ID_Article || !form.Code_article.trim() || !form.Code_defaut.trim() || !form.Description_defaut.trim()) {
-      showToast.error('ID Article, code article, code defaut et description sont requis');
+    if (!form.ID_Article || !form.Code_article.trim() || !form.Description_defaut.trim()) {
+      showToast.error('Article, et description de défaut sont requis');
       return;
     }
 
     try {
       setIsSaving(true);
-      const payload: CreateDefautProcessDto = {
+      const payload: any = {
         ID_Article: Number(form.ID_Article),
         Code_article: form.Code_article.trim(),
         Code_defaut: form.Code_defaut.trim(),
         Description_defaut: form.Description_defaut.trim(),
         ID_Poste: form.ID_Poste ?? null,
+        ID_Operateur: form.Operateur_ID ?? null,
         Gravite: form.Gravite || 'Mineure',
         Quantite_concernee: Number(form.Quantite_concernee || 1),
         Impact_production: form.Impact_production ?? null,
@@ -318,6 +350,7 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
                 <tr>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Date</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Article</th>
+                  <th className="px-4 py-3 text-left font-semibold text-gray-700">Operateur</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Defaut</th>
                   <th className="px-4 py-3 text-left font-semibold text-gray-700">Gravite</th>
                   <th className="px-4 py-3 text-right font-semibold text-gray-700">Quantite</th>
@@ -326,29 +359,29 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {paginated.map((item) => (
-                  <tr key={item.ID} className="hover:bg-gray-50">
-                    <td className="px-4 py-3 text-gray-700">
-                      {item.Date_defaut ? new Date(item.Date_defaut).toLocaleString('fr-FR') : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{item.Code_article}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      <div className="font-medium text-blue-600">{item.Code_defaut}</div>
-                      <div className="text-xs text-gray-500">{item.Description_defaut}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">{item.Gravite}</td>
-                    <td className="px-4 py-3 text-right text-gray-700">{item.Quantite_concernee}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <button onClick={() => openEditModal(item)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setDeleteId(item.ID)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                   <tr key={item.ID} className="hover:bg-gray-50">
+                     <td className="px-4 py-3 text-gray-700">
+                       {item.Date_defaut ? new Date(item.Date_defaut).toLocaleString('fr-FR') : '-'}
+                     </td>
+                     <td className="px-4 py-3 text-gray-700">{item.Code_article}</td>
+                     <td className="px-4 py-3 text-gray-700">{item.Operateur_nom || '-'}</td>
+                     <td className="px-4 py-3 text-gray-700">
+                       <div className="font-medium text-blue-600">{item.Description_defaut}</div>
+                     </td>
+                     <td className="px-4 py-3 text-gray-700">{item.Gravite}</td>
+                     <td className="px-4 py-3 text-right text-gray-700">{item.Quantite_concernee}</td>
+                     <td className="px-4 py-3">
+                       <div className="flex justify-end gap-2">
+                         <button onClick={() => openEditModal(item)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                           <Edit2 className="w-4 h-4" />
+                         </button>
+                         <button onClick={() => setDeleteId(item.ID)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                       </div>
+                     </td>
+                   </tr>
+                 ))}
               </tbody>
             </table>
           </div>
@@ -398,38 +431,90 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">ID Article *</label>
-                <input
-                  type="number"
-                  value={form.ID_Article || ''}
-                  onChange={(e) => setForm((prev) => ({ ...prev, ID_Article: Number((e.target as HTMLInputElement).value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                <SelectSearch
+                  label="Code article *"
+                  options={articles.map((a) => ({
+                    id: a.ID,
+                    label: a.Code_article
+                  }))}
+                  selectedId={form.ID_Article}
+                  onSelect={(option) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      ID_Article: Number(option.id),
+                      Code_article: option.label
+                    }))
+                  }
+                  placeholder="Rechercher un article..."
+                  required
+                  maxResults={999999}
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Code article *</label>
-                <input
-                  value={form.Code_article}
-                  onChange={(e) => setForm((prev) => ({ ...prev, Code_article: (e.target as HTMLInputElement).value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                <SelectSearch
+                  label="Operateur"
+                  options={personnels.map((p) => ({
+                    id: p.ID,
+                    label: p.Nom_prenom
+                  }))}
+                  selectedId={form.Operateur_ID}
+                  onSelect={(option) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      Operateur_ID: Number(option.id),
+                      Operateur_nom: option.label
+                    }))
+                  }
+                  placeholder="Rechercher un operateur..."
+                  maxResults={999999}
                 />
               </div>
+
+              <div className="md:col-span-2">
+                <SelectSearch
+                  label="Description defaut *"
+                  options={defauts.map((d) => ({
+                    id: d.ID,
+                    label: `${d.Code_defaut} - ${d.Description}`
+                  }))}
+                  selectedId={form.Defaut_ID}
+                  onSelect={(option) => {
+                    const label = option.label as string;
+                    const codePart = label.split(' - ')[0]?.trim() || '';
+                    setForm((prev) => ({
+                      ...prev,
+                      Defaut_ID: Number(option.id),
+                      Code_defaut: codePart,
+                      Description_defaut: label
+                    }));
+                  }}
+                  placeholder="Rechercher un defaut..."
+                  required
+                  maxResults={999999}
+                />
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Code defaut *</label>
-                <input
-                  value={form.Code_defaut}
-                  onChange={(e) => setForm((prev) => ({ ...prev, Code_defaut: (e.target as HTMLInputElement).value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                <SelectSearch
+                  label="Poste"
+                  options={postes.map((p) => ({
+                    id: p.ID,
+                    label: p.Description
+                  }))}
+                  selectedId={form.ID_Poste}
+                  onSelect={(option) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      ID_Poste: Number(option.id),
+                      Poste_Description: option.label
+                    }))
+                  }
+                  placeholder="Rechercher un poste..."
+                  maxResults={999999}
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description defaut *</label>
-                <input
-                  value={form.Description_defaut}
-                  onChange={(e) => setForm((prev) => ({ ...prev, Description_defaut: (e.target as HTMLInputElement).value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Gravite</label>
                 <select
@@ -442,29 +527,18 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">ID Poste</label>
-                <input
-                  type="number"
-                  value={form.ID_Poste ?? ''}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      ID_Poste: (e.target as HTMLInputElement).value ? Number((e.target as HTMLInputElement).value) : null
-                    }))
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Quantite concernee</label>
                 <input
                   type="number"
+                  min="1"
                   value={form.Quantite_concernee ?? 1}
                   onChange={(e) => setForm((prev) => ({ ...prev, Quantite_concernee: Number((e.target as HTMLInputElement).value) }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Impact production</label>
                 <input
@@ -479,9 +553,11 @@ export const NonConformitesProduction: FunctionComponent<NonConformitesProductio
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"
                 />
               </div>
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Commentaire</label>
                 <input
+                  type="text"
                   value={form.Commentaire || ''}
                   onChange={(e) => setForm((prev) => ({ ...prev, Commentaire: (e.target as HTMLInputElement).value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg"

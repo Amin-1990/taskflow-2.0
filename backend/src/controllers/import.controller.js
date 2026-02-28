@@ -271,7 +271,6 @@ class ImportController {
   async getTemplateDefautsTypeMachine(req, res) {
     try {
       const columns = [
-        { header: 'ID_Type_machine', key: 'id_type_machine', width: 18, example: '1' },
         { header: 'Type_machine', key: 'type_machine', width: 30, example: 'Presse hydraulique' },
         { header: 'Code_defaut', key: 'code_defaut', width: 18, example: 'DF-TM-001' },
         { header: 'Nom_defaut', key: 'nom_defaut', width: 28, example: 'Surchauffe moteur' },
@@ -1795,17 +1794,26 @@ class ImportController {
         return Number.isNaN(parsed.getTime()) ? null : formatDateForAPI(parsed);
       };
 
-      const statutsAutorises = new Set(['operationnel', 'en_maintenance', 'hors_service']);
+      // Mapping des valeurs pour Statut_operationnel acceptées par la DB
+      const statutMapping = {
+        'operationnel': 'en_production',
+        'en_maintenance': 'maintenance',
+        'hors_service': 'en_panne'
+      };
+      
+      const statutsAutorises = new Set(Object.keys(statutMapping));
 
       for (let i = 0; i < data.length; i += 1) {
         const rowNumber = i + 2;
         const row = normalizeRow(data[i]);
+
         if (isRowEmpty(row)) continue;
 
         const code = String(getCell(row, ['code', 'code interne', 'code_interne']) || '').trim();
         const nom = String(getCell(row, ['nom', 'nom machine', 'nom_machine']) || '').trim();
         const typeMachineNom = String(getCell(row, ['type machine', 'type_machine']) || '').trim();
         const statutRaw = String(getCell(row, ['statut operationnel', 'statut_operationnel']) || 'operationnel').trim();
+        const statutMapped = statutMapping[statutRaw] || statutRaw;
         const site = String(getCell(row, ['site affectation', 'site_affectation']) || '').trim();
         const dateInstallation = toDateOrNull(getCell(row, ['date installation', 'date_installation']));
         const numeroSerie = String(getCell(row, ['numero serie', 'numero_serie']) || '').trim() || null;
@@ -1846,16 +1854,16 @@ class ImportController {
                SET Type_machine_id = ?, Nom_machine = ?, Statut_operationnel = ?, Site_affectation = ?,
                    Date_installation = ?, Numero_serie = ?, Description = ?, Commentaire = ?, Date_modification = NOW()
                WHERE ID = ?`,
-              [typeMachineId, nom, statutRaw, site || null, dateInstallation, numeroSerie, description, notes, existing[0].ID]
+              [typeMachineId, nom, statutMapped, site || null, dateInstallation, numeroSerie, description, notes, existing[0].ID]
             );
             resultats.push({ id: existing[0].ID, code, action: 'updated' });
           } else {
             const [insert] = await connection.query(
               `INSERT INTO machines (
-                Type_machine_id, Code_interne, Nom_machine, Statut_operationnel, Site_affectation,
-                Date_installation, Numero_serie, Description, Commentaire, Statut, Date_creation
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'actif', NOW())`,
-              [typeMachineId, code, nom, statutRaw, site || null, dateInstallation, numeroSerie, description, notes]
+                 Type_machine_id, Code_interne, Nom_machine, Statut_operationnel, Site_affectation,
+                 Date_installation, Numero_serie, Description, Commentaire, Statut, Date_creation
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'actif', NOW())`,
+              [typeMachineId, code, nom, statutMapped, site || null, dateInstallation, numeroSerie, description, notes]
             );
             resultats.push({ id: insert.insertId, code, action: 'created' });
           }
