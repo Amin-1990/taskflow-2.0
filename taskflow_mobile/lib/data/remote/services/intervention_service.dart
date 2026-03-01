@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../../../core/services/timezone_service.dart';
 import '../../../domain/models/intervention.dart';
 import '../../../domain/models/maintenance_machine.dart';
 import '../../../domain/models/type_machine.dart';
@@ -58,6 +59,9 @@ class InterventionService {
     required String description,
     required InterventionPriority priority,
   }) async {
+    final now = TimezoneService.now();
+    final formattedDate = '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+    
     final response = await _dio.post<Map<String, dynamic>>(
       '/api/interventions',
       data: {
@@ -66,6 +70,8 @@ class InterventionService {
         'ID_Defaut': typePanneId,
         'Demandeur': demandeurId,
         'Description_panne': description,
+        'Description_probleme': description,
+        'Date_heure_demande': formattedDate,
         'Priorite': _priorityToApi(priority),
       },
     );
@@ -156,12 +162,15 @@ class InterventionService {
 
   String _priorityToApi(InterventionPriority priority) {
     switch (priority) {
+      case InterventionPriority.urgente:
+        return 'URGENTE';
       case InterventionPriority.haute:
         return 'HAUTE';
+      case InterventionPriority.normale:
+      case InterventionPriority.moyenne:
+        return 'NORMALE';
       case InterventionPriority.basse:
         return 'BASSE';
-      case InterventionPriority.moyenne:
-        return 'MOYENNE';
     }
   }
 }

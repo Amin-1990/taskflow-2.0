@@ -3,9 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/widgets/scanner_button.dart';
-import '../../../core/widgets/searchable_dropdown.dart';
+import '../../../core/widgets/selection_field.dart';
+import '../../../core/widgets/selection_modal.dart';
+import '../../../core/services/toast_service.dart';
 import '../../../domain/models/article.dart';
+import '../../../domain/models/poste.dart';
+import '../../../domain/models/semaine.dart';
+import '../../../domain/models/operateur.dart';
+import '../../../domain/models/type_defaut.dart';
 import '../defects/controllers/defects_process_provider.dart';
 import '../../../core/constants/design_constants.dart';
 
@@ -88,52 +93,83 @@ class DefectsPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('Poste de travail'),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField(
+                        SelectionField<Poste>(
+                          label: 'POSTE DE TRAVAIL',
                           value: state.selectedPoste,
-                          onChanged: notifier.selectPoste,
-                          dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
-                          decoration: InputDecoration(
-                              hintText: 'Sélectionner un poste',
-                              hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight)),
-                          items: state.postes
-                              .map((p) => DropdownMenuItem(
-                                  value: p,
-                                  child: Text(p.name,
-                                      style: TextStyle(
-                                          color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16))))
-                              .toList(),
-                        ),
-                        const SizedBox(height: 18),
-                        const _Label('Semaine'),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField(
-                          value: state.selectedSemaine,
-                          onChanged: notifier.selectSemaine,
-                          dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
-                          items: state.semaines
-                              .map((s) => DropdownMenuItem(
-                                  value: s,
-                                  child: Text(s.label,
-                                      style: TextStyle(
-                                          color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16))))
-                              .toList(),
-                        ),
-                        const SizedBox(height: 18),
-                        const _Label('Article / Référence'),
-                        const SizedBox(height: 8),
-                        SearchableDropdown<Article>(
-                          hint: 'Ex: REF-99201',
-                          selected: state.selectedArticle,
-                          onSearch: notifier.searchArticles,
-                          itemToText: (a) => '${a.code} - ${a.name}',
-                          onSelected: notifier.selectArticle,
-                          onScan: notifier.scanArticle,
+                          displayText: (p) => p.name,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Poste>(
+                                title: 'Sélectionner un poste',
+                                items: state.postes,
+                                displayText: (p) => p.name,
+                                selectedValue: state.selectedPoste,
+                                onSelect: (p) {
+                                  notifier.selectPoste(p);
+                                },
+                              ),
+                            );
+                          },
+                          enableQrScan: false,
+                          onClear: () {
+                            notifier.clearPoste();
+                          },
+                          ),
+                          const SizedBox(height: 16),
+                          SelectionField<Semaine>(
+                           label: 'SEMAINE',
+                           value: state.selectedSemaine,
+                           displayText: (s) => s.label,
+                           onTap: () {
+                             showDialog(
+                               context: context,
+                               builder: (context) => SelectionModal<Semaine>(
+                                 title: 'Sélectionner une semaine',
+                                 items: state.semaines,
+                                 displayText: (s) => s.label,
+                                 selectedValue: state.selectedSemaine,
+                                 onSelect: (s) {
+                                   notifier.selectSemaine(s);
+                                 },
+                               ),
+                             );
+                           },
+                           enableQrScan: false,
+                           onClear: () {
+                             notifier.clearSemaine();
+                           },
+                          ),
+                        const SizedBox(height: 16),
+                        SelectionField<Article>(
+                          label: 'ARTICLE / RÉFÉRENCE',
+                          value: state.selectedArticle,
+                          displayText: (a) => a.code == a.name ? a.code : '${a.code} - ${a.name}',
+                          onTap: () {
+                            if (state.selectedSemaine == null) {
+                              ToastService.showInfo(context, 'Veuillez d\'abord sélectionner une semaine');
+                              return;
+                            }
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Article>(
+                                title: 'Sélectionner un article',
+                                items: state.articleSuggestions,
+                                displayText: (a) => a.code == a.name ? a.code : '${a.code} - ${a.name}',
+                                selectedValue: state.selectedArticle,
+                                onSelect: (a) {
+                                  notifier.selectArticle(a);
+                                },
+                              ),
+                            );
+                          },
+                          enableQrScan: true,
+                          onScanQr: () async {
+                            // TODO: Implement QR scan logic
+                          },
+                          onClear: () {
+                            notifier.clearArticle();
+                          },
                         ),
                       ],
                     ),
@@ -146,54 +182,55 @@ class DefectsPage extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _Label('Opérateur'),
-                        const SizedBox(height: 8),
-                        DropdownButtonFormField(
+                        SelectionField<Operateur>(
+                          label: 'OPÉRATEUR',
                           value: state.selectedOperateur,
-                          onChanged: notifier.selectOperateur,
-                          dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
-                          decoration: InputDecoration(
-                              hintText: 'Sélectionner un opérateur',
-                              hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight)),
-                          items: state.operateurs
-                              .map((o) => DropdownMenuItem(
-                                  value: o,
-                                  child: Text(
-                                      '${o.firstName} ${o.lastName} (${o.matricule})',
-                                      style: TextStyle(
-                                          color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 16))))
-                              .toList(),
-                        ),
-                        const SizedBox(height: 18),
-                        const _Label('Type de défaut'),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField(
-                                value: state.selectedTypeDefaut,
-                                onChanged: notifier.selectTypeDefaut,
-                                dropdownColor: isDark ? const Color(0xFF13284A) : Colors.white,
-                                decoration: InputDecoration(
-                                    hintText: 'CODE - Description',
-                                    hintStyle: TextStyle(color: isDark ? AppPalette.textMuted : AppPalette.textMutedLight)),
-                                items: state.typesDefaut
-                                    .map((t) => DropdownMenuItem(
-                                        value: t,
-                                        child: Text(t.codeAndDescription,
-                                            style: TextStyle(
-                                                color: isDark ? const Color(0xFFEAF0F9) : AppPalette.textPrimaryLight,
-                                                fontWeight: FontWeight.w600,
-                                                fontSize: 16))))
-                                    .toList(),
+                          displayText: (o) => '${o.firstName} ${o.lastName} (${o.matricule})',
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<Operateur>(
+                                title: 'Sélectionner un opérateur',
+                                items: state.operateurs,
+                                displayText: (o) => '${o.firstName} ${o.lastName} (${o.matricule})',
+                                selectedValue: state.selectedOperateur,
+                                onSelect: (o) {
+                                  notifier.selectOperateur(o);
+                                },
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            ScannerButton(
-                                onScan: notifier.scanTypeDefaut, size: 52),
-                          ],
+                            );
+                          },
+                          enableQrScan: false,
+                          onClear: () {
+                            notifier.clearOperateur();
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        SelectionField<TypeDefaut>(
+                          label: 'TYPE DE DÉFAUT',
+                          value: state.selectedTypeDefaut,
+                          displayText: (t) => t.codeAndDescription,
+                          onTap: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => SelectionModal<TypeDefaut>(
+                                title: 'Sélectionner un type de défaut',
+                                items: state.typesDefaut,
+                                displayText: (t) => t.codeAndDescription,
+                                selectedValue: state.selectedTypeDefaut,
+                                onSelect: (t) {
+                                  notifier.selectTypeDefaut(t);
+                                },
+                              ),
+                            );
+                          },
+                          enableQrScan: true,
+                          onScanQr: () async {
+                            // TODO: Implement QR scan logic or use direct scan
+                          },
+                          onClear: () {
+                            notifier.clearTypeDefaut();
+                          },
                         ),
                         const SizedBox(height: 18),
                         const _Label('Quantité'),
@@ -282,11 +319,13 @@ class DefectsPage extends ConsumerWidget {
                 : () async {
                     final ok = await notifier.submit();
                     if (!ok || !context.mounted) {
+                      if (context.mounted && state.error != null) {
+                        ToastService.showError(context, state.error!);
+                      }
                       return;
                     }
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Défaut enregistré avec succès.')));
-                    context.go('/operator/dashboard');
+                    notifier.reset();
+                    ToastService.showSuccess(context, 'Défaut enregistré avec succès');
                   },
             icon: state.isSubmitting
                 ? const SizedBox(

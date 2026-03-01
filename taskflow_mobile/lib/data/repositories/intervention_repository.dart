@@ -405,12 +405,14 @@ class InterventionRepository {
 
   InterventionPriority _priorityFromName(String value) {
     switch (value.toLowerCase()) {
-      case 'basse':
-        return InterventionPriority.basse;
+      case 'urgente':
+        return InterventionPriority.urgente;
       case 'haute':
         return InterventionPriority.haute;
+      case 'basse':
+        return InterventionPriority.basse;
       default:
-        return InterventionPriority.moyenne;
+        return InterventionPriority.normale;
     }
   }
 
@@ -451,7 +453,7 @@ final _mockInterventions = <Intervention>[
     ),
     typePanne: 'Maintenance preventive',
     description: 'Graissage des roulements et verification tension bande.',
-    priority: InterventionPriority.moyenne,
+    priority: InterventionPriority.normale,
     status: InterventionStatus.affectee,
     dateDemande: TimezoneService.now().subtract(const Duration(hours: 1, minutes: 10)),
     datePrise: TimezoneService.now().subtract(const Duration(hours: 1)),

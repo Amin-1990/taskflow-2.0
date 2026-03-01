@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/design_constants.dart';
+import '../../../../core/services/toast_service.dart';
 import '../../../../core/widgets/selection_field.dart';
 import '../../../../core/widgets/selection_modal.dart';
 import '../../widgets/sync_indicator.dart';
@@ -226,19 +227,18 @@ class _FinishTaskPageState extends ConsumerState<FinishTaskPage> {
                 height: 60,
                 child: FilledButton.icon(
                   onPressed: state.isSubmitting || state.quantity <= 0
-                      ? null
-                      : () async {
-                          final result = await notifier.submit();
-                          if (result == null || !context.mounted) {
-                            return;
-                          }
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'Production clôturée avec succès.')),
-                          );
-                          context.go('/operator/dashboard');
-                        },
+                     ? null
+                     : () async {
+                         final result = await notifier.submit();
+                         if (result == null || !context.mounted) {
+                           if (context.mounted && state.error != null) {
+                             ToastService.showError(context, state.error!);
+                           }
+                           return;
+                         }
+                         notifier.reset();
+                         ToastService.showSuccess(context, 'Production clôturée avec succès');
+                       },
                   icon: state.isSubmitting
                       ? const SizedBox(
                           width: 20,

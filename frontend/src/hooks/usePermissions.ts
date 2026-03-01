@@ -19,7 +19,10 @@ export const usePermissions = () => {
     const canWrite = (module: string): boolean =>
         permissions.includes(`${module}_WRITE`);
 
-    return { canRead, canWrite };
+    const canDelete = (module: string): boolean =>
+        permissions.includes(`${module}_DELETE`);
+
+    return { canRead, canWrite, canDelete };
 };
 
 export default usePermissions;

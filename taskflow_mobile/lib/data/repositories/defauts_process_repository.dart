@@ -139,6 +139,14 @@ class DefautsProcessRepository {
     }
   }
 
+  Future<List<Article>> getArticlesBySemaine(String semaineId) async {
+    try {
+      return await _service.getArticlesBySemaine(semaineId);
+    } on DioException {
+      return const [];
+    }
+  }
+
   Future<void> submitDefaut(DefautProcess defaut) async {
     try {
       await _service.createDefautProcess(defaut);

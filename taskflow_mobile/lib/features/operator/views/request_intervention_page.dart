@@ -192,13 +192,13 @@ class RequestInterventionPage extends ConsumerWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: _PriorityCard(
-                          title: 'Moyenne',
+                          title: 'Normale',
                           icon: Icons.warning_amber_rounded,
                           selected:
-                              state.priority == InterventionPriority.moyenne,
+                              state.priority == InterventionPriority.normale,
                           color: const Color(0xFFF2B01A),
                           onTap: () => notifier
-                              .setPriority(InterventionPriority.moyenne),
+                              .setPriority(InterventionPriority.normale),
                         ),
                       ),
                       const SizedBox(width: 12),

@@ -38,14 +38,12 @@ class InterventionCard extends StatelessWidget {
                       offset: Offset(0, 4),
                     ),
                   ],
-            image: isDark ? null : DecorationImage(
-              image: const AssetImage('assets/images/card_pattern.png'), // Fallback safe
-              opacity: 0.03,
-              alignment: Alignment.centerRight,
-              repeat: ImageRepeat.repeat,
-            ),
+
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 width: 64,
@@ -60,30 +58,36 @@ class InterventionCard extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Demander Intervention',
-                      style: TextStyle(
-                          color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
-                          fontSize: 32 / 1.4,
-                          fontWeight: FontWeight.w700),
-                    ),
+                       'Demander Intervention',
+                       style: TextStyle(
+                            color: isDark ? AppPalette.textPrimary : AppPalette.textPrimaryLight,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     const SizedBox(height: 4),
                     Text(
-                      'Maintenance requise ?',
-                      style: TextStyle(
-                          color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
-                          fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
-                  size: 36),
-            ],
-          ),
+                       'Maintenance requise ?',
+                       style: TextStyle(
+                           color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
+                           fontSize: 14,
+                           height: 1.2),
+                     ),
+                   ],
+                 ),
+               ),
+               const SizedBox(width: 8),
+               Icon(Icons.chevron_right,
+                   color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight, 
+                   size: 24),
+             ],
+           ),
         ),
       ),
     );

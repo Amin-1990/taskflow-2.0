@@ -228,4 +228,15 @@ class FinishTaskNotifier extends StateNotifier<FinishTaskState> {
       return null;
     }
   }
+
+  void reset() {
+    state = state.copyWith(
+      clearCurrentTask: true,
+      clearSelectedOperator: true,
+      quantity: 0,
+      notes: '',
+      operatorInput: '',
+      clearError: true,
+    );
+  }
 }

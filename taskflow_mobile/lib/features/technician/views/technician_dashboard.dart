@@ -454,10 +454,12 @@ class _InterventionCard extends StatelessWidget {
 
   Color _priorityColor(InterventionPriority priority) {
     switch (priority) {
+      case InterventionPriority.urgente:
       case InterventionPriority.haute:
         return AppPalette.error;
       case InterventionPriority.basse:
         return AppPalette.success;
+      case InterventionPriority.normale:
       case InterventionPriority.moyenne:
         return AppPalette.warning;
     }
@@ -472,13 +474,14 @@ class _PriorityBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = switch (priority) {
-      InterventionPriority.haute => AppPalette.error,
-      InterventionPriority.moyenne => AppPalette.warning,
+      InterventionPriority.urgente || InterventionPriority.haute => AppPalette.error,
+      InterventionPriority.normale || InterventionPriority.moyenne => AppPalette.warning,
       InterventionPriority.basse => AppPalette.success,
     };
     final label = switch (priority) {
+      InterventionPriority.urgente => 'URGENTE',
       InterventionPriority.haute => 'HAUTE',
-      InterventionPriority.moyenne => 'MOYENNE',
+      InterventionPriority.normale || InterventionPriority.moyenne => 'NORMALE',
       InterventionPriority.basse => 'BASSE',
     };
 

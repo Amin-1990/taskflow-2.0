@@ -98,6 +98,24 @@ class DefautsProcessService {
         .toList();
   }
 
+  Future<List<Article>> getArticlesBySemaine(String semaineId) async {
+    final response = await _dio.get<Map<String, dynamic>>('/api/commandes', queryParameters: {'semaine_id': semaineId});
+    final body = response.data ?? <String, dynamic>{};
+    final data = body['data'];
+    if (data is! List) {
+      return const [];
+    }
+
+    final articles = <String, Article>{};
+    for (final item in data.whereType<Map<String, dynamic>>()) {
+      final article = Article.fromJson(item);
+      if (!articles.containsKey(article.id)) {
+        articles[article.id] = article;
+      }
+    }
+    return articles.values.toList();
+  }
+
   Future<void> createDefautProcess(DefautProcess defaut) async {
     await _dio.post('/api/defauts-process', data: defaut.toApiPayload());
   }

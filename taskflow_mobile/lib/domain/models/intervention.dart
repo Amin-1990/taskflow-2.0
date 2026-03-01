@@ -5,7 +5,7 @@ import 'maintenance_machine.dart';
 
 enum InterventionStatus { enAttente, affectee, enCours, terminee, annulee }
 
-enum InterventionPriority { basse, moyenne, haute }
+enum InterventionPriority { basse, normale, moyenne, haute, urgente }
 
 class Intervention extends Equatable {
   const Intervention({

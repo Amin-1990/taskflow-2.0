@@ -37,6 +37,7 @@ class StatCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 100,
@@ -53,8 +54,11 @@ class StatCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: isDark ? AppPalette.textSecondary : AppPalette.textSecondaryLight,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    height: 1.2),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

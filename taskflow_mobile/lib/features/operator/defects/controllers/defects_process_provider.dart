@@ -96,10 +96,15 @@ class DefectsProcessState {
     List<Operateur>? operateurs,
     List<TypeDefaut>? typesDefaut,
     Poste? selectedPoste,
+    bool clearPoste = false,
     Semaine? selectedSemaine,
+    bool clearSemaine = false,
     Article? selectedArticle,
+    bool clearArticle = false,
     Operateur? selectedOperateur,
+    bool clearOperateur = false,
     TypeDefaut? selectedTypeDefaut,
+    bool clearTypeDefaut = false,
     String? articleSearch,
     List<Article>? articleSuggestions,
     int? quantite,
@@ -116,11 +121,11 @@ class DefectsProcessState {
       semaines: semaines ?? this.semaines,
       operateurs: operateurs ?? this.operateurs,
       typesDefaut: typesDefaut ?? this.typesDefaut,
-      selectedPoste: selectedPoste ?? this.selectedPoste,
-      selectedSemaine: selectedSemaine ?? this.selectedSemaine,
-      selectedArticle: selectedArticle ?? this.selectedArticle,
-      selectedOperateur: selectedOperateur ?? this.selectedOperateur,
-      selectedTypeDefaut: selectedTypeDefaut ?? this.selectedTypeDefaut,
+      selectedPoste: clearPoste ? null : (selectedPoste ?? this.selectedPoste),
+      selectedSemaine: clearSemaine ? null : (selectedSemaine ?? this.selectedSemaine),
+      selectedArticle: clearArticle ? null : (selectedArticle ?? this.selectedArticle),
+      selectedOperateur: clearOperateur ? null : (selectedOperateur ?? this.selectedOperateur),
+      selectedTypeDefaut: clearTypeDefaut ? null : (selectedTypeDefaut ?? this.selectedTypeDefaut),
       articleSearch: articleSearch ?? this.articleSearch,
       articleSuggestions: articleSuggestions ?? this.articleSuggestions,
       quantite: quantite ?? this.quantite,
@@ -192,12 +197,34 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
 
   void selectPoste(Poste? poste) =>
       state = state.copyWith(selectedPoste: poste, clearError: true);
-  void selectSemaine(Semaine? semaine) =>
-      state = state.copyWith(selectedSemaine: semaine, clearError: true);
+  void selectSemaine(Semaine? semaine) async {
+    state = state.copyWith(selectedSemaine: semaine, clearError: true);
+    if (semaine != null) {
+      await _loadArticlesBySemaine(semaine.id);
+    }
+  }
+
+  Future<void> _loadArticlesBySemaine(String semaineId) async {
+    try {
+      final articles = await _repository.getArticlesBySemaine(semaineId);
+      if (mounted) {
+        state = state.copyWith(articleSuggestions: articles);
+      }
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(error: e.toString());
+      }
+    }
+  }
   void selectOperateur(Operateur? operateur) =>
       state = state.copyWith(selectedOperateur: operateur, clearError: true);
   void selectTypeDefaut(TypeDefaut? type) =>
       state = state.copyWith(selectedTypeDefaut: type, clearError: true);
+
+  void clearPoste() => selectPoste(null);
+  void clearSemaine() => selectSemaine(null);
+  void clearOperateur() => selectOperateur(null);
+  void clearTypeDefaut() => selectTypeDefaut(null);
 
   void incrementQuantite() =>
       state = state.copyWith(quantite: state.quantite + 1, clearError: true);
@@ -233,6 +260,13 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
     state = state.copyWith(
         selectedArticle: article,
         articleSearch: '${article.code} - ${article.name}',
+        clearError: true);
+  }
+
+  void clearArticle() {
+    state = state.copyWith(
+        selectedArticle: null,
+        articleSearch: '',
         clearError: true);
   }
 
@@ -313,6 +347,20 @@ class DefectsProcessNotifier extends StateNotifier<DefectsProcessState> {
         state = state.copyWith(isOnline: false);
       }
     }
+  }
+
+  void reset() {
+    state = state.copyWith(
+      clearPoste: true,
+      clearSemaine: true,
+      clearArticle: true,
+      clearOperateur: true,
+      clearTypeDefaut: true,
+      articleSearch: '',
+      articleSuggestions: const [],
+      quantite: 1,
+      clearError: true,
+    );
   }
 
   Semaine? _findCurrentWeek(List<Semaine> semaines, DateTime now) {

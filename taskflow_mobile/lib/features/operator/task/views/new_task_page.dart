@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/constants/design_constants.dart';
+import '../../../../core/services/toast_service.dart';
 import '../../../../core/widgets/selection_field.dart';
 import '../../../../core/widgets/selection_modal.dart';
 import '../../../../domain/models/article_lot.dart';
@@ -264,53 +265,14 @@ class _NewTaskPageState extends ConsumerState<NewTaskPage> {
                     }
                     
                     final state = ref.read(newTaskProvider);
-                    final isOngoingTaskError = state.error?.contains('deja une affectation en cours') ?? false;
                     
                     if (created != null) {
                       // Succès
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.check_circle, 
-                                color: Colors.green.shade400,
-                                size: 24),
-                              const SizedBox(width: 12),
-                              const Text('Affectation enregistrée avec succès'),
-                            ],
-                          ),
-                          duration: const Duration(seconds: 2),
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.all(16),
-                          backgroundColor: Colors.grey.shade900,
-                        ),
-                      );
+                      ToastService.showSuccess(context, 'Affectation enregistrée avec succès');
                       notifier.clearOperateur();
-                    } else if (isOngoingTaskError) {
-                      // Erreur: opérateur a déjà une tâche en cours
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              Icon(Icons.warning_rounded, 
-                                color: Colors.orange.shade400,
-                                size: 24),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  state.error ?? 'Cet opérateur a déjà une tâche en cours',
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                          duration: const Duration(seconds: 3),
-                          behavior: SnackBarBehavior.floating,
-                          margin: const EdgeInsets.all(16),
-                          backgroundColor: Colors.grey.shade900,
-                        ),
-                      );
+                    } else if (state.error != null) {
+                      // Erreur
+                      ToastService.showError(context, state.error!);
                     }
                   },
             icon: state.isSubmitting

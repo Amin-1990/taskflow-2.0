@@ -78,7 +78,7 @@ class RequestInterventionState {
       selectedMachine: null,
       selectedTypePanne: null,
       description: '',
-      priority: InterventionPriority.moyenne,
+      priority: InterventionPriority.normale,
       error: null,
     );
   }
