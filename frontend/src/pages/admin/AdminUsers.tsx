@@ -15,6 +15,8 @@ import {
 import { useAdminUsers } from '../../hooks/useAdminUsers';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
+import PageHeader from '../../components/common/PageHeader';
+import ActionButton from '../../components/common/ActionButton';
 import { showToast } from '../../utils/toast';
 import type { AdminUser } from '../../types/admin.types';
 
@@ -94,23 +96,21 @@ export const AdminUsers: FunctionComponent = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Utilisateurs</h1>
-          <p className="text-sm text-gray-500 mt-1">Gestion des utilisateurs de l'application</p>
-        </div>
-
-        {canWrite('ADMIN_USERS') && (
-          <button
-            onClick={() => route('/admin/utilisateurs/nouveau')}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-sm"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Créer un utilisateur</span>
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Utilisateurs"
+        subtitle="Gestion des utilisateurs de l'application"
+        actions={
+          canWrite('ADMIN_USERS') && (
+            <ActionButton
+              onClick={() => route('/admin/utilisateurs/nouveau')}
+              icon={Plus}
+              variant="accent"
+            >
+              Créer un utilisateur
+            </ActionButton>
+          )
+        }
+      />
 
       {/* Recherche */}
       <div className="bg-white rounded-lg shadow-sm p-4">

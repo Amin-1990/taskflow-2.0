@@ -1,6 +1,6 @@
 import { type FunctionComponent } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
-import { Plus, Download, Upload, RefreshCw, Eye, Trash2 } from 'lucide-preact';
+import { Plus, Eye, Trash2, RefreshCw } from 'lucide-preact';
 import { useInterventions } from '../../hooks/useInterventions';
 import * as maintenanceApi from '../../api/maintenance';
 import SelectSearch from '../../components/common/SelectSearch';
@@ -298,15 +298,19 @@ export const Interventions: FunctionComponent<InterventionsListProps> = () => {
     <div className="space-y-6">
       <PageHeader 
         title="Gestion des interventions" 
-        subtitle="Import, export, edition et pagination"
-        actions={
-          <>
-            {canWrite('INTERVENTIONS') && <ActionButton onClick={handleDownloadTemplate} icon={Download}>Template</ActionButton>}
-            {canWrite('INTERVENTIONS') && <ActionButton onClick={handleImportClick} icon={Upload}>Importer</ActionButton>}
-            <ActionButton onClick={handleExportXlsx} icon={Download}>Exporter</ActionButton>
-            <ActionButton onClick={async () => { await fetchInterventions(); }} icon={RefreshCw}>Actualiser</ActionButton>
-          </>
-        }
+        subtitle="Suivi et planification des interventions de maintenance"
+        showTemplate={canWrite('INTERVENTIONS')}
+        showImport={canWrite('INTERVENTIONS')}
+        showExport={true}
+        showRefresh={true}
+        onTemplate={handleDownloadTemplate}
+        onImport={handleImportClick}
+        onExport={handleExportXlsx}
+        onRefresh={fetchInterventions}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={isImporting}
+        isExporting={isExporting}
+        isRefreshing={false}
       />
 
       <FilterPanel title="Filtres">

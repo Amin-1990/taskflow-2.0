@@ -15,8 +15,6 @@ import {
   Eye,
   AlertCircle,
   CheckCircle,
-  Download,
-  Upload,
 } from 'lucide-preact';
 import { useCommandes } from '../../hooks/useCommandes';
 import { usePermissions } from '../../hooks/usePermissions';
@@ -225,25 +223,22 @@ export const Commandes: FunctionComponent<CommandesListProps> = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Commandes de production"
-        subtitle={`Total: ${total} commande${total > 1 ? 's' : ''}`}
+        title="Commandes"
+        subtitle="Liste et gestion des commandes de production"
+        showTemplate={true}
+        showImport={true}
+        showExport={true}
+        onTemplate={handleDownloadTemplate}
+        onImport={handleImportClick}
+        onExport={handleExportXlsx}
+        isImporting={isImporting}
+        isExporting={isExporting}
         actions={
-          <>
-            <ActionButton onClick={handleDownloadTemplate} icon={Download} title="Telecharger le template d'import">
-              Template
+          canWrite('COMMANDES') && (
+            <ActionButton onClick={() => setShowNewCommandeModal(true)} icon={Plus} variant="accent">
+              Nouvelle commande
             </ActionButton>
-            <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload} title="Importer des commandes">
-              {isImporting ? 'Import...' : 'Importer'}
-            </ActionButton>
-            <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download} title="Exporter les commandes en XLSX">
-              {isExporting ? 'Export...' : 'Exporter'}
-            </ActionButton>
-            {canWrite('COMMANDES') && (
-              <ActionButton onClick={() => setShowNewCommandeModal(true)} icon={Plus} variant="accent">
-                Nouvelle commande
-              </ActionButton>
-            )}
-          </>
+          )
         }
       />
 

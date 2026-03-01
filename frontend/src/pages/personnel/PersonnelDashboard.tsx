@@ -162,7 +162,7 @@ const PersonnelDashboard: FunctionalComponent = () => {
     <div className="space-y-6">
       <PageHeader
         title="Personnel"
-        subtitle={`Total: ${personnels.length} employe${personnels.length > 1 ? 's' : ''}`}
+        subtitle="Gestion des employés avec leurs informations et statut"
         actions={
           <>
             {canWrite('PERSONNEL') && (

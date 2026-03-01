@@ -1,9 +1,10 @@
 import { type FunctionComponent } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { route } from 'preact-router';
-import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-preact';
+import { ChevronLeft, ChevronRight } from 'lucide-preact';
 import { ROUTES } from '../../../constants';
 import { showToast } from '../../../utils/toast';
+import PageHeader from '../../../components/common/PageHeader';
 import planningManuelService from '../../../services/planning/planningManuel.service';
 import type { DayKey, ManualPlanningRow, PlanningWeekOption } from '../../../services/planning/types';
 
@@ -184,22 +185,23 @@ export const PlanningManuel: FunctionComponent<PlanningManuelProps> = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Planning</h1>
-        <div className="flex gap-2">
-          <button onClick={() => void loadRows()} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-            <RefreshCw className="w-4 h-4" />
-            Actualiser
-          </button>
-          <button onClick={() => route(ROUTES.PLANNING_REALISATION)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-            Suivi realisation
-          </button>
-          <button onClick={() => route(ROUTES.PLANNING_ANALYSE)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
-            Analyse charge
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Planning Manuel"
+        subtitle="Planification manuelle des commandes par semaine"
+        showRefresh={true}
+        onRefresh={() => void loadRows()}
+        actions={
+          <>
+            <button onClick={() => route(ROUTES.PLANNING_REALISATION)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+              Suivi réalisation
+            </button>
+            <button onClick={() => route(ROUTES.PLANNING_ANALYSE)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">
+              Analyse charge
+            </button>
+          </>
+        }
+      />
 
       <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-end gap-3">
         <div className="flex items-center gap-2">

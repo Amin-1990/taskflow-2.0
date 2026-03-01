@@ -1,6 +1,6 @@
 import { type FunctionComponent } from 'preact';
 import { useMemo, useRef, useState } from 'preact/hooks';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Download, Upload } from 'lucide-preact';
+import { Plus, Search, Edit2, Trash2, AlertCircle } from 'lucide-preact';
 import { useDefautsTypeMachine } from '../../hooks/useDefautsTypeMachine';
 import { showToast } from '../../utils/toast';
 import defautsTypeMachineApi, { type DefautTypeMachine } from '../../api/defautsTypeMachine';
@@ -210,29 +210,23 @@ export const DefautsTypeMachine: FunctionComponent<DefautsTypeMachineProps> = ()
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Defauts par type de machine"
-        subtitle={`Total: ${total} defaut${total > 1 ? 's' : ''}`}
+        title="Défauts par type de machine"
+        subtitle="Référentiel des défauts pour chaque type de machine"
+        showTemplate={canWrite('DEFAUTS_TYPE_MACHINE')}
+        showImport={canWrite('DEFAUTS_TYPE_MACHINE')}
+        showExport={true}
+        onTemplate={handleDownloadTemplate}
+        onImport={handleImportClick}
+        onExport={handleExportXlsx}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={isImporting}
+        isExporting={isExporting}
         actions={
-          <>
-            {canWrite('DEFAUTS_TYPE_MACHINE') && (
-              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-                {isDownloadingTemplate ? 'Template...' : 'Template'}
-              </ActionButton>
-            )}
-            {canWrite('DEFAUTS_TYPE_MACHINE') && (
-              <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-                {isImporting ? 'Import...' : 'Importer'}
-              </ActionButton>
-            )}
-            <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download}>
-              {isExporting ? 'Export...' : 'Exporter'}
+          canWrite('DEFAUTS_TYPE_MACHINE') && (
+            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+              Ajouter
             </ActionButton>
-            {canWrite('DEFAUTS_TYPE_MACHINE') && (
-              <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
-                Ajouter
-              </ActionButton>
-            )}
-          </>
+          )
         }
       />
 

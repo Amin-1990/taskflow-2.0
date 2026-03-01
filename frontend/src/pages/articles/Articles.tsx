@@ -14,8 +14,6 @@ import {
   Trash2,
   Eye,
   AlertCircle,
-  Download,
-  Upload,
   CheckCircle,
 } from 'lucide-preact';
 import { useArticles } from '../../hooks/useArticles';
@@ -23,6 +21,7 @@ import { showToast } from '../../utils/toast';
 import { ARTICLE_STATUT_OPTIONS, articlesApi, type ArticleStatut } from '../../api/articles';
 import ActionButton from '../../components/common/ActionButton';
 import ArticleForm from '../../components/articles/ArticleForm';
+import PageHeader from '../../components/common/PageHeader';
 import { usePermissions } from '../../hooks/usePermissions';
 
 interface ArticlesListProps {
@@ -178,35 +177,26 @@ export const Articles: FunctionComponent<ArticlesListProps> = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Articles</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Total: {total} article{total > 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {canWrite('ARTICLES') && (
-            <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-              {isDownloadingTemplate ? 'Template...' : 'Template'}
-            </ActionButton>
-          )}
-          {canWrite('ARTICLES') && (
-            <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-              {isImporting ? 'Import...' : 'Importer'}
-            </ActionButton>
-          )}
-          <ActionButton onClick={handleExportXLSX} loading={isExporting} icon={Download}>
-            {isExporting ? 'Export...' : 'Exporter'}
-          </ActionButton>
-          {canWrite('ARTICLES') && (
+      <PageHeader
+        title="Articles"
+        subtitle="Gestion des articles"
+        showTemplate={canWrite('ARTICLES')}
+        showImport={canWrite('ARTICLES')}
+        showExport={true}
+        onTemplate={handleDownloadTemplate}
+        onImport={handleImportClick}
+        onExport={handleExportXLSX}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={isImporting}
+        isExporting={isExporting}
+        actions={
+          canWrite('ARTICLES') && (
             <ActionButton onClick={() => setShowNewArticleModal(true)} icon={Plus} variant="accent">
               Nouvel article
             </ActionButton>
-          )}
-        </div>
-      </div>
+          )
+        }
+      />
 
       {/* Hidden file input for imports */}
       <input

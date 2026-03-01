@@ -10,6 +10,7 @@ import type {
 } from '../../types/affectations.types';
 import { showToast } from '../../utils/toast';
 import ActionButton from '../../components/common/ActionButton';
+import PageHeader from '../../components/common/PageHeader';
 
 interface AffectationsTempsProps {
   path?: string;
@@ -217,17 +218,15 @@ export const AffectationsTemps: FunctionComponent<AffectationsTempsProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Affectations - Suivi du temps</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Chargement par période pour préserver les performances
-          </p>
-        </div>
-        <ActionButton onClick={() => void loadAffectations()} icon={RefreshCw}>
-          Actualiser
-        </ActionButton>
-      </div>
+      <PageHeader
+        title="Affectations"
+        subtitle="Suivi du temps de travail par opérateur et Attribution des opérateurs aux postes de travail"
+        actions={
+          <ActionButton onClick={() => void loadAffectations()} icon={RefreshCw}>
+            Actualiser
+          </ActionButton>
+        }
+      />
 
       <div className="bg-white rounded-lg shadow-sm p-4 space-y-4">
         <div className="flex flex-wrap items-end gap-3">

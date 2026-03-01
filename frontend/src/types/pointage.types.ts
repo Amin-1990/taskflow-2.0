@@ -50,5 +50,6 @@ export interface PointageAjustementPayload extends PointagePayloadBase {
   Statut: 'present' | 'absent';
   Entree?: string | null;
   Sortie?: string | null;
+  H_sup?: number | null;
   Commentaire?: string;
 }

@@ -11,8 +11,6 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
-  Download,
-  Upload,
   Trash2,
   AlertCircle,
   Calendar,
@@ -187,28 +185,23 @@ export const Semaines: FunctionComponent<SemainesProps> = () => {
     <div className="space-y-6">
       <PageHeader
         title="Gestion des semaines"
-        subtitle={`Total: ${total} semaine${total > 1 ? 's' : ''}`}
+        subtitle="Configuration et gestion des semaines de production"
+        showTemplate={canWrite('SEMAINES')}
+        showImport={canWrite('SEMAINES')}
+        showExport={true}
+        showRefresh={false}
+        onTemplate={handleDownloadTemplate}
+        onImport={() => setShowImportModal(true)}
+        onExport={handleExport}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={loadingImport}
+        isExporting={false}
         actions={
-          <>
-            {canWrite('SEMAINES') && (
-              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-                {isDownloadingTemplate ? 'Template...' : 'Template'}
-              </ActionButton>
-            )}
-            {canWrite('SEMAINES') && (
-              <ActionButton onClick={() => setShowImportModal(true)} loading={loadingImport} icon={Upload}>
-                {loadingImport ? 'Import...' : 'Importer'}
-              </ActionButton>
-            )}
-            <ActionButton onClick={handleExport} disabled={loading || semaines.length === 0} icon={Download}>
-              Exporter
+          canWrite('SEMAINES') ? (
+            <ActionButton onClick={() => setShowAddModal(true)} icon={Plus} variant="accent">
+              Ajouter
             </ActionButton>
-            {canWrite('SEMAINES') && (
-              <ActionButton onClick={() => setShowAddModal(true)} icon={Plus} variant="accent">
-                Ajouter
-              </ActionButton>
-            )}
-          </>
+          ) : null
         }
       />
 

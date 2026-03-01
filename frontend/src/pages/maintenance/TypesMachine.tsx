@@ -1,6 +1,6 @@
 import { type FunctionComponent } from 'preact';
 import { useRef, useState } from 'preact/hooks';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Download, Upload } from 'lucide-preact';
+import { Plus, Search, Edit2, Trash2, AlertCircle } from 'lucide-preact';
 import { useTypesMachine } from '../../hooks/useTypesMachine';
 import type { TypeMachine } from '../../types/maintenance.types';
 import { showToast } from '../../utils/toast';
@@ -174,29 +174,23 @@ export const TypesMachine: FunctionComponent<TypesMachineProps> = () => {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Types de machine"
-        subtitle={`Total: ${total} type${total > 1 ? 's' : ''}`}
+        title="Types de Machine"
+        subtitle="Catégorisation des machines par type"
+        showTemplate={canWrite('TYPES_MACHINE')}
+        showImport={canWrite('TYPES_MACHINE')}
+        showExport={true}
+        onTemplate={handleDownloadTemplate}
+        onImport={handleImportClick}
+        onExport={handleExportXlsx}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={isImporting}
+        isExporting={isExporting}
         actions={
-          <>
-            {canWrite('TYPES_MACHINE') && (
-              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-                {isDownloadingTemplate ? 'Template...' : 'Template'}
-              </ActionButton>
-            )}
-            {canWrite('TYPES_MACHINE') && (
-              <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-                {isImporting ? 'Import...' : 'Importer'}
-              </ActionButton>
-            )}
-            <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download}>
-              {isExporting ? 'Export...' : 'Exporter'}
+          canWrite('TYPES_MACHINE') && (
+            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+              Ajouter
             </ActionButton>
-            {canWrite('TYPES_MACHINE') && (
-              <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
-                Ajouter
-              </ActionButton>
-            )}
-          </>
+          )
         }
       />
 

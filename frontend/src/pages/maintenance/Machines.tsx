@@ -1,6 +1,6 @@
 import { type FunctionComponent } from 'preact';
 import { useRef, useState } from 'preact/hooks';
-import { Plus, Search, Edit2, Trash2, AlertCircle, Download, Upload } from 'lucide-preact';
+import { Plus, Search, Edit2, Trash2, AlertCircle } from 'lucide-preact';
 import { useMachines } from '../../hooks/useMachines';
 import * as maintenanceApi from '../../api/maintenance';
 import SelectSearch, { type SelectSearchOption } from '../../components/common/SelectSearch';
@@ -235,28 +235,22 @@ export const Machines: FunctionComponent<MachinesListProps> = () => {
     <div className="space-y-6">
       <PageHeader
         title="Machines"
-        subtitle={`Total: ${total} machine${total > 1 ? 's' : ''}`}
+        subtitle="Gestion du parc machine avec leur statut et historique"
+        showTemplate={canWrite('MACHINES')}
+        showImport={canWrite('MACHINES')}
+        showExport={true}
+        onTemplate={handleDownloadTemplate}
+        onImport={handleImportClick}
+        onExport={handleExportXlsx}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={isImporting}
+        isExporting={isExporting}
         actions={
-          <>
-            {canWrite('MACHINES') && (
-              <ActionButton onClick={handleDownloadTemplate} loading={isDownloadingTemplate} icon={Download}>
-                {isDownloadingTemplate ? 'Template...' : 'Template'}
-              </ActionButton>
-            )}
-            {canWrite('MACHINES') && (
-              <ActionButton onClick={handleImportClick} loading={isImporting} icon={Upload}>
-                {isImporting ? 'Import...' : 'Importer'}
-              </ActionButton>
-            )}
-            <ActionButton onClick={handleExportXlsx} loading={isExporting} icon={Download}>
-              {isExporting ? 'Export...' : 'Exporter'}
+          canWrite('MACHINES') && (
+            <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
+              Ajouter
             </ActionButton>
-            {canWrite('MACHINES') && (
-              <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
-                Ajouter
-              </ActionButton>
-            )}
-          </>
+          )
         }
       />
 

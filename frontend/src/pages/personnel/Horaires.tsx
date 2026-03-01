@@ -4,14 +4,11 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Download,
   Plus,
-  RefreshCw,
-  Upload,
   X
 } from 'lucide-preact';
 import PersonnelActionButton from '../../components/personnel/PersonnelActionButton';
-import PersonnelPageHeader from '../../components/personnel/PersonnelPageHeader';
+import PageHeader from '../../components/common/PageHeader';
 import PersonnelFilterPanel from '../../components/personnel/PersonnelFilterPanel';
 import horairesApi from '../../api/horaires';
 import type { CreateHoraireDto, Horaire, JourSemaine, TypeChome } from '../../types/horaires.types';
@@ -311,38 +308,27 @@ export const Horaires: FunctionComponent<HorairesPageProps> = () => {
 
   return (
     <div className="space-y-6">
-      <PersonnelPageHeader
-        title="Calendrier des horaires"
-        eyebrow={
-          <span className="inline-flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Horaires &gt; Gestion des horaires
-          </span>
-        }
+      <PageHeader
+        title="Horaires"
+        subtitle="Gestion des horaires de travail"
+        showTemplate={canWrite('HORAIRES')}
+        showImport={canWrite('HORAIRES')}
+        showExport={true}
+        showRefresh={true}
+        onTemplate={onTemplate}
+        onImport={onImportClick}
+        onExport={onExport}
+        onRefresh={loadData}
+        isDownloadingTemplate={isDownloadingTemplate}
+        isImporting={isImporting}
+        isExporting={isExporting}
+        isRefreshing={false}
         actions={
-          <>
-            {canWrite('HORAIRES') && (
-              <PersonnelActionButton onClick={onTemplate} loading={isDownloadingTemplate} icon={Download}>
-                {isDownloadingTemplate ? 'Template...' : 'Template'}
-              </PersonnelActionButton>
-            )}
-            {canWrite('HORAIRES') && (
-              <PersonnelActionButton onClick={onImportClick} loading={isImporting} icon={Upload}>
-                {isImporting ? 'Import...' : 'Importer'}
-              </PersonnelActionButton>
-            )}
-            <PersonnelActionButton onClick={onExport} loading={isExporting} icon={Download}>
-              {isExporting ? 'Export...' : 'Exporter'}
+          canWrite('HORAIRES') ? (
+            <PersonnelActionButton onClick={() => openCreate()} icon={Plus} variant="accent">
+              Ajouter
             </PersonnelActionButton>
-            {canWrite('HORAIRES') && (
-              <PersonnelActionButton onClick={() => openCreate()} icon={Plus} variant="accent">
-                Ajouter
-              </PersonnelActionButton>
-            )}
-            <PersonnelActionButton onClick={loadData} icon={RefreshCw}>
-              Actualiser
-            </PersonnelActionButton>
-          </>
+          ) : null
         }
       />
 

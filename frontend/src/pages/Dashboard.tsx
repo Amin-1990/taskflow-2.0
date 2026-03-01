@@ -7,13 +7,13 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle,
-  RefreshCw,
   Calendar
 } from 'lucide-preact';
 import { useDashboard } from '../hooks/useDashboard';
 import { useAuth } from '../hooks/useAuth';
 import { useChartData } from '../hooks/useChartData';
 import { ProductionChart, QualiteChart, MaintenanceChart } from '../components/charts';
+import PageHeader from '../components/common/PageHeader';
 import { showToast } from '../utils/toast';
 
 export const Dashboard: FunctionComponent = () => {
@@ -69,17 +69,13 @@ export const Dashboard: FunctionComponent = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête avec période et rafraîchissement */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Tableau de bord</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Dernière mise à jour : {formatLastUpdate()}
-          </p>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          {/* Sélecteur de période */}
+      <PageHeader
+        title="Tableau de bord"
+        subtitle="Vue d'ensemble des indicateurs clés de performance et statistiques globales"
+        showRefresh={true}
+        onRefresh={refresh}
+        isRefreshing={loading}
+        actions={
           <div className="flex space-x-2 bg-white rounded-lg shadow-sm p-1">
             {(['jour', 'semaine', 'mois', 'annee'] as const).map((p) => (
               <button
@@ -96,18 +92,8 @@ export const Dashboard: FunctionComponent = () => {
               </button>
             ))}
           </div>
-
-          {/* Bouton rafraîchir */}
-          <button
-            onClick={refresh}
-            disabled={loading}
-            className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            title="Rafraîchir"
-          >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Cartes de statistiques principales */}
       {data && (

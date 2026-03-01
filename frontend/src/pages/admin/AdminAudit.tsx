@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo } from 'preact/hooks';
 import { route } from 'preact-router';
 import {
   AlertTriangle,
-  RefreshCw,
   Download,
   ChevronLeft,
   ChevronRight,
@@ -14,6 +13,8 @@ import {
 import { useAdminAudit } from '../../hooks/useAdminAudit';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
+import PageHeader from '../../components/common/PageHeader';
+import ActionButton from '../../components/common/ActionButton';
 import { showToast } from '../../utils/toast';
 import { adminApi } from '../../api/admin';
 import type { AdminUser } from '../../types/admin.types';
@@ -170,33 +171,22 @@ export const AdminAudit: FunctionComponent = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Journal d'Audit</h1>
-          <p className="text-sm text-gray-500 mt-1">Historique des modifications</p>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <button
+      <PageHeader
+        title="Journal d'Audit"
+        subtitle="Historique des modifications et actions dans l'application"
+        showRefresh={true}
+        onRefresh={refresh}
+        isRefreshing={loading}
+        actions={
+          <ActionButton
             onClick={handleExportCsv}
             disabled={logs.length === 0}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            icon={Download}
           >
-            <Download className="w-4 h-4" />
-            <span>Export CSV</span>
-          </button>
-
-          <button
-            onClick={refresh}
-            disabled={loading}
-            className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            title="Rafraîchir"
-          >
-            <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-      </div>
+            Export CSV
+          </ActionButton>
+        }
+      />
 
       {/* Filtres */}
       <div className="bg-white rounded-lg shadow-sm p-4 grid grid-cols-1 md:grid-cols-4 gap-4">

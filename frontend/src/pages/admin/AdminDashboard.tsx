@@ -6,13 +6,13 @@ import {
     Lock,
     Key,
     Activity,
-    RefreshCw,
     AlertTriangle,
     Clock
 } from 'lucide-preact';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 import { usePermissions } from '../../hooks/usePermissions';
 import { useAuth } from '../../hooks/useAuth';
+import PageHeader from '../../components/common/PageHeader';
 import { showToast } from '../../utils/toast';
 
 /**
@@ -89,23 +89,13 @@ export const AdminDashboard: FunctionComponent = () => {
 
     return (
         <div className="space-y-6">
-            {/* En-tête */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Administration</h1>
-                    <p className="text-sm text-gray-500 mt-1">Tableau de bord administrateur</p>
-                </div>
-
-                {/* Bouton rafraîchir */}
-                <button
-                    onClick={refresh}
-                    disabled={loading}
-                    className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50"
-                    title="Rafraîchir"
-                >
-                    <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-                </button>
-            </div>
+            <PageHeader
+                title="Administration"
+                subtitle="Tableau de bord du module administration"
+                showRefresh={true}
+                onRefresh={refresh}
+                isRefreshing={loading}
+            />
 
             {/* Cartes de statistiques */}
             {data && (

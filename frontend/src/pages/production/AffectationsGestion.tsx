@@ -370,7 +370,7 @@ export const AffectationsGestion: FunctionComponent<AffectationsGestionProps> = 
 
     return (
         <div className="space-y-6">
-            <PageHeader title="Gestion des affectations" subtitle="Import, export, edition et pagination" actions={
+            <PageHeader title="Affectations" subtitle="Suivi du temps de travail par opérateur et Attribution des opérateurs aux postes de travail" actions={
                 <>
                     {canWrite('AFFECTATIONS') && <ActionButton onClick={template} icon={Download}>Template</ActionButton>}
                     {canWrite('AFFECTATIONS') && <ActionButton onClick={() => fileInputRef.current?.click()} icon={Upload}>Importer</ActionButton>}

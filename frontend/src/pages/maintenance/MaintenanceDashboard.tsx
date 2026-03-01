@@ -12,13 +12,12 @@ import {
     Clock,
     CheckCircle,
     AlertCircle,
-    RefreshCw,
     Zap,
 } from 'lucide-preact';
 import * as maintenanceApi from '../../api/maintenance';
 import type { MaintenanceDashboardData, MaintenanceKPIs } from '../../types/maintenance.types';
 import { showToast } from '../../utils/toast';
-import ActionButton from '../../components/common/ActionButton';
+import PageHeader from '../../components/common/PageHeader';
 
 interface MaintenanceDashboardProps {
     path?: string;
@@ -92,18 +91,13 @@ export const MaintenanceDashboard: FunctionComponent<MaintenanceDashboardProps> 
 
     return (
         <div className="space-y-6">
-            {/* En-tête */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Tableau de bord Maintenance</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Suivi des machines et interventions
-                    </p>
-                </div>
-                <ActionButton onClick={loadDashboardData} icon={RefreshCw}>
-                    Actualiser
-                </ActionButton>
-            </div>
+            <PageHeader
+                title="Tableau de bord Maintenance"
+                subtitle="Indicateurs de performance et état des machines"
+                showRefresh={true}
+                onRefresh={loadDashboardData}
+                isRefreshing={loading}
+            />
 
             {/* KPIs - Première ligne */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

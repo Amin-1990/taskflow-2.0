@@ -1,12 +1,11 @@
 import { type FunctionComponent } from 'preact';
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { route } from 'preact-router';
-import { Download } from 'lucide-preact';
 import { ROUTES } from '../../../constants';
 import analyseChargeService from '../../../services/planning/analyseCharge.service';
 import { planningApi } from '../../../api/planning';
 import SelectSearch, { type SelectSearchOption } from '../../../components/common/SelectSearch';
-import ActionButton from '../../../components/common/ActionButton';
+import PageHeader from '../../../components/common/PageHeader';
 import type { DayKey, PlanningWeekOption } from '../../../services/planning/types';
 import { showToast } from '../../../utils/toast';
 
@@ -121,17 +120,19 @@ export const AnalyseCharge: FunctionComponent<AnalyseChargeProps> = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Analyse Charge</h1>
-        <div className="flex gap-2">
-          <button onClick={() => route(ROUTES.PLANNING_MANUEL)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Planning</button>
-          <button onClick={() => route(ROUTES.PLANNING_REALISATION)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Suivi realisation</button>
-          <ActionButton onClick={() => void exportExcel()} icon={Download}>
-            Export
-          </ActionButton>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Analyse Charge"
+        subtitle="Analyse de la charge de production et des capacités journalières"
+        showExport={true}
+        onExport={() => void exportExcel()}
+        actions={
+          <>
+            <button onClick={() => route(ROUTES.PLANNING_MANUEL)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Planning</button>
+            <button onClick={() => route(ROUTES.PLANNING_REALISATION)} className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50">Suivi realisation</button>
+          </>
+        }
+      />
 
       <div className="bg-white rounded-lg shadow-sm p-4 flex flex-wrap items-end gap-3">
         <div className="min-w-48">

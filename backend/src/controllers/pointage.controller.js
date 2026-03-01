@@ -55,28 +55,140 @@ const normalizeTimeInput = (value) => {
 };
 
 const calculerChampsPointage = ({ entree, sortie, debutHoraire, finHoraire }) => {
+   let retard = null;
+   let departAnticipe = null;
+   let presenceReelle = '00:00:00';
+
+   const entreeSec = parseTimeToSeconds(entree);
+   const sortieSec = parseTimeToSeconds(sortie);
+   const debutSec = parseTimeToSeconds(debutHoraire);
+   const finSec = parseTimeToSeconds(finHoraire);
+
+   if (entreeSec !== null && debutSec !== null && entreeSec > debutSec) {
+     retard = secondsToTime(entreeSec - debutSec);
+   }
+
+   if (sortieSec !== null && finSec !== null && sortieSec < finSec) {
+     departAnticipe = secondsToTime(finSec - sortieSec);
+   }
+
+   if (entreeSec !== null && sortieSec !== null && sortieSec >= entreeSec) {
+     presenceReelle = secondsToTime(sortieSec - entreeSec);
+   }
+
+   return { retard, departAnticipe, presenceReelle };
+};
+
+const calculerChampsPointageEtendu = ({ entree, sortie, horaire, existingValues }) => {
+  // Valeurs par défaut
   let retard = null;
   let departAnticipe = null;
   let presenceReelle = '00:00:00';
+  let heuresSupp = 0;
 
-  const entreeSec = parseTimeToSeconds(entree);
-  const sortieSec = parseTimeToSeconds(sortie);
-  const debutSec = parseTimeToSeconds(debutHoraire);
-  const finSec = parseTimeToSeconds(finHoraire);
-
-  if (entreeSec !== null && debutSec !== null && entreeSec > debutSec) {
-    retard = secondsToTime(entreeSec - debutSec);
+  // Si des valeurs existent en base, les utiliser comme base
+  if (existingValues) {
+    retard = existingValues.Retard;
+    departAnticipe = existingValues.Depart_anticipe;
+    presenceReelle = existingValues.Presence_reelle;
+    heuresSupp = existingValues.H_sup;
   }
 
-  if (sortieSec !== null && finSec !== null && sortieSec < finSec) {
-    departAnticipe = secondsToTime(finSec - sortieSec);
+  // Vérifier si jour chômé, férié ou fermé - dans ce cas tout est à 0
+  if (horaire) {
+    const estJourFerie = horaire.Est_jour_ferie === 1;
+    const estFerme = horaire.Est_ouvert === 0;
+    const estChome = horaire.Type_chome && horaire.Type_chome !== 'non_chomé';
+    
+    if (estJourFerie || estFerme || estChome) {
+      return { retard: null, departAnticipe: null, presenceReelle: '00:00:00', heuresSupp: 0 };
+    }
   }
 
-  if (entreeSec !== null && sortieSec !== null && sortieSec >= entreeSec) {
-    presenceReelle = secondsToTime(sortieSec - entreeSec);
+  // Si les champs sont null, les calculer automatiquement
+  // Retard: seulement si null en base
+  if (retard === null || retard === undefined || retard === '') {
+    const entreeSec = parseTimeToSeconds(entree);
+    const debutSec = parseTimeToSeconds(horaire?.Heure_debut || '08:00:00');
+    if (entreeSec !== null && debutSec !== null && entreeSec > debutSec) {
+      retard = secondsToTime(entreeSec - debutSec);
+    }
   }
 
-  return { retard, departAnticipe, presenceReelle };
+  // Depart_anticipe: seulement si null en base
+  if (departAnticipe === null || departAnticipe === undefined || departAnticipe === '') {
+    const sortieSec = parseTimeToSeconds(sortie);
+    const finSec = parseTimeToSeconds(horaire?.Heure_fin || '17:00:00');
+    if (sortieSec !== null && finSec !== null && sortieSec < finSec) {
+      departAnticipe = secondsToTime(finSec - sortieSec);
+    }
+  }
+
+  // Presence_reelle = Durée normale de l'horaire + Heures supplémentaires
+  // On recalcule toujours pour prendre en compte l'horaire
+  // mais on preserve la valeur si elle existe et si on n'a pas d'horaire
+  const shouldRecalculatePresence = !presenceReelle || presenceReelle === '' || presenceReelle === '00:00:00' || presenceReelle === '00:00';
+  
+  if (shouldRecalculatePresence || horaire) {
+    const entreeSec = parseTimeToSeconds(entree);
+    const sortieSec = parseTimeToSeconds(sortie);
+    const debutHoraireSec = parseTimeToSeconds(horaire?.Heure_debut || '08:00:00');
+    const finHoraireSec = parseTimeToSeconds(horaire?.Heure_fin || '17:00:00');
+    const pauseDebutSec = parseTimeToSeconds(horaire?.Pause_debut);
+    const pauseFinSec = parseTimeToSeconds(horaire?.Pause_fin);
+    
+    // Calculer la durée normale de l'horaire
+    let dureeNormale = 0;
+    if (debutHoraireSec !== null && finHoraireSec !== null) {
+      let pauseDuree = 0;
+      if (pauseDebutSec !== null && pauseFinSec !== null && pauseFinSec > pauseDebutSec) {
+        pauseDuree = pauseFinSec - pauseDebutSec;
+      }
+      dureeNormale = finHoraireSec - debutHoraireSec - pauseDuree;
+    }
+    
+    // Calculer les heures supplémentaires basées sur la sortie
+    let heuresSuppCalculees = 0;
+    if (sortieSec !== null && pauseFinSec !== null && sortieSec > pauseFinSec) {
+      heuresSuppCalculees = (sortieSec - pauseFinSec) / 3600;
+    }
+    
+    // Si on a un horaire, Presence_reelle = Durée normale + Heures supplémentaires
+    // On utilise H_sup enregistré (manuel) ou la valeur calculée
+    let heuresSuppAUtiliser = heuresSupp;
+    if (heuresSuppAUtiliser === null || heuresSuppAUtiliser === undefined) {
+        heuresSuppAUtiliser = heuresSuppCalculees;
+    }
+    
+    if (horaire && dureeNormale > 0) {
+      const totalSeconds = dureeNormale + ((heuresSuppAUtiliser || 0) * 3600);
+      presenceReelle = secondsToTime(totalSeconds);
+    } else if (entreeSec !== null && sortieSec !== null && sortieSec >= entreeSec) {
+      // Fallback: calculer directement si pas d'horaire
+      let pauseDuree = 0;
+      if (pauseDebutSec !== null && pauseFinSec !== null && pauseFinSec > pauseDebutSec) {
+        pauseDuree = pauseFinSec - pauseDebutSec;
+      }
+      presenceReelle = secondsToTime(sortieSec - entreeSec - pauseDuree);
+    }
+  }
+
+  // Heures_sup: seulement si null en base (pas de calcul automatique!)
+  // H_sup est saisi manuellement par l'utilisateur, on ne le recalcule pas automatiquement
+  if (heuresSupp === null || heuresSupp === undefined) {
+    // Calcul automatique des heures supplémentaires seulement si pas de valeur enregistrée
+    const sortieSec = parseTimeToSeconds(sortie);
+    const finSec = parseTimeToSeconds(horaire?.Heure_fin || '17:00:00');
+    const pauseFinSec = parseTimeToSeconds(horaire?.Pause_fin);
+    
+    if (sortieSec !== null && finSec !== null && pauseFinSec !== null) {
+      if (sortieSec > pauseFinSec) {
+        heuresSupp = (sortieSec - pauseFinSec) / 3600;
+      }
+    }
+  }
+
+  return { retard, departAnticipe, presenceReelle, heuresSupp };
 };
 
 // Helper pour extraire IP et User-Agent
@@ -179,10 +291,48 @@ exports.getPointageByPeriode = async (req, res) => {
     
     const [rows] = await db.query(query, params);
     
+    // Récupérer tous les horaires de la période
+    const [horaires] = await db.query(
+      'SELECT * FROM horaires WHERE Date BETWEEN ? AND ?',
+      [debut, fin]
+    );
+    
+    // Créer une map pour un accès rapide aux horaires par date
+    const horairesMap = new Map();
+    horaires.forEach(h => horairesMap.set(h.Date, h));
+    
+    // Ajouter les champs calculés à chaque enregistrement
+    const rowsWithCalculatedFields = rows.map(row => {
+      const horaire = horairesMap.get(row.Date);
+      
+      // Convertir explicitement les valeurs en types corrects
+      const existingValues = {
+        Retard: row.Retard || null,
+        Depart_anticipe: row.Depart_anticipe || null,
+        Presence_reelle: row.Presence_reelle || null,
+        H_sup: row.H_sup != null ? Number(row.H_sup) : null
+      };
+      
+      const { retard, departAnticipe, presenceReelle, heuresSupp } = calculerChampsPointageEtendu({
+        entree: row.Entree,
+        sortie: row.Sortie,
+        horaire: horaire,
+        existingValues: existingValues
+      });
+      
+      return {
+        ...row,
+        Retard: retard,
+        Depart_anticipe: departAnticipe,
+        Presence_reelle: presenceReelle,
+        H_sup: typeof heuresSupp === 'number' ? heuresSupp : 0
+      };
+    });
+    
     res.json({
       success: true,
-      count: rows.length,
-      data: rows
+      count: rowsWithCalculatedFields.length,
+      data: rowsWithCalculatedFields
     });
   } catch (error) {
     console.error('Erreur getPointageByPeriode:', error);
@@ -724,7 +874,7 @@ exports.validerPointage = async (req, res) => {
 // POST /api/pointage/ajuster - Ajustement manuel (statut + heures)
 exports.ajusterPointage = async (req, res) => {
   try {
-    const { ID_Personnel, Matricule, Nom, Date: dateInput, Statut, Entree, Sortie, Commentaire } = req.body;
+    const { ID_Personnel, Matricule, Nom, Date: dateInput, Statut, Entree, Sortie, H_sup, Commentaire } = req.body;
     const targetDate = resolveTargetDate(dateInput);
 
     if (!isValidIsoDate(targetDate)) {
@@ -819,6 +969,7 @@ exports.ajusterPointage = async (req, res) => {
             Retard = NULL,
             Depart_anticipe = NULL,
             Presence_reelle = '00:00:00',
+            H_sup = NULL,
             Absent = 1,
             Commentaire = ?,
             Date_modification = NOW()
@@ -850,8 +1001,8 @@ exports.ajusterPointage = async (req, res) => {
         `INSERT INTO pointage (
           ID_Personnel, Matricule, Nom, Date,
           Debut, Fin, Absent, Commentaire,
-          Presence_reelle, Date_creation
-        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, '00:00:00', NOW())`,
+          Presence_reelle, H_sup, Date_creation
+        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?, '00:00:00', NULL, NOW())`,
         [personnelId, matricule || '', nom || '', targetDate, debutHoraire, finHoraire, Commentaire || null]
       );
 
@@ -895,6 +1046,7 @@ exports.ajusterPointage = async (req, res) => {
           Retard = ?,
           Depart_anticipe = ?,
           Presence_reelle = ?,
+          H_sup = ?,
           Absent = 0,
           Commentaire = ?,
           Date_modification = NOW()
@@ -909,6 +1061,7 @@ exports.ajusterPointage = async (req, res) => {
           champs.retard,
           champs.departAnticipe,
           champs.presenceReelle,
+          H_sup !== undefined ? H_sup : null,
           Commentaire || null,
           existing[0].ID
         ]
@@ -938,8 +1091,8 @@ exports.ajusterPointage = async (req, res) => {
       `INSERT INTO pointage (
         ID_Personnel, Matricule, Nom, Date,
         Debut, Fin, Entree, Sortie, Retard, Depart_anticipe,
-        Presence_reelle, Absent, Commentaire, Date_creation
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NOW())`,
+        Presence_reelle, H_sup, Absent, Commentaire, Date_creation
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, NOW())`,
       [
         personnelId,
         matricule || '',
@@ -952,6 +1105,7 @@ exports.ajusterPointage = async (req, res) => {
         champs.retard,
         champs.departAnticipe,
         champs.presenceReelle,
+        H_sup !== undefined ? H_sup : null,
         Commentaire || null
       ]
     );

@@ -415,7 +415,7 @@ export const Planning: FunctionComponent<PlanningPageProps> = () => {
     <div className="space-y-6">
       <PageHeader
         title="Planning Hebdomadaire"
-        subtitle="Planning - edition semaine par semaine"
+        subtitle="Planification visuelle des commandes par semaine et par jour"
         actions={
           <>
             {canWrite('PLANNING') && (

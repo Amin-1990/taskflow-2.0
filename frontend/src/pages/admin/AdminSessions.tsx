@@ -1,10 +1,11 @@
 import type { FunctionComponent } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
 import { route } from 'preact-router';
-import { AlertTriangle, RefreshCw, X, Globe, Clock, Wifi } from 'lucide-preact';
+import { AlertTriangle, X, Globe, Clock, Wifi } from 'lucide-preact';
 import { useAdminSessions } from '../../hooks/useAdminSessions';
 import { useAuth } from '../../hooks/useAuth';
 import { usePermissions } from '../../hooks/usePermissions';
+import PageHeader from '../../components/common/PageHeader';
 import { showToast } from '../../utils/toast';
 import type { AdminSession } from '../../types/admin.types';
 
@@ -137,25 +138,13 @@ export const AdminSessions: FunctionComponent = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-800">Sessions Actives</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {sessions.length} session{sessions.length !== 1 ? 's' : ''} active{sessions.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-
-        {/* Bouton rafraîchir */}
-        <button
-          onClick={refresh}
-          disabled={loading}
-          className="p-2 bg-white rounded-lg shadow-sm hover:bg-gray-50 disabled:opacity-50"
-          title="Rafraîchir (auto-refresh: 30s)"
-        >
-          <RefreshCw className={`w-5 h-5 text-gray-600 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+      <PageHeader
+        title="Sessions Actives"
+        subtitle="Surveillance des sessions utilisateurs actives"
+        showRefresh={true}
+        onRefresh={refresh}
+        isRefreshing={loading}
+      />
 
       {/* Grille de sessions */}
       {sessions.length > 0 ? (

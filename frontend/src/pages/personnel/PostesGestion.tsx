@@ -145,7 +145,7 @@ const PostesGestion: FunctionComponent<PostesGestionProps> = () => {
     <div className="space-y-6">
       <PageHeader
         title="Gestion des postes"
-        subtitle={`Total: ${postes.length} poste${postes.length > 1 ? 's' : ''}`}
+        subtitle="Configuration des postes de travail et postes disponibles"
         actions={(
           canWrite('POSTES') ? (
             <ActionButton onClick={openCreateModal} icon={Plus} variant="accent">
